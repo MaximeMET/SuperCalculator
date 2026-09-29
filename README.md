@@ -85,6 +85,53 @@ adb logcat -s calc:* | grep 'getAutoResult returned res'
 
 > `$$` 是结果分隔符：左边是精确解，右边是数值解。
 
+## 引擎内核：我们改了上游的什么
+
+参考 App 里的 Symja **不是原版**，是一个被大改过的分支：
+
+- 多出 `core/computeprocess`、`core/eval/util/segmentfunction` 等整包（解方程过程、分段函数）
+- 砍掉了 `DSolve`、`Matcher`、`LaplaceTransform` 等一批上游类
+- 连排版行为都动过（加法项序、函数括号形状、对数写法）
+
+那份分支源码没有公开，所以这里不走「对齐源码」的路线，而是用差分测试逼近行为：
+在上游 tag `version_2016-04-15` 上打最小补丁。选它的依据是**顶级类名集合比对**——
+和基准的重合度最高（差异 140，次优 `2017-04-06` 是 465）。
+
+目前的四处补丁：
+
+| 补丁 | 内容 |
+|---|---|
+| `reflection/Log` | 对数渲染成 `\ln{x}` / `\log_{b}{x}`（上游根本没有这个转换器） |
+| `TeXFormFactory` | `Log` 不进 `operTab`；补 `Sec`/`Csc`；补 `E → e`；通用函数用 `\left( \right)` 而不是裸括号 |
+| `TeXFunction` | `\cos(x)` → `\cos{x}`，多参数用 `\,` 分隔 |
+| `EvalAttributes` + `EvalEngine` | 每次顶层求值后，递归把结果里的 `Plus` 按**降幂**重排（原版 `x^2-1` 显示成 `x^{2}-1`，而不是 Symja 默认的 `-1+x^{2}`） |
+
+补丁都写在 `tools/build-symja.ps1` 和 `tools/symja-patches/` 里，可重新生成内核：
+
+```powershell
+pwsh tools/build-symja.ps1 -WorkDir work/symja
+```
+
+### 差分测试现状（216 条语料）
+
+| 项目 | 一致 |
+|---|---|
+| 自动预览 | 216 / 216 |
+| 方法按钮集合 | 216 / 216 |
+| 方法计算结果 | 243 / 272 |
+
+剩下的 29 条里，21 条是**探针测量口径的问题**，不是引擎缺陷：原版绘图页并不使用
+`evaluateAndConvertLaTex` 的返回值，它拿的是 `DrawMethod.getSymjaFormula()`
+（`上一行 + "\n" + 当前行`，这里的 `\n` 是**字面反斜杠加 n**，当作多函数分隔符用），
+再由 `ScaleGraphView` 按 `[\*]*\\n[\*]*` 切开、取最后一段。修探针时改成测这条通道即可。
+
+真正还没对齐的是 8 条：解不等式 4 条（要补分支独有的 `SolveInEquality`）、
+求解方程 2 条（分支会给复根补一串数值形式）、`1/x` 的积分差一个绝对值、
+`(1+x)^2` 这一处的项序。
+
+> 语料库目前是 216 条，下一步会扩到千条量级——插桩探针跑 216 条不到 1 秒，
+> 所以加语料几乎不要成本，比按坐标点按钮快 8 个数量级。
+
 ## 构建
 
 需要 JDK 17。
@@ -108,6 +155,10 @@ GPL-3.0。这不是随便选的：引擎依赖的 Symja 是 GPL-3.0，链接它�
 |---|---|---|
 | [Symja](https://github.com/axkr/symja_android_library) | GPL-3.0 | 符号计算内核（含 Rubi 积分规则、JAS 代数系统、Apfloat 高精度浮点） |
 | Hipparchus | Apache-2.0 | 数值方法 |
+
+`engine/libs/symja-2016-04-15.jar` 是 Symja 的**修改版**（GPL-3.0）。
+对应的源码获取方式就是上面那条 `build-symja.ps1` 命令：
+它拉取上游 `version_2016-04-15` 的完整源码，再套用 `tools/symja-patches/` 与本脚本里的补丁。
 
 ## 与参考实现的关系
 

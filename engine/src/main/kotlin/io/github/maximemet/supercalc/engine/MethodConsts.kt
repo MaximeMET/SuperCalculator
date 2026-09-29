@@ -26,17 +26,17 @@ object MethodConsts {
     const val SYMJA_DINTE = "%s"
 
     /**
-     * 数值化模板（带精度）。
+     * 数值化模板。
      *
-     * 参考实现用的是 `N(%s)`——那是 2016 年版 Symja 的行为，有理数会按机器精度展开：
-     * 基准 App 里 `1/3` 实测输出 `0.3333333333`（10 位，跟随「保留小数位」设置）。
+     * 就用最朴素的两参数形式。锁定到 2016 版 Symja 之后，有理数会按机器精度展开，
+     * `1/3` 得到 `0.3333333333333333`，再经 [LatexText.toFixPoint] 按「保留小数位」
+     * 截断成 `0.3333333333`——与基准 App 实测值逐字符一致。
      *
-     * 现代 Symja 对有理数默认只给 6 位有效数字（`N(1/3)` → `0.333333`），
-     * 直接用会让「保留小数位」这个设置完全失效。所以这里显式索要位数，
-     * 取 `precision + 6` 与 17 位中的较大值——17 位足以复现机器精度下的四舍五入结果。
+     * 曾经的教训：为了让新版 Symja 也产出同样位数，这里写过 `N(%s,%d)` 的精度 hack，
+     * 结果在正确版本上反而输出 `3.3333333333e-1` 这种科学计数法。
+     * 换版本才是正解，改模板不是。
      */
-    fun numeric(formula: String, precision: Int): String =
-        "N(%s,%d)".format(formula, maxOf(precision + 6, 17))
+    fun numeric(formula: String, precision: Int): String = "N(%s)".format(formula)
 }
 
 /**

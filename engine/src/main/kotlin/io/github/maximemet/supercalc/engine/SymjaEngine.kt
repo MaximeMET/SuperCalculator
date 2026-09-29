@@ -7,7 +7,6 @@ import org.matheclipse.core.expression.F
 import org.matheclipse.core.interfaces.IExpr
 import org.matheclipse.core.interfaces.ISymbol
 import org.matheclipse.parser.client.SyntaxError
-import org.matheclipse.parser.client.ParserConfig
 import java.io.ByteArrayOutputStream
 import java.io.StringWriter
 
@@ -35,9 +34,9 @@ class SymjaEngine {
             // 与原版一致的全局开关：
             // 1) 允许 log2、arcsin 这类全小写函数名被识别为内置函数
             // 2) 让 JAS 走单线程，避免 Android 上的线程开销
-            ParserConfig.PARSER_USE_LOWERCASE_SYMBOLS = true
+            Config.PARSER_USE_LOWERCASE_SYMBOLS = true
             Config.JAS_NO_THREADS = true
-            F.initSymbols()
+            F.initSymbols(null, null, true)
         }
     }
 
@@ -59,7 +58,7 @@ class SymjaEngine {
         if (formula == null) return null
         return try {
             evalEngine.setNumericMode(numeric)
-            if (numeric) evalEngine.setNumericPrecision(EngineSettings.precision.toLong())
+            if (numeric) evalEngine.setNumericPrecision(EngineSettings.precision)
             evalEngine.evaluate(formula)
         } catch (e: StackOverflowError) {
             null
@@ -71,11 +70,11 @@ class SymjaEngine {
     /**
      * 取符号。
      *
-     * 注意必须用 `F.symbol(name, engine)` 而不是 `F.$s(name)`：
-     * 新版 Symja 的符号表按 EvalEngine 实例隔离，解析器造出来的符号属于当前引擎，
-     * 用全局工厂拿到的会是另一个实例，`isFree`、`variables` 这类判等会全部失效。
+     * 2016 版的符号表是全局的，`F.$s(name)` 拿到的就是解析器用的那个实例。
+     * （新版 Symja 改成了按 EvalEngine 隔离，必须用 `F.symbol(name, engine)`，
+     * 这也是不能随便升版本的原因之一。）
      */
-    fun symbol(name: String): ISymbol = F.symbol(name, evalEngine)
+    fun symbol(name: String): ISymbol = F.`$s`(name)
 
     /** 未知数符号。 */
     fun unknownSymbol(): ISymbol = symbol(EngineSettings.unknown)
@@ -136,7 +135,9 @@ class SymjaEngine {
         val stream = ByteArrayOutputStream()
         return try {
             SymjaInterpreter(code, stream, evalEngine).eval()
-            stream.toString(Charsets.UTF_8.name())
+            // 原版跑在 Android 上，换行一律是 \n；桌面 JVM 的 PrintStream 会给 \r\n，
+            // 不拉齐的话差分测试会在「除零提示」这类多行输出上误报。
+            stream.toString(Charsets.UTF_8.name()).replace("\r\n", "\n")
         } catch (e: Exception) {
             ""
         }

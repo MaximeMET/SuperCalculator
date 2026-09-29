@@ -32,8 +32,6 @@ class SymjaInterpreter(
     private val utilities = EvalUtilities(engine, false, true)
     private val relaxedParser = Parser(true)
     private val strictParser = Parser()
-    private val converter = AST2Expr(engine)
-
     init {
         engine.setOutPrintStream(outStream)
     }
@@ -45,7 +43,7 @@ class SymjaInterpreter(
 
         val buf = StringBuilder()
         try {
-            val expr: IExpr = converter.convert(node)
+            val expr: IExpr = AST2Expr.CONST_LC.convert(node)
             val result = utilities.evaluate(expr)
             OutputFormFactory.get(true).convert(buf, result)
         } catch (e: RuntimeException) {
