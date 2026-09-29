@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     构建本项目使用的 Symja 内核 jar。
 

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     构建本项目使用的 MathQuill（公式编辑器）。
 
