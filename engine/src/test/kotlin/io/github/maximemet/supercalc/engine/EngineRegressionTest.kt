@@ -79,9 +79,10 @@ class EngineRegressionTest {
 
     @Test
     fun `求导结果`() {
-        assertEquals("2 \\cdot x", session("x^2").evaluate(Method.Derivative))
-        assertEquals(" - \\frac{1}{{x}^{2}}", session("1/x").evaluate(Method.Derivative))
-        assertEquals("\\cos (x)", session("sin(x)").evaluate(Method.Derivative))
+        // 期望值全部来自基准 App 的插桩探针实测（work/corpus/ref_methods.tsv）
+        assertEquals("2\\,x", session("x^2").evaluate(Method.Derivative))
+        assertEquals("\\frac{-1}{x^{2}}", session("1/x").evaluate(Method.Derivative))
+        assertEquals("\\cos{x}", session("sin(x)").evaluate(Method.Derivative))
     }
 
     @Test
@@ -92,10 +93,9 @@ class EngineRegressionTest {
 
     @Test
     fun `因式分解结果`() {
-        // 现代 Symja 的 TeX 输出会用 \left( \right) 包裹括号；
-        // 渲染效果与旧版一致，但字符串不同——对比时以渲染结果为准确认。
+        // 基准行为：项按降幂排（x-1 而不是 -1+x），多因子之间用 \, 分隔。
         assertEquals(
-            "\\left( -1 + x\\right)  \\cdot \\left( 1 + x\\right) ",
+            "\\left( x-1\\right) \\,\\left( x+1\\right) ",
             session("x^2-1").evaluate(Method.Decompose),
         )
     }
