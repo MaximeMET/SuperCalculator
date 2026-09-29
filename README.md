@@ -36,14 +36,35 @@ app/      Android 应用
 ### M2 现状：主界面已经能在手机上跑起来
 
 `app` 模块已经能构建、安装、启动，并且**真的接上了引擎**：
-敲 `1 / 3` 停顿半秒，结果区会显示 `= 0.3333333333`；运算按钮条也会按
-`MethodAdvisor` 的判定浮出来。键盘四页、左侧书签、工具行（清空 / 换行 /
-左右移光标 / 退格）、撤销重做都已接好。
+敲 `1 / 3` 停顿半秒，公式区渲染出真分数，右边跟着精确解 `= 1/3` 和数值解
+`= 0.3333333333`；运算按钮条也会按 `MethodAdvisor` 的判定浮出来。
+键盘四页、左侧书签、工具行（清空 / 换行 / 左右移光标 / 退格）、撤销重做都已接好。
 
-还差的是编辑器本身：现在用 `EditText` 占位，原版是 WebView 里的 MathQuill。
-换成 MathQuill 之前，公式显示是 LaTeX 原文而不是排版后的样子。命令表已经
-按原版逐条抄好放在 `keyboard/KeyCommand.kt` 与 `keyboard/KeyboardModel.kt`，
-`editor/PlainTextKeyWriter.kt` 只是把命令翻译成 Symja 能认的纯文本（过渡用）。
+公式编辑器和原版一样是 **WebView 里的 MathQuill**：页面、样式、命令层都在
+`app/src/main/assets/matheditor/`，Kotlin 侧只有两个薄封装——`editor/MathEditor.kt`
+往下发按键，`editor/EditorBridge.kt` 同步取结果。公式状态（公式树、光标、撤销栈）
+全留在 JS 那一侧，和原版的分工一致。
+
+#### 命令层：M2 最费劲的一块
+
+原版用的**不是**官方 MathQuill 0.10.1，而是一个带 `symja()` 的分支：每条 LaTeX 命令
+自己算引擎输入（`\frac{a}{b}` → `((a)/(b))`、`\ge` → `>=`、`e` → `E`……），
+Android 侧只收一个现成的字符串。这份分支没有公开源码，所以做法是把它当**活体标尺**：
+同一张键盘命令表（`keyboard/KeyboardModel.kt` 抄自原版 bundle）跑两边，
+逐键比对 `latex()`、渲染出的 HTML、`symja()` 三样东西。
+
+结果：**78 个单键 + 48 条连打序列，全部一致**。原版实测结果固化成
+`tools/matheditor/golden-keys-orig.json`（行为规格，不是代码），
+回归一条命令跑完：
+
+```powershell
+pwsh tools/matheditor/run_probes.ps1 -SkipOrig   # 只测自己，对基准文件
+pwsh tools/matheditor/run_probes.ps1             # 有原版 min.js 时两边一起跑
+```
+
+踩过的坑记在 `tools/matheditor/README.md`，其中一条值得单独说：隐式乘法。
+Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，空槽位又不能再留一个
+孤零零的 `*`——原版就是这么按槽位分别处理的，照着做才逐字符一致。
 
 键盘的几何不是拍脑袋定的，几条规则都来自原版源码：
 
@@ -237,10 +258,28 @@ GPL-3.0。这不是随便选的：引擎依赖的 Symja 是 GPL-3.0，链接它�
 |---|---|---|
 | [Symja](https://github.com/axkr/symja_android_library) | GPL-3.0 | 符号计算内核（含 Rubi 积分规则、JAS 代数系统、Apfloat 高精度浮点） |
 | Hipparchus | Apache-2.0 | 数值方法 |
+| [MathQuill](https://github.com/mathquill/mathquill) | MPL-2.0 | 公式编辑器（`app/src/main/assets/matheditor/mathquill/`） |
+| [jQuery](https://jquery.com/) 2.1.4 | MIT | MathQuill 的运行时依赖 |
+| AndroidX / Material | Apache-2.0 | Android 界面基础库 |
 
 `engine/libs/symja-2016-04-15.jar` 是 Symja 的**修改版**（GPL-3.0）。
 对应的源码获取方式就是上面那条 `build-symja.ps1` 命令：
 它拉取上游 `version_2016-04-15` 的完整源码，再套用 `tools/symja-patches/` 与本脚本里的补丁。
+
+`app/src/main/assets/matheditor/mathquill/mathquill.min.js` 同样是 MathQuill 0.10.1 的**修改版**
+（MPL-2.0）。MPL 是文件级 copyleft，要求修改过的文件继续以 MPL 提供、并说明源码在哪：
+这里是在上游 v0.10.1 上打了两个补丁（暴露内部对象给命令层、按我们的构建参数重新压缩），
+重建命令是
+
+```powershell
+pwsh tools/build-mathquill.ps1
+```
+
+它会拉取上游源码、套用 `tools/mathquill-patches/`，再输出到 `app/src/main/assets/matheditor/mathquill/`。
+完整的 MPL-2.0 与 MIT 原文见 [NOTICE.md](NOTICE.md)。
+
+> MathQuill 自带的 `Symbola` 字体也是从上游仓库取的（哈希与 `mathquill-0.10.1/src/font/`
+> 逐个一致），不是从原版 App 里抠出来的素材。
 
 ## 与参考实现的关系
 
