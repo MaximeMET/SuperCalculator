@@ -46,6 +46,15 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
      */
     fun evaluate(method: Method): String? {
         if (formula.isEmpty()) return null
+
+        // 解不等式上游没有现成实现，走自己写的求解器；
+        // 拿不准的输入会返回 null，再退回原来的路径。
+        if (method == Method.SolveIneq) {
+            InequalitySolver.solve(engine, formula, EngineSettings.unknown)?.let { branches ->
+                return formatOutput(method, InequalitySolver.render(engine, branches))
+            }
+        }
+
         val symjaFormula = method.buildFormula(formula, EngineSettings.unknown)
         val raw = engine.evaluateAsLatex(symjaFormula)
         if (raw.isEmpty()) return null

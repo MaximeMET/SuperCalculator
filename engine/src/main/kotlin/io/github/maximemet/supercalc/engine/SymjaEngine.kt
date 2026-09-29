@@ -4,6 +4,7 @@ import org.matheclipse.core.basic.Config
 import org.matheclipse.core.eval.EvalEngine
 import org.matheclipse.core.eval.TeXUtilities
 import org.matheclipse.core.expression.F
+import org.matheclipse.core.interfaces.IAST
 import org.matheclipse.core.interfaces.IExpr
 import org.matheclipse.core.interfaces.ISymbol
 import org.matheclipse.parser.client.SyntaxError
@@ -148,6 +149,52 @@ class SymjaEngine {
     fun isInvalid(expr: IExpr?): Boolean =
         expr == null || expr.isInfinity || expr.isDirectedInfinity ||
             expr.isNegativeInfinity || expr.isIndeterminate
+
+    // ---------- 给不等式求解器用的小工具 ----------
+
+    /** 求值一段 Symja 代码，返回结果的 input form；算不出来返回 null。 */
+    fun stringOf(code: String): String? =
+        evaluateOrNull(parseOrNull(code))?.toString()
+
+    /** 求 `expr == 0` 的全部根；解不出或含参数解时返回空表。 */
+    fun solveZeros(expr: String, unknown: String): List<IExpr>? {
+        val solved = evaluateOrNull(parseOrNull("Solve($expr==0,$unknown)")) ?: return emptyList()
+        if (!solved.isAST(F.List)) return null
+        val roots = mutableListOf<IExpr>()
+        val outer = solved as IAST
+        for (i in 1 until outer.size) {
+            val item = outer.get(i)
+            if (!item.isAST(F.List)) return null
+            val inner = item as IAST
+            for (j in 1 until inner.size) {
+                val rule = inner.get(j)
+                if (!rule.isAST(F.Rule)) return null
+                val ast = rule as IAST
+                if (ast.size != 3) return null
+                // 带参数的解（比如 x == a）没法拿来划分区间，放弃
+                if (!isFreeOf(ast.arg2(), unknown)) return null
+                roots.add(ast.arg2())
+            }
+        }
+        return roots
+    }
+
+    /**
+     * 求一段表达式的数值；不是有限的数就返回 null。
+     *
+     * 注意要把无穷排掉：`1/0.0` 会得到 `Infinity`，而 `"Infinity".toDoubleOrNull()`
+     * 是能成功的（正无穷），拿它去判号会把断点误判成解的一部分。
+     */
+    fun numericValueOf(code: String): Double? {
+        val value = evaluateOrNull(parseOrNull(code), numeric = true) ?: return null
+        if (!value.isNumber) return null
+        val d = value.toString().toDoubleOrNull() ?: return null
+        return if (d.isFinite()) d else null
+    }
+
+    /** 把 `x = value` 代进 f，返回数值；代不进去（比如落在断点上）返回 null。 */
+    fun signAt(f: String, unknown: String, value: Double): Double? =
+        numericValueOf("($f) /. $unknown -> $value")
 
     fun isEqOrUneq(expr: IExpr?): Boolean {
         if (expr == null) return false

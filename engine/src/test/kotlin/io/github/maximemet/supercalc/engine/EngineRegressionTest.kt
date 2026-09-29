@@ -99,4 +99,49 @@ class EngineRegressionTest {
             session("x^2-1").evaluate(Method.Decompose),
         )
     }
+
+    // ---------- 不等式 ----------
+    // 期望值全部来自基准 App 的插桩探针实测。输出形状是「列表套列表」：
+    // 外层是若干情形（或），内层是同时成立的条件（且），Symja 会把它排成矩阵。
+
+    @Test
+    fun `一元一次不等式`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx > 3 \n\\end{array}\n\\right) ",
+            session("x>3").evaluate(Method.SolveIneq),
+        )
+    }
+
+    @Test
+    fun `二次不等式给出两段`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx < -2 \\\\\nx > 2 \n\\end{array}\n\\right) ",
+            session("x^2>4").evaluate(Method.SolveIneq),
+        )
+    }
+
+    @Test
+    fun `二次不等式给出夹逼区间`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{cc}\nx > -3 & x < 3 \n\\end{array}\n\\right) ",
+            session("x^2<9").evaluate(Method.SolveIneq),
+        )
+    }
+
+    @Test
+    fun `分式不等式的断点不算解`() {
+        // 1/x > 1 的解是 (0, 1)：x=0 是分母零点，不能写成闭端点。
+        assertEquals(
+            "\\left(\n\\begin{array}{cc}\nx > 0 & x < 1 \n\\end{array}\n\\right) ",
+            session("1/x>1").evaluate(Method.SolveIneq),
+        )
+    }
+
+    @Test
+    fun `绝对值不等式先平方化`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx < -1 \\\\\nx > 1 \n\\end{array}\n\\right) ",
+            session("abs(x)>1").evaluate(Method.SolveIneq),
+        )
+    }
 }
