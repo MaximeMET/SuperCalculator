@@ -49,6 +49,23 @@ enum class Method(
     }
 
     companion object {
+        /**
+         * 「绘制图像」交给绘图页的公式串。
+         *
+         * 参考实现写的是 `上一行 + "\n" + 当前行`——注意这里的 `\n` 是**字面反斜杠加 n**，
+         * 不是换行符。它被当作多函数分隔符用：绘图页按它切开，逐段当函数画。
+         * 单行输入时前面会多出一段空串，切完丢掉即可。
+         */
+        fun drawFormula(formula: String, lastFormula: String = ""): String =
+            lastFormula + "\\n" + formula
+
+        /** 绘图页用的正则：切开 [drawFormula] 的结果，丢掉空段。 */
+        private val DRAW_SEPARATOR = Regex("""[*]*\\n[*]*""")
+
+        /** 把 [drawFormula] 的结果切回成要画的函数列表。 */
+        fun splitDrawFormula(text: String): List<String> =
+            DRAW_SEPARATOR.split(text).filter { it.isNotEmpty() }
+
         /** 定积分只给数值解。 */
         val numericOnly = listOf(Numeric)
 

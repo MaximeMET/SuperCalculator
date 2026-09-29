@@ -41,6 +41,7 @@ class CorpusRunnerTest {
 
         val auto = StringBuilder()
         val methods = StringBuilder()
+        val draw = StringBuilder()
 
         for (raw in input.readLines(Charsets.UTF_8)) {
             val expr = raw.trim()
@@ -62,11 +63,23 @@ class CorpusRunnerTest {
                     .append(esc(m.label)).append('\t')
                     .append(m.typeCode).append('\t')
                     .append(esc(result)).append('\n')
+
+                // 绘图按钮的结果不是上面那段文本：界面会丢掉它，只把公式串交给绘图页。
+                if (m == Method.Draw) {
+                    val raw = Method.drawFormula(expr, session.lastFormula)
+                    draw.append(esc(expr)).append('\t')
+                        .append(esc(raw)).append('\t')
+                        .append(esc(Method.splitDrawFormula(raw).joinToString("|"))).append('\n')
+                }
             }
         }
 
         File(outDir, "engine_auto.tsv").writeText(auto.toString(), Charsets.UTF_8)
         File(outDir, "engine_methods.tsv").writeText(methods.toString(), Charsets.UTF_8)
-        println("语料跑完：${auto.lines().size - 1} 条自动预览，${methods.lines().size - 1} 条方法结果")
+        File(outDir, "engine_draw.tsv").writeText(draw.toString(), Charsets.UTF_8)
+        println(
+            "语料跑完：${auto.lines().size - 1} 条自动预览，" +
+                "${methods.lines().size - 1} 条方法结果，${draw.lines().size - 1} 条绘图公式"
+        )
     }
 }

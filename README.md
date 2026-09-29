@@ -118,22 +118,22 @@ pwsh tools/build-symja.ps1 -WorkDir work/symja
 |---|---|
 | 自动预览 | 1140 / 1140 |
 | 方法按钮集合 | 1131 / 1131 |
-| 方法计算结果 | 1207 / 1308（92.3%） |
+| 方法计算结果 | 1207 / 1239（97.4%） |
+| 绘图公式 | 69 / 69 |
 
-剩下的 101 条按方法分布：绘制图像 69、解不等式 14、求解方程 9、积分 3、
-多项式分解 3、求导 3。归因是三块：
+「绘制图像」不进文本结果那一栏：那个按钮根本没有文本结果。原版绘图页拿走的是
+`DrawMethod.getSymjaFormula()`（`上一行 + "\n" + 当前行`，这里的 `\n` 是**字面反斜杠加 n**，
+当多函数分隔符用），再由 `ScaleGraphView` 按 `[\*]*\\n[\*]*` 切开、逐段画。
+探针现在把这条通道单独记到 `ref_draw.tsv`，引擎侧对应 `Method.drawFormula()` /
+`Method.splitDrawFormula()`。
 
-**1. 探针测错了通道（69 条，全是「绘制图像」）**——原版绘图页并不使用
-`evaluateAndConvertLaTex` 的返回值，它拿的是 `DrawMethod.getSymjaFormula()`
-（`上一行 + "\n" + 当前行`，这里的 `\n` 是**字面反斜杠加 n**，当作多函数分隔符用），
-再由 `ScaleGraphView` 按 `[\*]*\\n[\*]*` 切开取最后一段。探针测了被丢弃的那条通道，
-所以每一条都稳定多出个 `n`。改探针即可，不是引擎缺陷。
+剩下的 32 条按方法分布：解不等式 14、求解方程 9、积分 3、多项式分解 3、求导 3。
 
-**2. 分支独有的求解能力（14 条，全是「解不等式」）**——原版用的是分支里自己写的
+**1. 分支独有的求解能力（14 条，全是「解不等式」）**——原版用的是分支里自己写的
 `SolveInEquality` / `SolveSystemInequality`（上游没有这个包），
 输出还会排成 `\begin{array}` 矩阵。这部分要照行为重写一个不等式求解器。
 
-**3. 真正待查的 18 条**——求解方程 9 条（分支会给非整数根和复根追加 `= 数值形式`）、
+**2. 真正待查的 18 条**——求解方程 9 条（分支会给非整数根和复根追加 `= 数值形式`）、
 `1/x` 这类积分差一层绝对值（分支的积分器返回 `Log[Abs[x]]`，上游返回 `Log[x]`）、
 `(1+x)^n` 当底数落在 `Power` 里时的项序（分支有一部分不参与降幂重排）。
 
@@ -150,10 +150,13 @@ adb push corpus.txt /data/local/tmp/
 adb shell cp /data/local/tmp/corpus.txt \
   /data/data/com.youdao.calculator/files/probe_in.txt
 adb shell am broadcast -n com.youdao.calculator/com.youdao.calculator.probe.ProbeReceiver
-# 等 files/probe_done.txt 出现 OK，再拉 probe_auto.tsv / probe_methods.tsv
+# 等 files/probe_done.txt 出现 OK，
+# 再拉 probe_auto.tsv / probe_methods.tsv / probe_draw.tsv
 ```
 
-探针本体见 `work/probe/src/.../ProbeReceiver.java`，只在插桩版里跑，不随项目分发。
+探针本体见 `work/probe/src/.../ProbeReceiver.java`，重建脚本是 `work/probe/build-probe.ps1`
+（javac → d8 → apktool 编基础包 → 塞 classes3.dex → zipalign → 签名）。只在插桩版里跑，
+不随项目分发。
 
 ## 构建
 
