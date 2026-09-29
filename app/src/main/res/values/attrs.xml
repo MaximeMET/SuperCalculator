@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      对应参考实现的 AutoLineLayout：固定列数、等宽单元、可配行列间距。
+      运算按钮就是按这个方法排成 4 列。
+    -->
+    <declare-styleable name="AutoLineLayout">
+        <attr name="columns" format="integer" />
+        <attr name="rowSpace" format="dimension" />
+        <attr name="columnSpace" format="dimension" />
+    </declare-styleable>
+</resources>

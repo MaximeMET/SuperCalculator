@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  键盘上的一个格子。参考实现这里是「图标 + 可选小标签」，
+  图标素材要全部替换，所以先用文字顶位，几何尺寸保持一致。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="0dp"
+    android:background="@drawable/selector_key"
+    android:clickable="true"
+    android:focusable="true">
+
+    <TextView
+        android:id="@+id/key_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/key_text"
+        android:textSize="@dimen/key_text_size" />
+</FrameLayout>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SuperCalc" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@color/default_bg</item>
+        <item name="colorAccent">@color/capsule_button_pressed</item>
+    </style>
+
+    <!-- 对应参考实现的 BtnOperation -->
+    <style name="MethodButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/capsule_button_height</item>
+        <item name="android:padding">@dimen/space_normal</item>
+        <item name="android:textColor">@color/capsule_button_text</item>
+        <item name="android:textSize">@dimen/text_13sp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/bg_method_button</item>
+    </style>
+
+    <!-- 对应参考实现的 CalcKey -->
+    <style name="CalcKey">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:textColor">@color/editor_hint</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/selector_key</item>
+    </style>
+
+    <style name="ToolbarButton">
+        <item name="android:layout_width">@dimen/toolbar_button</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:background">?selectableItemBackgroundBorderless</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:tint">#FFFFFFFF</item>
+    </style>
+
+    <style name="ToolbarTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/space_middle</item>
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <style name="KeyboardToolKey">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">?selectableItemBackground</item>
+        <item name="android:scaleType">center</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <!-- 左侧书签：等分的槽位，圆形图标居中放在里面 -->
+    <style name="DartSlot">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_weight">1</item>
+    </style>
+
+    <style name="KeyboardDart">
+        <item name="android:layout_width">@dimen/dart_size</item>
+        <item name="android:layout_height">@dimen/dart_size</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:background">@drawable/bg_dart_normal</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/dart_normal_text</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+</resources>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">超级计算器</string>
+    <string name="input_hint">输入算式，或点下面的键盘</string>
+    <string name="no_result">算不出来</string>
+    <string name="engine_starting">引擎启动中…</string>
+    <string name="calculating">计算中…</string>
+
+    <string name="title_calculate">计算</string>
+    <string name="all_examples">全部举例</string>
+
+    <string name="action_menu">菜单</string>
+    <string name="action_history">历史</string>
+    <string name="action_undo">撤销</string>
+    <string name="action_redo">重做</string>
+    <string name="keyboard_clear">清空</string>
+    <string name="keyboard_newline">换行</string>
+    <string name="keyboard_left">左移</string>
+    <string name="keyboard_right">右移</string>
+    <string name="keyboard_backspace">退格</string>
+
+    <string name="dart_basic">基本</string>
+    <string name="dart_function">函数</string>
+    <string name="dart_variable">变量</string>
+    <string name="dart_formula">公式</string>
+</resources>

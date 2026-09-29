@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "supercalc"
 
 include(":engine")
+include(":app")

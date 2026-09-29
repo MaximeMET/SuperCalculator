@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      数值取自参考实现的 dimens.xml。keyboard_height 是键盘总高，
+      keyboard_top_height 是键盘上方那排工具键的高度。
+    -->
+    <dimen name="keyboard_height">400dp</dimen>
+    <dimen name="keyboard_top_height">48dp</dimen>
+    <dimen name="example_height">35dp</dimen>
+
+    <dimen name="toolbar_height">48dp</dimen>
+    <dimen name="toolbar_button">48dp</dimen>
+
+    <dimen name="capsule_button_height">30dp</dimen>
+    <dimen name="capsule_button_radius">14dp</dimen>
+    <dimen name="dart_size">30dp</dimen>
+
+    <dimen name="space_micro">0.5dp</dimen>
+    <dimen name="space_tiny">2dp</dimen>
+    <dimen name="space_small">3dp</dimen>
+    <dimen name="space_little">4dp</dimen>
+    <dimen name="space_normal">5dp</dimen>
+    <dimen name="space_normal_6">6dp</dimen>
+    <dimen name="space_middle">8dp</dimen>
+    <dimen name="space_medium">10dp</dimen>
+    <dimen name="space_common">16dp</dimen>
+    <dimen name="space_big">18dp</dimen>
+    <dimen name="space_large">20dp</dimen>
+
+    <dimen name="text_13sp">13sp</dimen>
+    <dimen name="text_14sp">14sp</dimen>
+    <dimen name="key_text_size">16sp</dimen>
+</resources>

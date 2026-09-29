@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      这里的色值全部直接取自参考实现的 colors.xml，属于「行为规格」的一部分：
+      改任何一个都会让界面和基准截图对不上。
+    -->
+    <color name="default_bg">#FF53595E</color>
+    <color name="action_bar_bottom">#FF4C5256</color>
+
+    <color name="keyboard_upper_bg">#FFFFFFFF</color>
+    <color name="keyboard_grid_bg">#FFFFFFFF</color>
+    <color name="keyboard_bookdart_bg">#FFF4F4F4</color>
+    <color name="gray_divider">#FFD2D2D2</color>
+
+    <color name="key_pressed">#FFEDEDED</color>
+    <color name="key_text">#FF2B2F36</color>
+
+    <color name="example_text">#FFFFCD7C</color>
+    <color name="editor_hint">#80FFFFFF</color>
+    <color name="editor_result">#FFA4A8AC</color>
+
+    <color name="capsule_button_pressed">#FFFFB560</color>
+    <color name="capsule_button_stroke">#F0000000</color>
+    <color name="capsule_button_text">#FF000000</color>
+
+    <color name="dart_selected">#FFF0A24B</color>
+    <color name="dart_normal">#FFE6E6E6</color>
+    <color name="dart_normal_text">#FF8A8F96</color>
+</resources>
