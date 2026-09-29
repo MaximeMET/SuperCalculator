@@ -140,6 +140,21 @@ pwsh tools/build-symja.ps1 -WorkDir work/symja
 > 语料库从 216 条扩到 1140 条之后，插桩探针跑完仍然只要几秒——
 > 加语料的成本几乎为零，比按坐标点按钮快几个数量级。
 
+### 期望值是怎么采的
+
+按坐标点按钮要 10 秒一条，改成给参考包插一个广播接收器，直接反射调用它自己的
+`SymjaManager`，1140 条不到 5 秒。流程（需要 root 的模拟器）：
+
+```bash
+adb push corpus.txt /data/local/tmp/
+adb shell cp /data/local/tmp/corpus.txt \
+  /data/data/com.youdao.calculator/files/probe_in.txt
+adb shell am broadcast -n com.youdao.calculator/com.youdao.calculator.probe.ProbeReceiver
+# 等 files/probe_done.txt 出现 OK，再拉 probe_auto.tsv / probe_methods.tsv
+```
+
+探针本体见 `work/probe/src/.../ProbeReceiver.java`，只在插桩版里跑，不随项目分发。
+
 ## 构建
 
 需要 JDK 17。
