@@ -55,6 +55,14 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
             }
         }
 
+        // 求解方程要给不够直白的根补一段数值形式，得在表达式层加工，
+        // 走不了「拼字符串再 TexForm」那条路。
+        if (method == Method.Solve) {
+            SolveFormatter.decorate(engine, formula, EngineSettings.unknown)?.let {
+                return formatOutput(method, it)
+            }
+        }
+
         val symjaFormula = method.buildFormula(formula, EngineSettings.unknown)
         val raw = engine.evaluateAsLatex(symjaFormula)
         if (raw.isEmpty()) return null

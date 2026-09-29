@@ -144,4 +144,31 @@ class EngineRegressionTest {
             session("abs(x)>1").evaluate(Method.SolveIneq),
         )
     }
+
+    // ---------- 求解方程的数值后缀 ----------
+
+    @Test
+    fun `无理根补一段数值形式`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx= \\sqrt{2}= 1.4142135624 \\\\\n" +
+                "x=  - \\sqrt{2}= -1.4142135624 \n\\end{array}\n\\right) ",
+            session("x^2==2").evaluate(Method.Solve),
+        )
+    }
+
+    @Test
+    fun `整数根不补数值形式`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx= -1 \\\\\nx= 1 \n\\end{array}\n\\right) ",
+            session("x^2==1").evaluate(Method.Solve),
+        )
+    }
+
+    @Test
+    fun `有理根不补数值形式`() {
+        assertEquals(
+            "\\left(\n\\begin{array}{c}\nx= \\frac{1}{5} \n\\end{array}\n\\right) ",
+            session("5*x==1").evaluate(Method.Solve),
+        )
+    }
 }
