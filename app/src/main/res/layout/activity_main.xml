@@ -195,20 +195,22 @@
         android:paddingEnd="@dimen/space_large"
         android:paddingBottom="@dimen/space_normal">
 
-        <EditText
+        <!--
+          公式区就是原版那个 MathQuill 编辑器页（assets/matheditor/editor.html）。
+          公式、精确结果、数值结果三块都在页面里渲染，Kotlin 侧只负责算。
+        -->
+        <WebView
             android:id="@+id/editor"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@null"
-            android:gravity="top|start"
-            android:hint="@string/input_hint"
-            android:inputType="textNoSuggestions|textMultiLine"
-            android:textColor="#FFFFFFFF"
-            android:textColorHint="@color/editor_hint"
-            android:textSize="22sp" />
+            android:background="@android:color/transparent"
+            android:scrollbars="none" />
 
-        <!-- 结果区：现在就显示引擎给的 LaTeX 原文，下一步换成 MathJax 渲染 -->
+        <!--
+          这块只用来显示「引擎启动中」这类状态和方法按钮算出来的纯文本。
+          自动预览的结果由编辑器页自己渲染，不走这里。
+        -->
         <TextView
             android:id="@+id/result"
             android:layout_width="match_parent"

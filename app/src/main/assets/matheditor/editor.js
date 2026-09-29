@@ -855,6 +855,17 @@
       return symjaOf();
     },
 
+    /**
+     * 重新算一次当前公式。
+     *
+     * 引擎比编辑器晚就绪时用得上：之前那次 autoResult 只能拿到空串，
+     * 而编辑器自己不会主动重算（公式没变）。
+     */
+    refresh: function () {
+      lastSent = null;
+      compute(formulaField.latex());
+    },
+
     undo: function () {
       if (!undoStack.length) return;
       var previous = undoStack.pop();
