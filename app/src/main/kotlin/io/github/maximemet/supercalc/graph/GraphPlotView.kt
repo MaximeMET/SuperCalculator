@@ -45,6 +45,15 @@ class GraphPlotView @JvmOverloads constructor(
     /** 手势结束（抬手/缩放停止），参考实现在这时候整体重算一次曲线。 */
     var onGestureEnd: (() -> Unit)? = null
 
+    /**
+     * 单击（不含拖动）：参数是触点坐标。
+     *
+     * 参考实现里每个交点是一个独立的可点 View，压在曲线图上；点中谁都由
+     * 系统的触摸分发决定。我们合成一个 View，就只能自己判定了——拿到触点以后
+     * 由调用方去比对各个交点的可点范围。
+     */
+    var onTap: ((Float, Float) -> Unit)? = null
+
     private var scaleEndTime = -1L
 
     private val scaleDetector = ScaleGestureDetector(
@@ -72,6 +81,12 @@ class GraphPlotView @JvmOverloads constructor(
 
             /** 参考实现的双击只消费事件，不做动作。 */
             override fun onDoubleTap(e: MotionEvent): Boolean = true
+
+            /** 单击（拖动过就不算）：对应参考实现里 ScaleView 的 onClick。 */
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                onTap?.invoke(e.x, e.y)
+                return true
+            }
         },
     )
 
@@ -133,6 +148,20 @@ class GraphPlotView @JvmOverloads constructor(
         }
 
     /**
+     * 点中交点时套上去的白圈（屏幕坐标）。
+     *
+     * 参考实现里它是个独立 View（`ll_graph_intersect_highlight`），但**压在所有
+     * XML 子 View 下面**：刻度层是后加进去的，所以竖轴那条线会从白圈上穿过去。
+     * 实测原版截图确实如此（白圈正中那 1px 是轴色 `#6B7176`），所以这里也在
+     * 「曲线之上、刻度线之下」的位置画。
+     */
+    var highlight: Pair<Float, Float>? = null
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /**
      * 曲线的临时变换矩阵。
      *
      * 参考实现把曲线画在 `mScaleMatrix` 下：双指缩放时曲线立刻跟着缩放，
@@ -186,6 +215,13 @@ class GraphPlotView @JvmOverloads constructor(
         style = Paint.Style.FILL
     }
 
+    /** 高亮圈的画法：参考实现用的是白色实心 oval drawable。 */
+    private val highlightPaint = Paint().apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
     /** 刻度文字高度：参考实现按 `bottom - top` 取整后乘 3 当作 View 的高度。 */
     private val textHeight: Int
         get() {
@@ -218,9 +254,17 @@ class GraphPlotView @JvmOverloads constructor(
         // 参考实现只在「没在缩放」的时候画准线/渐近线
         if (matrix == null) drawExtraLines(canvas, axes)
         canvas.restoreToCount(save)
+        // 白圈画在刻度线下面（见 highlight 的注释：原版的层级就是这样）
+        drawHighlight(canvas)
         drawHorizontalAxisLabels(canvas, axes)
         drawVerticalAxisLabels(canvas, axes)
         drawSpecialPoints(canvas, axes)
+    }
+
+    private fun drawHighlight(canvas: Canvas) {
+        val point = highlight ?: return
+        val radius = resources.getDimensionPixelSize(R.dimen.graph_highlight_diameter) / 2f
+        canvas.drawCircle(point.first, point.second, radius, highlightPaint)
     }
 
     private fun drawCurves(canvas: Canvas) {
@@ -351,7 +395,8 @@ class GraphPlotView @JvmOverloads constructor(
 
     private fun drawSpecialPoints(canvas: Canvas, axes: GraphAxes) {
         val radius = resources.getDimensionPixelSize(R.dimen.graph_point_radis).toFloat()
-        val all = specialPoints.map { it.x to it.y } + intersections.map { it.x to it.y }
+        val all = specialPoints.map { it.x to it.y } +
+            intersections.filter { it.valid }.map { it.x to it.y }
         all.forEach { (x, y) ->
             canvas.drawCircle(
                 axes.toDisplayX(x.toFloat()),

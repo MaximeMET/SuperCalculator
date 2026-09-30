@@ -82,7 +82,12 @@
             android:textSize="@dimen/text_12sp"
             android:visibility="invisible" />
 
-        <!-- 交点的浮层，M4 后续步骤再接 -->
+        <!--
+          交点气泡。参考实现里它平时是 invisible、第一次点开时被 remove + add 到
+          容器末尾（提到最上层），所以我们也让它当最后一个子 View。
+          点中的白圈不在这里：原版的圈被刻度层盖住，得画在画布中间层，
+          见 GraphPlotView.highlight。
+        -->
         <TextView
             android:id="@+id/graph_intersect_info"
             android:layout_width="wrap_content"
@@ -91,14 +96,6 @@
             android:background="@drawable/bg_corner_part_transparent"
             android:text="@string/graph_intersection"
             android:textColor="@color/white"
-            android:visibility="invisible" />
-
-        <View
-            android:id="@+id/graph_intersect_highlight"
-            android:layout_width="@dimen/graph_highlight_diameter"
-            android:layout_height="@dimen/graph_highlight_diameter"
-            android:layout_gravity="center"
-            android:background="@drawable/bg_graph_point_highlight"
             android:visibility="invisible" />
     </FrameLayout>
 

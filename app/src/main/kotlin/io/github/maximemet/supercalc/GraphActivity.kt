@@ -3,6 +3,8 @@ package io.github.maximemet.supercalc
 import android.os.Bundle
 import android.graphics.Matrix
 import android.util.Log
+import android.view.View
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -12,12 +14,16 @@ import io.github.maximemet.supercalc.databinding.ActivityGraphBinding
 import io.github.maximemet.supercalc.engine.ConicType
 import io.github.maximemet.supercalc.engine.ExtraLine
 import io.github.maximemet.supercalc.engine.GraphFunction
+import io.github.maximemet.supercalc.engine.GraphExtra
 import io.github.maximemet.supercalc.engine.GraphPlot
 import io.github.maximemet.supercalc.engine.Method
+import io.github.maximemet.supercalc.engine.SpecialPointKind
 import io.github.maximemet.supercalc.engine.SymjaEngine
 import io.github.maximemet.supercalc.graph.GraphAxes
 import io.github.maximemet.supercalc.graph.GraphPoint
+import java.util.Locale
 import java.util.concurrent.Executors
+import kotlin.math.abs
 
 /**
  * 图像结果页。
@@ -44,6 +50,21 @@ class GraphActivity : AppCompatActivity() {
 
     /** 当前图的准线 / 渐近线。 */
     private var extraLines: List<ExtraLine> = emptyList()
+
+    /** 当前图上每条函数的定义，点气泡时要拿它判断「这个点落在哪几条曲线上」。 */
+    private var functions: List<List<GraphFunction>> = emptyList()
+
+    /**
+     * 每条函数的「固定点」，按函数的显示顺序分组：
+     * 焦点 / 中心点 / 最小值 / 最大值，然后是与 y 轴的交点。
+     *
+     * 参考实现把这几种点放在同一个桶（`intersectCalculed[i*2][i*2]`）里，
+     * 点开气泡时**按这个顺序**逐条 `near()` 匹配、拼文字，所以顺序要保留。
+     */
+    private var fixedPoints: List<List<GraphPoint>> = emptyList()
+
+    /** 图上所有能点的小白点：固定点 + 与 x 轴交点 + 函数之间的交点。 */
+    private var tapPoints: List<GraphPoint> = emptyList()
 
     /** 公式（Symja 形式，多函数用字面 `\n` 分隔）。 */
     private var symjaFormula: String = ""
@@ -98,6 +119,7 @@ class GraphActivity : AppCompatActivity() {
         binding.graphView.onTranslate = { dx, dy -> handleTranslate(dx, dy) }
         binding.graphView.onScale = { factor, fx, fy -> handleScale(factor, fx, fy) }
         binding.graphView.onGestureEnd = { handleGestureEnd() }
+        binding.graphView.onTap = { x, y -> handleGraphTap(x, y) }
         Log.d(
             TAG,
             "axes: w=$windowWidth h=$windowHeight toolbar=$toolbarHeight " +
@@ -120,15 +142,15 @@ class GraphActivity : AppCompatActivity() {
             // 参考实现是**从最后一段往前**取函数的：公式里最后一行画成第 1 条（橙色）。
             // `{y=x+1 \n y=2x+3}` 里橙线是 2x+3、蓝线是 x+1，就是这么来的。
             val picked = formulas.takeLast(MAX_FUNCTIONS).reversed()
-            val functions = picked
+            val parsed = picked
                 .map { GraphPlot.functions(engine, it) }
-            if (functions.all { it.isEmpty() }) {
+            if (parsed.all { it.isEmpty() }) {
                 runOnUiThread {
                     Toast.makeText(this, R.string.toast_graph_cannotdraw, Toast.LENGTH_SHORT).show()
                 }
                 return@execute
             }
-            val zoomTimes = initialZoomTimes(functions, axes)
+            val zoomTimes = initialZoomTimes(parsed, axes)
             if (zoomTimes > 1) {
                 axes.applyInitialZoom(zoomTimes)
                 Log.d(
@@ -138,52 +160,93 @@ class GraphActivity : AppCompatActivity() {
                 )
             }
             val sampled = ArrayList<Curve>()
-            functions.forEachIndexed { index, branches ->
+            parsed.forEachIndexed { index, branches ->
                 branches.forEach { branch -> sampled += sample(branch, index, axes) }
             }
             // 每条函数都算一次特殊点（焦点/中心/极值）；准线、渐近线只有单函数才画
             val extras = picked.map { runCatching { GraphPlot.extraInfo(engine, it) }.getOrNull() }
-            val lines = if (functions.size == 1) extras.firstOrNull()?.lines.orEmpty() else emptyList()
-            val points = extras.filterNotNull()
-                .filter { it.type != ConicType.OTHER }
-                .flatMap { it.points }
-            val intersections = findIntersections(functions, axes)
+            val lines = if (parsed.size == 1) extras.firstOrNull()?.lines.orEmpty() else emptyList()
+            // 每条函数一组固定点（顺序：焦点/中心/极值，再是 y 轴交点）
+            val fixed = parsed.mapIndexed { index, branches ->
+                fixedPointsOf(index, branches, extras.getOrNull(index)?.takeIf { it.type != ConicType.OTHER })
+            }
+            val (xAxis, pairs) = findXAxisAndPairIntersections(parsed, axes)
+            // 画的顺序 = 参考实现加 View 的顺序：固定点、x 轴交点，最后是函数之间的交点
+            val dots = fixed.flatten() + xAxis + pairs
             runOnUiThread {
                 curves = sampled
+                this.functions = parsed
+                this.fixedPoints = fixed
+                this.tapPoints = dots
                 this.extraLines = lines
                 curveMatrix.reset()
                 view.curveMatrix = null
                 publish()
-                view.specialPoints = points
-                view.intersections = intersections
+                // 特殊点也走 intersections（它们本来就要能点），specialPoints 留空
+                view.specialPoints = emptyList()
+                view.intersections = dots
+                hideIntersectInfo()
             }
         }
     }
 
     /**
-     * 交点：每条函数与 y 轴、与 x 轴，以及函数与函数之间的交点。
+     * 一条函数的固定点：焦点/中心点/最小值/最大值，以及和 y 轴的交点 `(0, f(0))`。
+     *
+     * 参考实现 `parseExtraInfo()` 在解析函数时就把特殊点加进桶里，`initIntersects()`
+     * 之后再加 y 轴交点，所以这里的顺序也是「先特殊点、后 y 轴交点」。
+     */
+    private fun fixedPointsOf(
+        index: Int,
+        branches: List<GraphFunction>,
+        extra: GraphExtra?,
+    ): List<GraphPoint> {
+        val out = ArrayList<GraphPoint>()
+        extra?.points?.forEach { point ->
+            val name = when (point.kind) {
+                SpecialPointKind.FOCUS -> "焦点"
+                SpecialPointKind.CENTER -> "中心点"
+                SpecialPointKind.MIN -> "最小值"
+                SpecialPointKind.MAX -> "最大值"
+            }
+            out += GraphPoint(point.x, point.y, "\n${index + 1}的$name")
+        }
+        branches.forEach { branch ->
+            branch.valueAt(0.0)?.takeIf { it.isFinite() }?.let {
+                out += GraphPoint(0.0, it, "\n${index + 1}与y轴交点")
+            }
+        }
+        return out
+    }
+
+    /**
+     * 每条函数与 x 轴的交点，以及函数与函数之间的交点。
      *
      * 参考实现是逐个拿 Symja `Solve` 解出来的（`parseAddIntersect()`，和我们一样先解出 x
      * 再算 y）；这里改成在可见范围内找变号点、再二分细化——位置一致，还免去拼表达式字符串。
+     *
+     * 返回值的第二个元素（函数之间的交点）在参考实现里不进「固定点」桶，
+     * 点开时文字由「点落在哪些曲线上」现推，所以单独放。
      */
-    private fun findIntersections(
+    private fun findXAxisAndPairIntersections(
         functions: List<List<GraphFunction>>,
         axes: GraphAxes,
-    ): List<GraphPoint> {
-        val out = ArrayList<GraphPoint>()
+    ): Pair<List<GraphPoint>, List<GraphPoint>> {
+        val xAxisPoints = ArrayList<GraphPoint>()
+        val pairs = ArrayList<GraphPoint>()
         val left = axes.toCoordX(SAMPLE_START).toDouble()
         val right = axes.toCoordX(axes.idealMax[0]).toDouble()
         // 屏幕 4px 一步，细到不会漏掉挨得近的两个根
         val step = (4.0 / axes.ratioX).toDouble().let { if (it > 0) it else 1.0 }
 
-        fun add(x: Double, y: Double, label: String) {
+        fun add(into: ArrayList<GraphPoint>, x: Double, y: Double, label: String) {
             if (!x.isFinite() || !y.isFinite()) return
             // 同一位置不重复叠点（参考实现的 insertSort 也会去重）
-            val near = out.any { kotlin.math.abs(it.x - x) < 1e-3 && kotlin.math.abs(it.y - y) < 1e-3 }
-            if (!near) out += GraphPoint(x, y, label)
+            val near = into.any { abs(it.x - x) < 1e-3 && abs(it.y - y) < 1e-3 }
+            if (!near) into += GraphPoint(x, y, label)
         }
 
-        fun scan(left: Double, right: Double, f: (Double) -> Double?, label: String) {
+        fun scan(into: ArrayList<GraphPoint>, f: (Double) -> Double?, label: String) {
             var px = left
             var py = f(px)
             var x = left + step
@@ -192,7 +255,7 @@ class GraphActivity : AppCompatActivity() {
                 if (py != null && y != null && (py > 0) != (y > 0)) {
                     bisect(px, x, f)?.let { root ->
                         val value = f(root) ?: 0.0
-                        add(root, value, label)
+                        add(into, root, value, label)
                     }
                 }
                 px = x
@@ -203,13 +266,8 @@ class GraphActivity : AppCompatActivity() {
 
         functions.forEachIndexed { index, branches ->
             val first = branches.firstOrNull()
-            branches.forEach { branch ->
-                branch.valueAt(0.0)?.takeIf { it.isFinite() }?.let {
-                    add(0.0, it, "\n${index + 1}与y轴交点")
-                }
-            }
             if (first != null) {
-                scan(left, right, first::valueAt, "\nx轴与${index + 1}交点")
+                scan(xAxisPoints, first::valueAt, "\nx轴与${index + 1}交点")
                 for (j in 0 until index) {
                     val other = functions[j].firstOrNull() ?: continue
                     // 两条函数的差变号 = 交点；细化后 y 取两条曲线的平均值
@@ -228,7 +286,12 @@ class GraphActivity : AppCompatActivity() {
                                 val a = first.valueAt(root)
                                 val b = other.valueAt(root)
                                 if (a != null && b != null) {
-                                    add(root, (a + b) / 2.0, "\n-- ${j + 1}与${index + 1}交点")
+                                    add(
+                                        pairs,
+                                        root,
+                                        (a + b) / 2.0,
+                                        "\n-- ${j + 1}与${index + 1}交点",
+                                    )
                                 }
                             }
                         }
@@ -239,7 +302,7 @@ class GraphActivity : AppCompatActivity() {
                 }
             }
         }
-        return out
+        return xAxisPoints to pairs
     }
 
     /** 二分找零点：两端异号时调用。 */
@@ -375,6 +438,8 @@ class GraphActivity : AppCompatActivity() {
     private fun handleScale(factor: Float, focusX: Float, focusY: Float) {
         val axes = axes ?: return
         if (curves.isEmpty()) return
+        // 参考实现的 scale() 第一件事就是把气泡收起来
+        hideIntersectInfo()
         axes.scaleBy(factor, focusX, focusY)
         curveMatrix.postScale(factor, factor, focusX, focusY)
         scaling = true
@@ -388,6 +453,164 @@ class GraphActivity : AppCompatActivity() {
         if (!scaling) return
         scaling = false
         replot()
+    }
+
+    // ---------------------------------------------------------------
+    // 交点气泡
+    // ---------------------------------------------------------------
+
+    /**
+     * 单击图区：命中交点就弹气泡，没命中就把气泡收起来。
+     *
+     * 参考实现给每个交点建了一个可点的小 View（`mPosOffset` 写死 50px、
+     * `mTouchableDiameter` 30dp），盒子中心对着交点，但**不对称**：
+     * 左上各 50px、右下各 65px（= 50 + 30dp/2）。叠在一起时后加的在上，
+     * 也就是函数之间的交点盖住固定点。
+     */
+    private fun handleGraphTap(tx: Float, ty: Float) {
+        val axes = axes ?: return
+        var hit: GraphPoint? = null
+        tapPoints.forEach { point ->
+            if (!point.valid) return@forEach
+            val sx = axes.toDisplayX(point.x.toFloat())
+            val sy = axes.toDisplayY(point.y.toFloat())
+            if (tx >= sx - POINT_OFFSET && tx <= sx + POINT_TAIL &&
+                ty >= sy - POINT_OFFSET && ty <= sy + POINT_TAIL
+            ) {
+                hit = point
+            }
+        }
+        val point = hit
+        if (point == null) {
+            hideIntersectInfo()
+            return
+        }
+        showIntersectInfo(axes, point)
+    }
+
+    /**
+     * 气泡的文字与位置，逐条对应参考实现 `IntersectionView.onClick()`。
+     *
+     * 文字 = 坐标 + 附加说明。坐标按当前刻度精度格式化再去掉末尾的 0；附加说明：
+     *  - 正好落在原点上 → 「原点」；
+     *  - 附近有固定点（焦点/中心/极值/y 轴交点）→ 直接接上它的说明；
+     *  - 点落在曲线上 → 「1,2的交点」；在 x 轴上时写成「2与x轴的交点」；
+     *  - 什么都不是 → 说明这是缩放后残留的旧点，并把这个点**作废**（不再画、点不动）。
+     *
+     * 位置：左下角贴在交点下方 `2 × 半径` 处，横向按**上一段文字**的宽度居中——
+     * 这是原版的写法（先读 `getWidth()` 再 `setText()`），第一次点开的偏移量
+     * 就是占位文字「交点」的半个宽度，我们照抄。
+     */
+    private fun showIntersectInfo(axes: GraphAxes, point: GraphPoint) {
+        val xPrecision = labelPrecision(axes.labelUnitX)
+        val yPrecision = labelPrecision(axes.labelUnitY)
+        val xTolerance = Math.pow(10.0, -xPrecision.toDouble()).toFloat()
+        val yTolerance = Math.pow(10.0, -yPrecision.toDouble()).toFloat()
+        val x = point.x.toFloat()
+        val y = point.y.toFloat()
+
+        val text = StringBuilder("(")
+        var onXAxis = false
+        var onYAxis = false
+        if (xPrecision >= 0) {
+            val v = trimTailZeros(String.format(Locale.US, "%.${xPrecision}f", x))
+            text.append(v)
+            if (v == "0") onYAxis = true
+        } else if (x < xTolerance) {
+            // 参考实现这里没取绝对值，负坐标也会落到「0」——原样照抄
+            text.append("0")
+            onYAxis = true
+        } else {
+            text.append(trimTailZeros(String.format(Locale.US, "%.2g", x)))
+        }
+        text.append(", ")
+        if (yPrecision >= 0) {
+            val v = trimTailZeros(String.format(Locale.US, "%.${yPrecision}f", y))
+            text.append(v)
+            if (v == "0") onXAxis = true
+        } else if (y < yTolerance) {
+            text.append("0")
+            onXAxis = true
+        } else {
+            text.append(trimTailZeros(String.format(Locale.US, "%.2g", y)))
+        }
+        text.append(")")
+
+        var hasOtherInfo = false
+        if (onXAxis && onYAxis) {
+            text.append("\n原点")
+            hasOtherInfo = true
+        }
+        // 固定点：按函数顺序逐条比对，命中就把它的说明接上
+        fixedPoints.forEach { group ->
+            group.forEach { other ->
+                if (abs(other.x - point.x) <= xTolerance && abs(other.y - point.y) <= yTolerance) {
+                    hasOtherInfo = true
+                    text.append(other.label)
+                }
+            }
+        }
+        // 「这个点在哪几条曲线上」：容差是纵向每格的 5%。
+        // 参考实现的写法是 `(-0.05f) * getLabelUnit(Y)`——它的 labelUnitY 是负数
+        // （y 轴向下为正），负负得正。我们这里 labelUnitY 同样是负的，照抄即可。
+        val through = StringBuilder()
+        val tolerance = -0.05 * axes.labelUnitY
+        functions.forEachIndexed { index, branches ->
+            val on = branches.any { branch ->
+                branch.valueAt(point.x)?.let { abs(it - point.y) <= tolerance } ?: false
+            }
+            if (on) through.append(index + 1).append(",")
+        }
+        val length = through.length
+        if (length > 0) {
+            through.deleteCharAt(length - 1)
+            if (onXAxis) through.append("与x轴")
+            if (length > 2 || onXAxis) {
+                text.append("\n").append(through).append("的交点")
+                hasOtherInfo = true
+            }
+        }
+        if (!hasOtherInfo) {
+            text.append(point.label)
+            text.append("\n因缩放精度误差位置不准了,点别处我就消失\n双指放大图像,交点会算的更准")
+            point.valid = false
+            binding.graphView.invalidate()
+        }
+
+        val info = binding.graphIntersectInfo
+        val oldWidth = info.width
+        info.text = text
+        val radius = resources.getDimensionPixelSize(R.dimen.graph_point_radis)
+        val sx = axes.toDisplayX(x)
+        val sy = axes.toDisplayY(y)
+        info.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT,
+        ).apply {
+            setMargins((sx - oldWidth / 2f).toInt(), (sy + 2 * radius).toInt(), 0, 0)
+        }
+        info.visibility = View.VISIBLE
+        // 白圈画在画布里：参考实现在刻度线下面（见 GraphPlotView.highlight）
+        binding.graphView.highlight = sx to sy
+    }
+
+    /** 对应参考实现 `CalculatorGraphActivity.hideIntersectInfoView()`：两个浮层一起收起来。 */
+    private fun hideIntersectInfo() {
+        binding.graphIntersectInfo.visibility = View.GONE
+        binding.graphView.highlight = null
+    }
+
+    /** 参考实现 `IntersectionView.setAxisInfo()` 里那一行：刻度精度 = 2 - log10(每格数值)。 */
+    private fun labelPrecision(unit: Float): Int =
+        2 - Math.log10(abs(unit).toDouble()).toInt()
+
+    /** 参考实现 `StringUtils.replaceTailZeros(str, true)`：去掉小数末尾的 0 和光秃秃的小数点。 */
+    private fun trimTailZeros(value: String): String {
+        if (!value.contains(".") || value.contains("e")) return value
+        var out = value.trimEnd('0')
+        if (out == "-0.") out = "0."
+        if (out.endsWith(".")) out = out.dropLast(1)
+        return out
     }
 
     /** 用当前坐标轴重算曲线（后台线程，算完回主线程替换）。 */
@@ -427,6 +650,12 @@ class GraphActivity : AppCompatActivity() {
 
         /** 纵向夹取范围，对应参考实现的「太大了就贴到很远的地方」。 */
         const val CLAMP = 1e6
+
+        /** 参考实现 `IntersectionView.mPosOffset`：可点盒子的左上偏移（写死的像素值）。 */
+        private const val POINT_OFFSET = 50f
+
+        /** 可点盒子的右下偏移：50 + 30dp/2 = 65px（density 3 的那台设备上）。 */
+        private const val POINT_TAIL = 65f
 
         const val EXTRA_SYMJA_FORMAT = "symja_format"
         const val EXTRA_SYMJA_LATEX = "latex_formula"
