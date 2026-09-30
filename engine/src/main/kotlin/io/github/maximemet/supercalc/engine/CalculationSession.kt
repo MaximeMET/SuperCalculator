@@ -27,9 +27,24 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
     private var lastPreview: String = ""
 
     fun setFormula(formula: String, latex: String) {
-        this.formula = formula
+        // 参考实现 SymjaManager.parseMultilineFormula()：在**最后一个**换行符处切开，
+        // 换行符之前的部分进 lastFormula（方程组/不等式组用），之后的部分才是当前行。
+        // 分隔符是 `\newline` 命令自己的 symja 输出，即字面量「反斜杠 + n」。
+        var current = formula
+        var previous = ""
+        val p = current.lastIndexOf(Method.NEWLINE)
+        if (p >= 0) {
+            previous = if (p > 0 && current[p - 1] == '*') {
+                current.substring(0, p - 1)
+            } else {
+                current.substring(0, p)
+            }
+            current = current.substring(p + Method.NEWLINE.length)
+            if (current.startsWith("*")) current = current.substring(1)
+        }
+        this.formula = current
         this.latex = latex
-        this.lastFormula = ""
+        this.lastFormula = previous
         this.lastPreview = ""
     }
 
@@ -63,7 +78,14 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
             }
         }
 
-        val symjaFormula = method.buildFormula(formula, EngineSettings.unknown)
+        // 方程组/不等式组要把前面几行一起送进引擎，未知数也按实际出现的符号给。
+        val (input, unknown) = if (method == Method.Solve2 || method == Method.SolveIneq2) {
+            val all = Method.allFormula(lastFormula, formula)
+            all to Method.unknowns(all)
+        } else {
+            formula to EngineSettings.unknown
+        }
+        val symjaFormula = method.buildFormula(input, unknown)
         val raw = engine.evaluateAsLatex(symjaFormula)
         if (raw.isEmpty()) return null
         return formatOutput(method, raw)

@@ -125,6 +125,13 @@ class GraphPlotView @JvmOverloads constructor(
             invalidate()
         }
 
+    /** 交点（与坐标轴、函数之间）：和特殊点一样画成白色小圆点。 */
+    var intersections: List<GraphPoint> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     /**
      * 曲线的临时变换矩阵。
      *
@@ -344,10 +351,11 @@ class GraphPlotView @JvmOverloads constructor(
 
     private fun drawSpecialPoints(canvas: Canvas, axes: GraphAxes) {
         val radius = resources.getDimensionPixelSize(R.dimen.graph_point_radis).toFloat()
-        specialPoints.forEach { point ->
+        val all = specialPoints.map { it.x to it.y } + intersections.map { it.x to it.y }
+        all.forEach { (x, y) ->
             canvas.drawCircle(
-                axes.toDisplayX(point.x.toFloat()),
-                axes.toDisplayY(point.y.toFloat()),
+                axes.toDisplayX(x.toFloat()),
+                axes.toDisplayY(y.toFloat()),
                 radius,
                 pointPaint,
             )

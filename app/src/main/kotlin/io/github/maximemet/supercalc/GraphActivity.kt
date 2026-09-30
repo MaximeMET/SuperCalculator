@@ -16,6 +16,7 @@ import io.github.maximemet.supercalc.engine.GraphPlot
 import io.github.maximemet.supercalc.engine.Method
 import io.github.maximemet.supercalc.engine.SymjaEngine
 import io.github.maximemet.supercalc.graph.GraphAxes
+import io.github.maximemet.supercalc.graph.GraphPoint
 import java.util.concurrent.Executors
 
 /**
@@ -116,7 +117,10 @@ class GraphActivity : AppCompatActivity() {
         }
         val view = binding.graphView
         executor.execute {
-            val functions = formulas.take(MAX_FUNCTIONS)
+            // 参考实现是**从最后一段往前**取函数的：公式里最后一行画成第 1 条（橙色）。
+            // `{y=x+1 \n y=2x+3}` 里橙线是 2x+3、蓝线是 x+1，就是这么来的。
+            val picked = formulas.takeLast(MAX_FUNCTIONS).reversed()
+            val functions = picked
                 .map { GraphPlot.functions(engine, it) }
             if (functions.all { it.isEmpty() }) {
                 runOnUiThread {
@@ -124,14 +128,26 @@ class GraphActivity : AppCompatActivity() {
                 }
                 return@execute
             }
+            val zoomTimes = initialZoomTimes(functions, axes)
+            if (zoomTimes > 1) {
+                axes.applyInitialZoom(zoomTimes)
+                Log.d(
+                    TAG,
+                    "initial zoom x$zoomTimes labelUnit=(${axes.labelUnitX},${axes.labelUnitY}) " +
+                        "zero=(${axes.zeroX},${axes.zeroY})",
+                )
+            }
             val sampled = ArrayList<Curve>()
             functions.forEachIndexed { index, branches ->
                 branches.forEach { branch -> sampled += sample(branch, index, axes) }
             }
-            // 参考实现只给「单条函数」算特殊点/准线
-            val extra = if (functions.size == 1) GraphPlot.extraInfo(engine, formulas.last()) else null
-            val lines = extra?.lines.orEmpty()
-            val points = if (extra == null || extra.type == ConicType.OTHER) emptyList() else extra.points
+            // 每条函数都算一次特殊点（焦点/中心/极值）；准线、渐近线只有单函数才画
+            val extras = picked.map { runCatching { GraphPlot.extraInfo(engine, it) }.getOrNull() }
+            val lines = if (functions.size == 1) extras.firstOrNull()?.lines.orEmpty() else emptyList()
+            val points = extras.filterNotNull()
+                .filter { it.type != ConicType.OTHER }
+                .flatMap { it.points }
+            val intersections = findIntersections(functions, axes)
             runOnUiThread {
                 curves = sampled
                 this.extraLines = lines
@@ -139,9 +155,170 @@ class GraphActivity : AppCompatActivity() {
                 view.curveMatrix = null
                 publish()
                 view.specialPoints = points
+                view.intersections = intersections
             }
         }
     }
+
+    /**
+     * 交点：每条函数与 y 轴、与 x 轴，以及函数与函数之间的交点。
+     *
+     * 参考实现是逐个拿 Symja `Solve` 解出来的（`parseAddIntersect()`，和我们一样先解出 x
+     * 再算 y）；这里改成在可见范围内找变号点、再二分细化——位置一致，还免去拼表达式字符串。
+     */
+    private fun findIntersections(
+        functions: List<List<GraphFunction>>,
+        axes: GraphAxes,
+    ): List<GraphPoint> {
+        val out = ArrayList<GraphPoint>()
+        val left = axes.toCoordX(SAMPLE_START).toDouble()
+        val right = axes.toCoordX(axes.idealMax[0]).toDouble()
+        // 屏幕 4px 一步，细到不会漏掉挨得近的两个根
+        val step = (4.0 / axes.ratioX).toDouble().let { if (it > 0) it else 1.0 }
+
+        fun add(x: Double, y: Double, label: String) {
+            if (!x.isFinite() || !y.isFinite()) return
+            // 同一位置不重复叠点（参考实现的 insertSort 也会去重）
+            val near = out.any { kotlin.math.abs(it.x - x) < 1e-3 && kotlin.math.abs(it.y - y) < 1e-3 }
+            if (!near) out += GraphPoint(x, y, label)
+        }
+
+        fun scan(left: Double, right: Double, f: (Double) -> Double?, label: String) {
+            var px = left
+            var py = f(px)
+            var x = left + step
+            while (x <= right) {
+                val y = f(x)
+                if (py != null && y != null && (py > 0) != (y > 0)) {
+                    bisect(px, x, f)?.let { root ->
+                        val value = f(root) ?: 0.0
+                        add(root, value, label)
+                    }
+                }
+                px = x
+                py = y
+                x += step
+            }
+        }
+
+        functions.forEachIndexed { index, branches ->
+            val first = branches.firstOrNull()
+            branches.forEach { branch ->
+                branch.valueAt(0.0)?.takeIf { it.isFinite() }?.let {
+                    add(0.0, it, "\n${index + 1}与y轴交点")
+                }
+            }
+            if (first != null) {
+                scan(left, right, first::valueAt, "\nx轴与${index + 1}交点")
+                for (j in 0 until index) {
+                    val other = functions[j].firstOrNull() ?: continue
+                    // 两条函数的差变号 = 交点；细化后 y 取两条曲线的平均值
+                    fun diff(x: Double): Double? {
+                        val a = first.valueAt(x) ?: return null
+                        val b = other.valueAt(x) ?: return null
+                        return a - b
+                    }
+                    var px = left
+                    var py = diff(px)
+                    var x = left + step
+                    while (x <= right) {
+                        val y = diff(x)
+                        if (py != null && y != null && (py > 0) != (y > 0)) {
+                            bisect(px, x, ::diff)?.let { root ->
+                                val a = first.valueAt(root)
+                                val b = other.valueAt(root)
+                                if (a != null && b != null) {
+                                    add(root, (a + b) / 2.0, "\n-- ${j + 1}与${index + 1}交点")
+                                }
+                            }
+                        }
+                        px = x
+                        py = y
+                        x += step
+                    }
+                }
+            }
+        }
+        return out
+    }
+
+    /** 二分找零点：两端异号时调用。 */
+    private fun bisect(left: Double, right: Double, f: (Double) -> Double?): Double? {
+        var a = left
+        var b = right
+        var fa = f(a) ?: return null
+        repeat(60) {
+            val m = (a + b) / 2
+            val fm = f(m) ?: return null
+            if ((fa > 0) == (fm > 0)) {
+                a = m
+                fa = fm
+            } else {
+                b = m
+            }
+        }
+        return (a + b) / 2
+    }
+
+    /**
+     * 参考实现 `ScaleGraphView.initAll()` / `roughEstimateGraph()`：
+     *
+     * 默认视野是 `±scope`（`scope = 纵轴格数/4 × 每格数值` = 15/4 × 2 = 7.5），
+     * 每条函数沿当前视野每 250 屏幕像素粗估一次 y 范围；只要有一条函数整个
+     * 跑到视野外（最小值在视野上方、或最大值在视野下方），就把刻度单位
+     * 按 2 的幂放大，视野跟着变大。
+     */
+    private fun initialZoomTimes(functions: List<List<GraphFunction>>, axes: GraphAxes): Int {
+        var zoomTimes = 1
+        var scope = (GraphAxes.Y_COUNT / 4f) * (-GraphAxes.DEFAULT_LABEL_UNIT_Y)
+        var maxAxisY = scope
+        var minAxisY = -scope
+        // 参考实现里的 tooBigScreenCoor：粗估时的夹取范围，用 X 轴的参考点算（原版如此）
+        val tooBig = run {
+            val raw = (1e6f - axes.originX) / axes.ratioX + axes.labelX0
+            (if (raw < 0f) -raw else raw) + 2f
+        }
+        functions.forEach { branches ->
+            val branch = branches.firstOrNull() ?: return@forEach
+            var ymin = Float.MAX_VALUE
+            var ymax = -Float.MAX_VALUE
+            var any = false
+            fun scan(screenX: Float) {
+                val value = branch.valueAt(axes.toCoordX(screenX).toDouble()) ?: return
+                if (value.isNaN()) return
+                val y = value.coerceIn(-tooBig.toDouble(), tooBig.toDouble()).toFloat()
+                if (y < ymin) ymin = y
+                if (y > ymax) ymax = y
+                any = true
+            }
+            var x = SAMPLE_START
+            while (x < axes.idealMax[0]) {
+                scan(x)
+                x += GraphAxes.ESTIMATE_STEP
+            }
+            scan(axes.idealMax[0])
+            if (!any) {
+                // 参考实现的兜底：估不出范围就当成 defaultBigGraphLabel（100）
+                ymin = GraphAxes.DEFAULT_BIG_LABEL
+                ymax = GraphAxes.DEFAULT_BIG_LABEL
+            }
+            if (ymin > maxAxisY) {
+                zoomTimes = 1 shl (log2((ymin - 0f) / scope).toInt() + 1)
+                scope *= zoomTimes
+                maxAxisY = scope
+                minAxisY = -scope
+            } else if (ymax < minAxisY) {
+                zoomTimes = 1 shl (log2((0f - ymax) / scope).toInt() + 1)
+                scope *= zoomTimes
+                maxAxisY = scope
+                minAxisY = -scope
+            }
+        }
+        return zoomTimes
+    }
+
+    private fun log2(value: Float): Float =
+        (Math.log(value.toDouble()) / Math.log(2.0)).toFloat()
 
     /**
      * 屏幕空间采样：从左边界到右边界每 [SAMPLE_STEP] 像素取一个点。

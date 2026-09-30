@@ -97,14 +97,15 @@ html {
   cursor: pointer;
 }
 
-/* 长公式左边那条竖线（原版是位图，暂时只留结构） */
+/* 多行公式左边那个花括号（原版是位图，这里按轮廓重画成 SVG） */
 .bracket {
   display: inline-block;
+  height: 100%;
   width: 10px;
   position: absolute;
   left: 0;
 }
-.bracket img { width: 100%; }
+.bracket img { width: 100%; height: 100%; }
 
 /* 引擎启动中 / 方法按钮结果的临时行，M3 的结果页做出来后删 */
 .status {

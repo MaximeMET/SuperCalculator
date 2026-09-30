@@ -66,6 +66,44 @@ enum class Method(
         fun splitDrawFormula(text: String): List<String> =
             DRAW_SEPARATOR.split(text).filter { it.isNotEmpty() }
 
+        /**
+         * 换行分隔符：`\newline` 命令的 symja 输出，就是「反斜杠 + n」两个字符。
+         *
+         * 对应参考实现的 `SettingParams.getNewlineStr()`。
+         */
+        const val NEWLINE = "\\n"
+
+        private val NEWLINE_SEPARATOR = Regex("""\\n""")
+
+        /**
+         * 方程组/不等式组用的完整输入。
+         *
+         * 参考实现 `AbstractMethod.getAllFormula()`：把换行之前的每一段去掉首尾标记，
+         * 用 `, ` 连起来，末尾接上当前行。
+         */
+        fun allFormula(lastFormula: String, formula: String): String {
+            val builder = StringBuilder()
+            NEWLINE_SEPARATOR.split(lastFormula).forEach { raw ->
+                var field = raw
+                // 参考实现这里剥的是 Marker.ANY_MARKER，也就是 '*'（编辑器给行首插的
+                // 占位标记）。我们自己的编辑器不产出它，保留这一步只为逐条对应原版处理。
+                if (field.startsWith(MARKER)) field = field.substring(1)
+                if (field.endsWith("*")) field = field.dropLast(1)
+                if (field.isNotEmpty()) builder.append(field).append(", ")
+            }
+            return builder.append(formula).toString()
+        }
+
+        /**
+         * 参考实现 `AbstractMethod.getUnknowns()`：按 x、y、z 的顺序列出输入里出现的未知数。
+         */
+        fun unknowns(input: String): String =
+            listOf("x", "y", "z").filter { input.contains(it) }
+                .joinToString(separator = ",", prefix = "{", postfix = "}")
+
+        /** 参考实现 `Marker.ANY_MARKER`：行首占位标记。 */
+        private const val MARKER = "*"
+
         /** 定积分只给数值解。 */
         val numericOnly = listOf(Numeric)
 

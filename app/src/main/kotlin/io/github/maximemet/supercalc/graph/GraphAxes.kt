@@ -36,8 +36,13 @@ class GraphAxes(
     var idealPosUnit = 0f
         private set
 
-    var labelUnitX = 2f
-    var labelUnitY = -2f
+    var labelUnitX = DEFAULT_LABEL_UNIT_X
+        private set
+    var labelUnitY = DEFAULT_LABEL_UNIT_Y
+        private set
+
+    private var labelMinX = X_LABEL_MIN
+    private var labelMinY = Y_LABEL_MIN
 
     /** 可视区（容器坐标）。 */
     val idealMin = floatArrayOf(5f, 5f)
@@ -70,13 +75,29 @@ class GraphAxes(
         minIdxX = 0
         minIdxY = 0
         for (i in 0 until X_COUNT) {
-            xLabels += Label(5f + i * posUnit, X_LABEL_MIN + i * labelUnitX)
+            xLabels += Label(5f + i * posUnit, labelMinX + i * labelUnitX)
         }
         for (i in 0 until Y_COUNT) {
-            yLabels += Label(5f + i * posUnit, Y_LABEL_MIN + i * labelUnitY)
+            yLabels += Label(5f + i * posUnit, labelMinY + i * labelUnitY)
         }
         moveZero()
         refreshVisibility()
+    }
+
+    /**
+     * 开局自动缩放：参考实现 `ScaleGraphView.initAll()` 算出的 `zoomTimes`。
+     *
+     * 倍数大于 1 时，两个方向的刻度步长一起乘以它，起点也跟着挪：
+     * 参考实现里 X 的起点用的是 **Y 的步长**（`(cntX/4) * labelUnitY`），
+     * 所以纵轴标签从 `96` 起、横轴标签从 `-64` 起——照抄。
+     */
+    fun applyInitialZoom(zoomTimes: Int) {
+        if (zoomTimes <= 1) return
+        labelUnitX = DEFAULT_LABEL_UNIT_X * zoomTimes
+        labelUnitY = DEFAULT_LABEL_UNIT_Y * zoomTimes
+        labelMinX = (X_COUNT / 4) * labelUnitY
+        labelMinY = (Y_COUNT / 4) * (-labelUnitY)
+        reset()
     }
 
     /**
@@ -264,6 +285,14 @@ class GraphAxes(
         const val Y_COUNT = 15
         const val X_LABEL_MIN = -4f
         const val Y_LABEL_MIN = 8f
+        const val DEFAULT_LABEL_UNIT_X = 2f
+        const val DEFAULT_LABEL_UNIT_Y = -2f
+
+        /** 参考实现里的 `R.integer.defaultBigGraphLabel`：粗估不到范围时的兜底值。 */
+        const val DEFAULT_BIG_LABEL = 100f
+
+        /** 参考实现 `roughEstimateGraph()` 的采样间距（屏幕像素）。 */
+        const val ESTIMATE_STEP = 250f
 
         /** 刻度文字：`%.4g` 去尾零，和参考实现一致。 */
         fun formatLabel(value: Float): String {

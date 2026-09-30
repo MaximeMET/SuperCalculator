@@ -801,6 +801,7 @@
     restoring = false;
     current = formulaField.latex();
     notifyEmpty(current);
+    fitBracket(current);
   }
 
   // ---------------------------------------------------------------
@@ -815,10 +816,35 @@
     var latex = formulaField.latex();
     pushHistory(latex);
     notifyEmpty(latex);
+    fitBracket(latex);
     if (timer) window.clearTimeout(timer);
     timer = window.setTimeout(function () {
       compute(latex);
     }, DEBOUNCE_MS);
+  }
+
+  /**
+   * 多行公式左边那个花括号。
+   *
+   * 原版 `Matharea.fitBracket(latex)`：数 latex 里 `newline` 出现的次数，
+   * 一行时藏起来，2~7 行用矮的那张、8 行以上换高的那张，图片被拉到容器高度。
+   * 两张图是我们按原版位图的轮廓重画的 SVG。
+   */
+  function fitBracket(latex) {
+    var div = document.getElementById('bracketDiv');
+    var img = document.getElementById('bracketImg');
+    var container = document.getElementById('leftContainer');
+    if (!div || !img || !container) return;
+
+    var matches = String(latex || '').match(/newline/gi);
+    var lines = matches ? matches.length + 1 : 1;
+    if (lines <= 1) {
+      div.style.display = 'none';
+      return;
+    }
+    img.src = (lines <= 7 ? 'bracket-2-7.svg' : 'bracket-8.svg');
+    div.style.height = container.offsetHeight + 'px';
+    div.style.display = '';
   }
 
   /**
