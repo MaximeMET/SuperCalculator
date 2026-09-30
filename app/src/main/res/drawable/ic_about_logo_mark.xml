@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  项目标记：一条根号 + 一个等号（「开方」和「等于」是计算器最核心的两个符号）。
+
+  viewport 512 对应 90dp 见方，和 bg_about_logo 一起组成「关于我们」里的图标。
+  同一套几何在启动图标里复用，见 tools/make_launcher_icon.py。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="90dp"
+    android:height="90dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- 根号：斜下、折返、再横拉出被开方数的上划线 -->
+    <path
+        android:pathData="M56,272 L114,334 L190,156 L322,156"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="30"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- 等号 -->
+    <path
+        android:fillColor="@color/brand_accent"
+        android:pathData="M362,208 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+    <path
+        android:fillColor="@color/brand_accent"
+        android:pathData="M362,280 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+</vector>

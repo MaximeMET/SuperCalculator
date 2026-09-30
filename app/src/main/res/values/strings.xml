@@ -51,11 +51,9 @@
     <string name="navigation_settings">设置</string>
     <string name="navigation_feedback">反馈</string>
     <string name="navigation_shareme">推荐给朋友</string>
-    <string name="navigation_game">超级24点</string>
     <string name="navigation_history">历史记录</string>
 
     <string name="action_more">更多</string>
-    <string name="game_not_ready">超级24点还没做（M5）</string>
 
     <!-- 设置页 -->
     <string name="setting_group_regular">常规</string>
@@ -65,14 +63,15 @@
     <string name="setting_example_visibility">举例展示</string>
     <string name="setting_fraction">保留小数位</string>
     <string name="setting_process_visibility">过程展示</string>
-    <string name="setting_feedback_announce">推荐加入超级计算器QQ群：530100431\n反馈更及时</string>
+    <!-- 原版这里写的是它的 QQ 群号，开源版没有那个群，换成项目自己的反馈入口 -->
+    <string name="setting_feedback_announce">开源版本不收集反馈数据\n有问题请到 GitHub 提 issue</string>
     <string name="setting_advice_send">发送</string>
     <string name="feedback_hint">我想说</string>
     <string name="check_update">检查更新</string>
     <string name="about_us">关于我们</string>
     <string name="about_version">当前版本：%1$s</string>
-    <string name="about_web">官方网站：math.youdao.com</string>
-    <string name="about_copyright">Copyright © 2017, NetEase,Inc. All Rights Reserved.</string>
+    <string name="about_web">项目主页：github.com/MaximeMET/supercalc</string>
+    <string name="about_copyright">Copyright © 2026, MaximeMET · GPL-3.0</string>
     <string name="about_version_newest">当前已是最新版本</string>
     <string name="dialog_cancel">取消</string>
     <string name="dialog_confirm">确定</string>

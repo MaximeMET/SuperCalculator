@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- 原版 logo 下半块的竖向渐变（实机取色） -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:angle="270"
-        android:endColor="@color/about_logo_orange_bottom"
-        android:startColor="@color/about_logo_orange_top"
-        android:type="linear" />
-</shape>

@@ -3,7 +3,9 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SuperCalc">
 
@@ -35,7 +37,7 @@
             android:windowSoftInputMode="stateAlwaysHidden" />
 
         <!--
-          分享图片用。参考实现把截图写到 /sdcard/Youdao/tmp.jpg 再用 Uri.fromFile 发出去，
+          分享图片用。参考实现把截图写到外部存储里的固定路径再用 Uri.fromFile 发出去，
           新版系统会直接抛 FileUriExposedException，所以走 FileProvider 的 cache 目录。
         -->
         <provider

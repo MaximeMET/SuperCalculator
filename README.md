@@ -23,8 +23,10 @@ Android 14 起连安装都会被系统拒绝。
 | M2 | 计算器主界面（键盘 / 公式编辑 / 方法按钮） | ✅ |
 | M3 | 结果页 / 历史 / 设置 / 教程 / 反馈 / 关于 | ✅ |
 | M4 | 函数图像 | ✅ 绘图 / 拖动 / 缩放 / 最多 3 条函数 / 交点与点选气泡 / 图例 / 分享 |
-| M5 | 超级 24 点 | ⬜ |
-| M6 | 素材替换 + 开源发布 | ⬜ |
+| M6 | 素材替换 + 开源发布 | 🔄 品牌素材与文案已换，字体许可待处理 |
+
+> 原版抽屉里的「超级 24 点」不在复刻范围内，已按设计取消（M5 阶段整段跳过）：
+> 抽屉项、图标、字符串和历史记录里那个类型号都删掉了。
 
 ## 模块
 
@@ -96,7 +98,7 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
 |---|---|---|
 | 历史页 | 只剩状态栏时钟 | 列表、分页、⋮ 菜单、点一条回填公式 |
 | 设置页 | 只剩状态栏时钟 | 含两个开关和偏好对话框 |
-| 关于页 | 时钟 + 版本号（0.1.0 vs 2.0.0）+ 图标字形边缘 | 见下 |
+| 关于页 | 时钟 + 版本号（0.1.0 vs 2.0.0）+ 图标字形边缘 | 见下；M6 起 logo / 版权行 / 官网地址按设计不同 |
 | 键盘 | 只剩图标边缘抗锯齿 | 阈值 30 时 11.9k 像素，阈值 60 时 4.0k |
 
 几条踩出来的坑：
@@ -112,11 +114,13 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
 - **字体大小**。原版用 `WebSettings.setTextSize(LARGER/NORMAL/SMALLER)`，
   对应 textZoom 125/100/75；原版自己在新 WebView 上已经不生效了，我们按源码意图实现。
 
-图标素材一律**按原位图轮廓重画成矢量**，脚本在 `work/tools/`：
+界面图标一律**按原位图轮廓重画成矢量**，脚本在 `work/tools/`：
 
-- `trace_logo.py`：关于页 logo（背景渐变 + 网格线 + 白色字形的轮廓）
 - `trace_keyboard_icons.py`：71 个功能键图标（浅灰占位方块 + 深色字形两层）
 - `trace_keyboard_chrome.py`：工具行 5 个图标 + 左侧 4 个书签（含按下态的渐变圆）
+
+> 关于页那个 logo 早先也是这么描出来的（`trace_logo.py`），但那是网易的品牌素材，
+> M6 已经整体换成项目自己的标记，见下面 M6 一节。
 
 ### M4 现状：函数图像（已收口）
 
@@ -226,11 +230,43 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 - 图片走 `FileProvider`（原版是 `Uri.fromFile`，Android 7 起直接抛
   `FileUriExposedException`），文件放在 `cacheDir/share/`；
 - 底部那条宣传图不再用原版带二维码的位图——那是原版素材，
-  现在按同样的长宽比（750×1039）画我们自己的，M6 换素材时定稿。
+  现在按同样的长宽比（750×1039）画我们自己的：底色 + 曲线 + 项目地址，
+  全部用画布画出来（M6 已定稿，见下面 M6 一节）。
 
 渠道选择框（`view/ShareChooserDialog.kt`）的布局、文案、颜色都取自原版
 `ImgTxtChooserDialog`；列出来的应用来自 `queryIntentActivities(ACTION_SEND, 图片)`，
 一个都没有时显示「您暂未安装任何可以分享的渠道」。
+
+### M6 现状：素材与品牌替换
+
+这一步的目标是：仓库里**只剩本项目自己产出的素材**，同时把原版的品牌信息清干净。
+
+| 原版的东西 | 现在是什么 |
+|---|---|
+| 关于页那个网易品牌 logo（早先按轮廓描的矢量） | 项目自己的标记：冷色圆角方块 + 白色根号 + 琥珀色等号（`bg_about_logo` / `ic_about_logo_mark`） |
+| 原版那个橙色方块启动图标 | 同款标记的启动图标：5 档 PNG（API 21-25）+ 自适应图标（API 26+） |
+| 「官方网站：math.youdao.com」 | 「项目主页：github.com/MaximeMET/supercalc」 |
+| 「Copyright © 2017, NetEase,Inc.」 | 「Copyright © 2026, MaximeMET · GPL-3.0」 |
+| 设置/反馈页的「超级计算器 QQ 群：530100431」 | 「开源版本不收集反馈数据 / 有问题请到 GitHub 提 issue」 |
+| 分享底图（带二维码的原版位图） | 自绘：底色 + 曲线 + 项目地址 |
+| 抽屉里的「超级 24 点」 | 整项删除，连那条分组分隔线一起 |
+
+启动图标是脚本生成的，改配色或比例只要改一处：
+
+```powershell
+python tools/make_launcher_icon.py
+```
+
+标记的几何一共抄了三份——关于页的 `ic_about_logo_mark.xml`、自适应图标前景的
+`ic_launcher_foreground.xml`、生成脚本 `tools/make_launcher_icon.py`——改一处就要同步三处。
+比例取 0.8 不是随手定的：
+自适应图标外圈 18dp 可能被启动器裁掉，缩完之后标记两端离中心 34.3 格，
+正好落在圆形蒙版的 36 格半径以内。
+
+**还没收口的**：公式编辑器主字体是 MathQuill 上游带的 `Symbola`，
+而 Symbola 现在的许可（UFAS，见 NOTICE.md）只允许个人非商业使用、不允许再分发——
+开源发布前必须换成 OFL 一类的数学字体（候选：STIX Two Math），
+换完公式的字形会变，编辑器的对齐要重新测一遍。
 
 `engine` 是整个项目的核心。它复刻了原版的计算链路：
 
@@ -445,8 +481,21 @@ pwsh tools/build-mathquill.ps1
 它会拉取上游源码、套用 `tools/mathquill-patches/`，再输出到 `app/src/main/assets/matheditor/mathquill/`。
 完整的 MPL-2.0 与 MIT 原文见 [NOTICE.md](NOTICE.md)。
 
-> MathQuill 自带的 `Symbola` 字体也是从上游仓库取的（哈希与 `mathquill-0.10.1/src/font/`
-> 逐个一致），不是从原版 App 里抠出来的素材。
+编辑器还要两套字体，来源都能查：
+
+- `Symbola`：MathQuill 上游 `src/font/` 里那 10 个文件，逐个与 `v0.10.1` 的
+  git blob 哈希一致，不是从原版 App 里抠的。**但字体本身的许可有问题**：
+  UFAS 的许可协议只给个人非商业使用、不许再分发（详见 [NOTICE.md](NOTICE.md)），
+  开源发布前要换成别的数学字体。
+- `texgyretermes-*.otf`：编辑器的 `fonts.css` 把 `"Times New Roman"` 指向它，
+  取自 CTAN 上游 2.004 版，GUST Font License，允许原样再分发。重建命令：
+
+  ```powershell
+  pwsh tools/fetch-editor-fonts.ps1
+  ```
+
+  脚本会逐个核对 SHA-256，对不上就报错（`tools/build-mathquill.ps1` 结尾也会自动调它，
+  因为上游 `src/font/` 里没有这四个文件）。
 
 `app/src/main/assets/mathjax/` 是从官方 npm 包 `mathjax@3.2.2` 的 `es5/` 目录里
 挑出来的一小套离线运行时（`tex-svg.js`、`output/svg/fonts/tex.js`、
@@ -466,4 +515,6 @@ pwsh tools/fetch-mathjax.ps1
 - 提取功能清单、数据模型（历史库 schema）、键盘键位表
 - 通过 logcat 抓取计算输出，作为差分测试的期望值
 
-本项目不包含、也不再分发原版的任何代码、图片、字体或品牌素材。
+本项目不包含、也不再分发原版的任何代码、图片或品牌素材；
+界面图形全部是本项目自己画（或按轮廓重画）的矢量/生成素材，
+字体只从各自的上游发布获取（MathQuill 上游、CTAN），并在 [NOTICE.md](NOTICE.md) 里逐项说明。

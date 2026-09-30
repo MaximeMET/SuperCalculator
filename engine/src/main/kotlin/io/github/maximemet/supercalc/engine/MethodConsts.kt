@@ -62,5 +62,4 @@ object RecordType {
     const val SOLVEINEQ2 = 24
     const val DRAW = 25
     const val NO_USE = 99
-    const val GAME24 = 101
 }

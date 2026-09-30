@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M6 新素材：项目标记的底。
+
+  参考实现那个 logo 是「深灰上半 + 橙色下半 + 网格线」，这张是重新设计的：
+  一块冷色圆角方块，配色只在本项目里出现，和原品牌素材没有继承关系。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="18dp" />
+    <gradient
+        android:angle="270"
+        android:endColor="@color/brand_ink_bottom"
+        android:startColor="@color/brand_ink_top"
+        android:type="linear" />
+</shape>

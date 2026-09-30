@@ -4,7 +4,10 @@
 
     宽 230dp；顶部让出状态栏；标题栏 56dp（?actionBarSize）+ 1dp 分隔线 #E9E9E9；
     每项 56dp，图标 24dp 起于左边 16dp，文字起于 72dp；选中底色 #EFEFEF；
-    两组之间上下各 8dp 留白，中间 1dp 分隔线 #E0E0E0。
+    列表上下各 8dp 留白。
+
+    （原版在「推荐给朋友」下面还有一条分隔线和一组「超级 24 点」，那个功能不在
+    复刻范围内，这里连分隔线一起删掉了。）
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/drawer_container"
@@ -33,19 +36,6 @@
 
     <LinearLayout
         android:id="@+id/drawer_group_main"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingTop="@dimen/space_middle"
-        android:paddingBottom="@dimen/space_middle" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/navigation_group_divider" />
-
-    <LinearLayout
-        android:id="@+id/drawer_group_game"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"

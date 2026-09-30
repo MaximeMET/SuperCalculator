@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  自适应启动图标的前景：根号 + 等号，和关于页的 ic_about_logo_mark 是同一套几何。
+
+  外层 group 把它缩到 108 格里的约 68 格并居中，左右两端离中心 34.3 格，
+  落在启动器圆形蒙版的 36 格半径以内（自适应图标的外圈有可能被裁掉）。
+  改这里的比例要同步改 tools/make_launcher_icon.py。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <group
+        android:scaleX="0.8"
+        android:scaleY="0.8"
+        android:translateX="60"
+        android:translateY="60">
+
+        <path
+            android:pathData="M56,272 L114,334 L190,156 L322,156"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="30"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+
+        <path
+            android:fillColor="@color/brand_accent"
+            android:pathData="M362,208 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+        <path
+            android:fillColor="@color/brand_accent"
+            android:pathData="M362,280 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+    </group>
+</vector>

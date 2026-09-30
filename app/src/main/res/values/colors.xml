@@ -57,8 +57,6 @@
     <color name="primary_light">#FFFFB560</color>
     <color name="navigation_item_active">#FFEFEFEF</color>
     <color name="navigation_item_divider">#FFE9E9E9</color>
-    <!-- 两组之间的分隔线，实测比标题下面那条略深 -->
-    <color name="navigation_group_divider">#FFE0E0E0</color>
     <color name="semi_transparent">#F0000000</color>
     <color name="reply_frame_bg">#FFE5E5E5</color>
     <color name="feedback_send">#FFF44336</color>
@@ -72,11 +70,10 @@
     <color name="history_loading_bg">#FFF2F2F2</color>
     <color name="history_loading_text">#FFAAAAAA</color>
     <!-- 关于页图标的四段渐变端点与网格线（取自原版 ic_calculator_logo.png 512x512） -->
-    <color name="about_logo_dark_top">#FF656C71</color>
-    <color name="about_logo_dark_bottom">#FF444A4F</color>
-    <color name="about_logo_orange_top">#FFFEAE57</color>
-    <color name="about_logo_orange_bottom">#FFFF8A47</color>
-    <color name="about_logo_grid">#FFDC8239</color>
+    <!-- M6 品牌色：关于页图标与启动图标共用（本项目自己定的，不是原品牌配色） -->
+    <color name="brand_ink_top">#FF3C4A70</color>
+    <color name="brand_ink_bottom">#FF1E2740</color>
+    <color name="brand_accent">#FFFFB560</color>
     <color name="whole_transparent">#00FFFFFF</color>
     <color name="popup_item_pressed">#33FFFFFF</color>
 

@@ -1,55 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  「关于我们」里那个 90dp 的图标。
+  「关于我们」里那个 90dp 的图标，M6 已换成本项目自己的标记：
+  冷色圆角方块（bg_about_logo）+ 白色的根号和琥珀色等号（ic_about_logo_mark）。
 
-  原版是一张 512x512 的品牌位图（ic_calculator_logo，M6 必须换掉）。
-  这里拆成三层重画：
-    1. 上半块深灰渐变（45dp）+ 下半块橙色渐变（45dp），端点色取自原位图；
-    2. 橙色块里两条 2px 网格线（原图就是 4px@512 的实色 #DC8239）：
-       竖线居中，横线距橙色块顶 22dp（= 66px@480dpi，与原图 381/512 对齐）；
-    3. 全部白色字形（3.14 / log / √x / π / sin）走一张矢量图，
-       viewport 512x512 与 90dp 见方一一对应，见 ic_about_logo_glyphs.xml。
+  原来这里放的是参考实现那张网易品牌位图的重画版本，已经整体删除。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout
+    <View
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_about_logo_dark" />
-
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_about_logo_orange">
-
-            <View
-                android:layout_width="2px"
-                android:layout_height="match_parent"
-                android:layout_gravity="center_horizontal"
-                android:background="@color/about_logo_grid" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="2px"
-                android:layout_gravity="top"
-                android:layout_marginTop="22dp"
-                android:background="@color/about_logo_grid" />
-        </FrameLayout>
-    </LinearLayout>
+        android:background="@drawable/bg_about_logo" />
 
     <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@null"
         android:scaleType="fitXY"
-        android:src="@drawable/ic_about_logo_glyphs" />
+        android:src="@drawable/ic_about_logo_mark" />
 </FrameLayout>

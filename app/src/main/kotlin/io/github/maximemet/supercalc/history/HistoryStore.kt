@@ -194,7 +194,6 @@ object HistoryType {
     const val SOLVEINEQ = 23
     const val SOLVEINEQ2 = 24
     const val DRAW = 25
-    const val GAME24 = 101
 
     private val labels = mapOf(
         INTEGRATE to "积分",
@@ -209,8 +208,6 @@ object HistoryType {
         SOLVEINEQ to "解不等式",
         SOLVEINEQ2 to "解不等式组",
         DRAW to "绘制图像",
-        // 参考实现里 op_24game 是空串，24 点记录在普通历史里本来也不出现
-        GAME24 to "",
     )
 
     fun label(type: Int): String? = labels[type]

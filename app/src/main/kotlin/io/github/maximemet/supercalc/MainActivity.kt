@@ -42,7 +42,6 @@ class MainActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var currentItem = ITEM_CALCULATOR
-    private var historyFromGame = false
     private var lastBackPressedTime = -3000L
 
     private val fragments = mutableMapOf<Int, Fragment>()
@@ -68,10 +67,6 @@ class MainActivity : AppCompatActivity() {
             ) { FeedbackFragment() },
             NavItem(ITEM_SHARE, R.string.navigation_shareme, R.drawable.ic_drawer_share),
         )
-    }
-
-    private val gameItems by lazy {
-        listOf(NavItem(ITEM_GAME, R.string.navigation_game, R.drawable.ic_drawer_game))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -124,11 +119,6 @@ class MainActivity : AppCompatActivity() {
                 buildDrawerRow(inflater, binding.drawerView.drawerGroupMain, item),
             )
         }
-        for (item in gameItems) {
-            binding.drawerView.drawerGroupGame.addView(
-                buildDrawerRow(inflater, binding.drawerView.drawerGroupGame, item),
-            )
-        }
         selectDrawerItem(currentItem)
     }
 
@@ -158,26 +148,18 @@ class MainActivity : AppCompatActivity() {
             shareApp()
             return
         }
-        if (item.id == ITEM_GAME) {
-            // M5 才做超级24点，这里先按原样保留抽屉项
-            selectDrawerItem(item.id)
-            toast(getString(R.string.game_not_ready))
-            return
-        }
-        historyFromGame = false
         selectDrawerItem(item.id)
         showPage(item.id)
     }
 
     private fun selectDrawerItem(id: Int) {
-        for (group in listOf(binding.drawerView.drawerGroupMain, binding.drawerView.drawerGroupGame)) {
-            for (i in 0 until group.childCount) {
-                val row = group.getChildAt(i)
-                row.isSelected = row.tag == id
-                row.setBackgroundResource(
-                    if (row.tag == id) R.color.navigation_item_active else R.color.white,
-                )
-            }
+        val group = binding.drawerView.drawerGroupMain
+        for (i in 0 until group.childCount) {
+            val row = group.getChildAt(i)
+            row.isSelected = row.tag == id
+            row.setBackgroundResource(
+                if (row.tag == id) R.color.navigation_item_active else R.color.white,
+            )
         }
         currentItem = id
     }
@@ -190,10 +172,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnOverflow.setOnClickListener { view -> showHistoryMenu(view) }
         binding.btnUndo.setOnClickListener { calculator.undo() }
         binding.btnRedo.setOnClickListener { calculator.redo() }
-        binding.btnHistory.setOnClickListener {
-            historyFromGame = false
-            openHistory()
-        }
+        binding.btnHistory.setOnClickListener { openHistory() }
     }
 
     private fun openHistory() {
@@ -202,11 +181,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun goBackFromHistory() {
         if (currentItem != ITEM_HISTORY) return
-        if (historyFromGame) {
-            // 从 24 点进来的历史要回 24 点，但 24 点还没做（M5）
-            toast(getString(R.string.game_not_ready))
-            historyFromGame = false
-        }
         selectDrawerItem(ITEM_CALCULATOR)
         showPage(ITEM_CALCULATOR)
     }
@@ -273,7 +247,6 @@ class MainActivity : AppCompatActivity() {
             ITEM_SETTINGS -> R.string.navigation_settings
             ITEM_FEEDBACK -> R.string.navigation_feedback
             ITEM_HISTORY -> R.string.navigation_history
-            ITEM_GAME -> R.string.navigation_game
             else -> R.string.title_calculate
         }
         binding.toolbarTitle.setText(title)
@@ -354,8 +327,7 @@ class MainActivity : AppCompatActivity() {
         const val ITEM_SETTINGS = 3
         const val ITEM_FEEDBACK = 4
         const val ITEM_SHARE = 5
-        const val ITEM_GAME = 6
-        const val ITEM_HISTORY = 7
+        const val ITEM_HISTORY = 6
 
         private const val MENU_CLEAR = 101
         private const val MENU_SHARE = 102

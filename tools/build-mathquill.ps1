@@ -89,5 +89,10 @@ $fontTarget = Join-Path $target "font"
 if (Test-Path $fontTarget) { Remove-Item $fontTarget -Recurse -Force }
 Copy-Item "$src/src/font" $fontTarget -Recurse -Force
 
+# 上游 font/ 里只有 Symbola。编辑器还要一套 TeX Gyre Termes（GUST Font License，
+# 从 CTAN 取，见 tools/fetch-editor-fonts.ps1），单独补齐。
+Write-Host "补齐公式编辑器字体 ..."
+& (Join-Path $repo "tools/fetch-editor-fonts.ps1")
+
 Get-ChildItem $target -Recurse -File |
     ForEach-Object { "  {0}  {1}" -f $_.FullName.Substring($target.Length + 1), $_.Length }
