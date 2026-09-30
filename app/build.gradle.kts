@@ -53,6 +53,8 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
+
+    testImplementation(kotlin("test"))
 }
 
 /*

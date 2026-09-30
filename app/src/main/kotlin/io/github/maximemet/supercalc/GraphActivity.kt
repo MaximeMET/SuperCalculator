@@ -1,6 +1,7 @@
 package io.github.maximemet.supercalc
 
 import android.os.Bundle
+import android.graphics.Matrix
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -9,6 +10,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import io.github.maximemet.supercalc.databinding.ActivityGraphBinding
 import io.github.maximemet.supercalc.engine.ConicType
+import io.github.maximemet.supercalc.engine.ExtraLine
 import io.github.maximemet.supercalc.engine.GraphFunction
 import io.github.maximemet.supercalc.engine.GraphPlot
 import io.github.maximemet.supercalc.engine.Method
@@ -31,6 +33,16 @@ class GraphActivity : AppCompatActivity() {
     private val executor = Executors.newSingleThreadExecutor()
 
     private var axes: GraphAxes? = null
+
+    /** 采样好的曲线（屏幕坐标），拖动时平移它、缩放时按矩阵变换它。 */
+    private var curves = ArrayList<Curve>()
+
+    /** 缩放过程中的临时变换，松手重算后复位。 */
+    private val curveMatrix = Matrix()
+    private var scaling = false
+
+    /** 当前图的准线 / 渐近线。 */
+    private var extraLines: List<ExtraLine> = emptyList()
 
     /** 公式（Symja 形式，多函数用字面 `\n` 分隔）。 */
     private var symjaFormula: String = ""
@@ -82,6 +94,9 @@ class GraphActivity : AppCompatActivity() {
         val built = GraphAxes(windowWidth, windowHeight, toolbarHeight, containerHeight)
         axes = built
         binding.graphView.axes = built
+        binding.graphView.onTranslate = { dx, dy -> handleTranslate(dx, dy) }
+        binding.graphView.onScale = { factor, fx, fy -> handleScale(factor, fx, fy) }
+        binding.graphView.onGestureEnd = { handleGestureEnd() }
         Log.d(
             TAG,
             "axes: w=$windowWidth h=$windowHeight toolbar=$toolbarHeight " +
@@ -109,24 +124,20 @@ class GraphActivity : AppCompatActivity() {
                 }
                 return@execute
             }
-            val curves = ArrayList<FloatArray>()
-            val colors = ArrayList<Int>()
+            val sampled = ArrayList<Curve>()
             functions.forEachIndexed { index, branches ->
-                branches.forEach { branch ->
-                    sample(branch, axes).forEach {
-                        curves += it
-                        colors += index
-                    }
-                }
+                branches.forEach { branch -> sampled += sample(branch, index, axes) }
             }
             // 参考实现只给「单条函数」算特殊点/准线
             val extra = if (functions.size == 1) GraphPlot.extraInfo(engine, formulas.last()) else null
             val lines = extra?.lines.orEmpty()
             val points = if (extra == null || extra.type == ConicType.OTHER) emptyList() else extra.points
             runOnUiThread {
-                view.curves = curves
-                view.curveColors = colors.toIntArray()
-                view.extraLines = lines
+                curves = sampled
+                this.extraLines = lines
+                curveMatrix.reset()
+                view.curveMatrix = null
+                publish()
                 view.specialPoints = points
             }
         }
@@ -135,31 +146,89 @@ class GraphActivity : AppCompatActivity() {
     /**
      * 屏幕空间采样：从左边界到右边界每 [SAMPLE_STEP] 像素取一个点。
      *
-     * 和参考实现一样，取值落空时断开（上一个点和下一个点之间不连线），
+     * 和参考实现一样，取值落空时断开（用 NaN 标记，画的时候重新起笔），
      * 值太大/太小时夹到一根「很远但有限」的横线上，画出来就是几乎竖直的线。
      */
-    private fun sample(function: GraphFunction, axes: GraphAxes): List<FloatArray> {
-        val segments = ArrayList<FloatArray>()
-        var points = ArrayList<Float>(512)
+    private fun sample(function: GraphFunction, colorIndex: Int, axes: GraphAxes): Curve {
+        val curve = Curve(function, colorIndex)
         var x = SAMPLE_START
         val end = axes.idealMax[0] + 50f
         while (x <= end) {
-            val coordX = axes.toCoordX(x)
-            val value = function.valueAt(coordX.toDouble())
-            if (value == null || value.isNaN()) {
-                // 断点：这一段到此为止
-                if (points.size >= 4) segments += points.toFloatArray()
-                points = ArrayList(512)
-                x += SAMPLE_STEP
-                continue
-            }
-            val clamped = value.coerceIn(-CLAMP, CLAMP)
-            points += x
-            points += axes.toDisplayY(clamped.toFloat())
+            curve.appendPoint(axes, x)
             x += SAMPLE_STEP
         }
-        if (points.size >= 4) segments += points.toFloatArray()
-        return segments
+        curve.left = SAMPLE_START
+        curve.right = x - SAMPLE_STEP
+        return curve
+    }
+
+    /** 把当前曲线与额外线交给 View。 */
+    private fun publish() {
+        val view = binding.graphView
+        view.curves = curves.map { it.points.toFloatArray() }
+        view.curveColors = curves.map { it.colorIndex }.toIntArray()
+        view.extraLines = extraLines
+        view.invalidate()
+    }
+
+    /**
+     * 拖动：刻度整体平移，曲线跟着平移，只补两端新露出来的那一小条。
+     *
+     * 参考实现也是这么做的（`translateGraph` + `startSup` 只算新增区间），
+     * 所以拖动时不会每帧重算整条曲线。
+     */
+    private fun handleTranslate(dx: Float, dy: Float) {
+        val axes = axes ?: return
+        if ((dx == 0f && dy == 0f) || curves.isEmpty()) return
+        axes.translateBy(dx, dy)
+        curves.forEach { curve ->
+            curve.shift(dx, dy)
+            curve.extendLeft(axes, SAMPLE_START)
+            curve.extendRight(axes, axes.idealMax[0] + 50f)
+        }
+        publish()
+    }
+
+    /**
+     * 双指缩放：刻度按焦点缩放（曲线靠矩阵跟着缩），松手后再整体重算。
+     *
+     * 参考实现的 `scale()` 就是这么分工的：`mScaleMatrix` 管曲线，
+     * `dealScale` 管刻度，`adjustImage()` 在松手时重算全部。
+     */
+    private fun handleScale(factor: Float, focusX: Float, focusY: Float) {
+        val axes = axes ?: return
+        if (curves.isEmpty()) return
+        axes.scaleBy(factor, focusX, focusY)
+        curveMatrix.postScale(factor, factor, focusX, focusY)
+        scaling = true
+        binding.graphView.curveMatrix = Matrix(curveMatrix)
+        publish()
+        binding.graphView.invalidate()
+    }
+
+    /** 手势结束：按新的映射重算曲线，矩阵复位。 */
+    private fun handleGestureEnd() {
+        if (!scaling) return
+        scaling = false
+        replot()
+    }
+
+    /** 用当前坐标轴重算曲线（后台线程，算完回主线程替换）。 */
+    private fun replot() {
+        val axes = axes ?: return
+        val functions = curves.map { it.function }
+        if (functions.isEmpty()) return
+        executor.execute {
+            val sampled = functions.mapIndexed { index, function ->
+                sample(function, curves[index].colorIndex, axes)
+            }
+            runOnUiThread {
+                curves = ArrayList(sampled)
+                curveMatrix.reset()
+                binding.graphView.curveMatrix = null
+                publish()
+            }
+        }
     }
 
     /** 分享按钮：参考实现是「截图 + 应用信息」，这里先只把公式和图片准备好留给后续步骤。 */
@@ -174,15 +243,87 @@ class GraphActivity : AppCompatActivity() {
         private const val MAX_FUNCTIONS = 3
 
         /** 采样步长（屏幕像素），参考实现写死 25。 */
-        private const val SAMPLE_STEP = 25f
+        const val SAMPLE_STEP = 25f
 
         /** 采样起点，参考实现从 -150 开始（左侧多画一点，拖动时不会露空）。 */
-        private const val SAMPLE_START = -150f
+        const val SAMPLE_START = -150f
 
         /** 纵向夹取范围，对应参考实现的「太大了就贴到很远的地方」。 */
-        private const val CLAMP = 1e6
+        const val CLAMP = 1e6
 
         const val EXTRA_SYMJA_FORMAT = "symja_format"
         const val EXTRA_SYMJA_LATEX = "latex_formula"
+    }
+}
+
+/**
+ * 采样好的曲线：屏幕坐标点对 + 两端已经采到的位置。
+ *
+ * 断点（定义域外/无定义）用 NaN 占位，画的时候遇到 NaN 就重新起笔。
+ */
+private class Curve(val function: GraphFunction, val colorIndex: Int) {
+
+    /** 成对的 x,y。 */
+    val points = ArrayList<Float>(1024)
+    var left = Float.NaN
+    var right = Float.NaN
+
+    /** 在屏幕 x 处采一个点追加到末尾。 */
+    fun appendPoint(axes: GraphAxes, x: Float) {
+        appendPointTo(axes, x, points)
+    }
+
+    fun shift(dx: Float, dy: Float) {
+        for (i in points.indices step 2) {
+            if (points[i].isNaN()) continue
+            points[i] += dx
+            points[i + 1] += dy
+        }
+        if (!left.isNaN()) left += dx
+        if (!right.isNaN()) right += dx
+    }
+
+    /** 往左补采样，直到盖住 [target]。 */
+    fun extendLeft(axes: GraphAxes, target: Float) {
+        if (left.isNaN()) return
+        var x = left
+        val fresh = ArrayList<Float>(64)
+        while (x - GraphActivity.SAMPLE_STEP >= target) {
+            x -= GraphActivity.SAMPLE_STEP
+            appendPointTo(axes, x, fresh)
+        }
+        if (fresh.isNotEmpty()) {
+            points.addAll(0, fresh)
+            left = x
+        }
+    }
+
+    /** 往右补采样，直到盖住 [target]。 */
+    fun extendRight(axes: GraphAxes, target: Float) {
+        if (right.isNaN()) return
+        var x = right
+        while (x + GraphActivity.SAMPLE_STEP <= target) {
+            x += GraphActivity.SAMPLE_STEP
+            appendPoint(axes, x)
+        }
+        right = x
+    }
+
+    private fun appendPointTo(axes: GraphAxes, x: Float, into: ArrayList<Float>) {
+        val value = function.valueAt(axes.toCoordX(x).toDouble())
+        if (value == null || value.isNaN()) {
+            into.add(Float.NaN)
+            into.add(Float.NaN)
+            return
+        }
+        val clamped = if (value < -GraphActivity.CLAMP) {
+            -GraphActivity.CLAMP
+        } else if (value > GraphActivity.CLAMP) {
+            GraphActivity.CLAMP
+        } else {
+            value
+        }
+        into.add(x)
+        into.add(axes.toDisplayY(clamped.toFloat()))
     }
 }

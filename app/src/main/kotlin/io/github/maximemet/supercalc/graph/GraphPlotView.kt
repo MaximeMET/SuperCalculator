@@ -3,9 +3,14 @@ package io.github.maximemet.supercalc.graph
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
+import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Rect
 import android.util.AttributeSet
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import io.github.maximemet.supercalc.R
 import io.github.maximemet.supercalc.engine.ExtraLine
@@ -30,6 +35,63 @@ class GraphPlotView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
+
+    /** 拖动回调：参数是「手指位移的反向」，和参考实现一致。 */
+    var onTranslate: ((Float, Float) -> Unit)? = null
+
+    /** 双指缩放回调：(缩放系数, 焦点 x, 焦点 y)。 */
+    var onScale: ((Float, Float, Float) -> Unit)? = null
+
+    /** 手势结束（抬手/缩放停止），参考实现在这时候整体重算一次曲线。 */
+    var onGestureEnd: (() -> Unit)? = null
+
+    private var scaleEndTime = -1L
+
+    private val scaleDetector = ScaleGestureDetector(
+        context,
+        object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                onScale?.invoke(detector.scaleFactor, detector.focusX, detector.focusY)
+                return true
+            }
+
+            override fun onScaleEnd(detector: ScaleGestureDetector) {
+                scaleEndTime = System.currentTimeMillis()
+                onGestureEnd?.invoke()
+            }
+        },
+    )
+
+    private val dragDetector = GestureDetector(
+        context,
+        object : GestureDetector.SimpleOnGestureListener() {
+            override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float): Boolean {
+                onTranslate?.invoke(-dx, -dy)
+                return true
+            }
+
+            /** 参考实现的双击只消费事件，不做动作。 */
+            override fun onDoubleTap(e: MotionEvent): Boolean = true
+        },
+    )
+
+    /**
+     * 参考实现的触摸分发：单指走拖动（双击也算单指），双指走缩放，
+     * 并且从双指回到单指后的 [TOUCH_GAP] 毫秒内不认拖动，免得手抖被当成拖。
+     */
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.pointerCount < 2 &&
+            (event.action == MotionEvent.ACTION_DOWN ||
+                System.currentTimeMillis() - scaleEndTime > TOUCH_GAP)
+        ) {
+            scaleEndTime = -1L
+            dragDetector.onTouchEvent(event)
+            if (event.action == MotionEvent.ACTION_UP) onGestureEnd?.invoke()
+        } else {
+            scaleDetector.onTouchEvent(event)
+        }
+        return true
+    }
 
     var axes: GraphAxes? = null
         set(value) {
@@ -58,6 +120,18 @@ class GraphPlotView @JvmOverloads constructor(
         }
 
     var specialPoints: List<SpecialPoint> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /**
+     * 曲线的临时变换矩阵。
+     *
+     * 参考实现把曲线画在 `mScaleMatrix` 下：双指缩放时曲线立刻跟着缩放，
+     * 刻度则是另外算位置的；松开手以后整体重算一次、矩阵回到单位阵。
+     */
+    var curveMatrix: Matrix? = null
         set(value) {
             field = value
             invalidate()
@@ -130,8 +204,13 @@ class GraphPlotView @JvmOverloads constructor(
         super.onDraw(canvas)
         val axes = axes ?: return
 
+        val save = canvas.save()
+        val matrix = curveMatrix
+        matrix?.let { canvas.concat(it) }
         drawCurves(canvas)
-        drawExtraLines(canvas, axes)
+        // 参考实现只在「没在缩放」的时候画准线/渐近线
+        if (matrix == null) drawExtraLines(canvas, axes)
+        canvas.restoreToCount(save)
         drawHorizontalAxisLabels(canvas, axes)
         drawVerticalAxisLabels(canvas, axes)
         drawSpecialPoints(canvas, axes)
@@ -142,7 +221,24 @@ class GraphPlotView @JvmOverloads constructor(
             if (points.size < 4) return@forEachIndexed
             val functionIndex = curveColors.getOrElse(index) { 0 }
             val paint = curvePaints[functionIndex.coerceIn(0, curvePaints.size - 1)]
-            canvas.drawLines(points, 0, points.size, paint)
+            // 采到断点（定义域外/无定义）的地方用 NaN 标出来，这里断开重起一条线
+            val path = Path()
+            var pen = false
+            var i = 0
+            while (i + 1 < points.size) {
+                val x = points[i]
+                val y = points[i + 1]
+                if (x.isNaN() || y.isNaN()) {
+                    pen = false
+                } else if (pen) {
+                    path.lineTo(x, y)
+                } else {
+                    path.moveTo(x, y)
+                    pen = true
+                }
+                i += 2
+            }
+            canvas.drawPath(path, paint)
         }
     }
 
@@ -267,5 +363,8 @@ class GraphPlotView @JvmOverloads constructor(
 
         /** 0 刻度的通线与刻度小段（深灰）。 */
         const val AXIS_COLOR = 0xFF6B7176.toInt()
+
+        /** 从双指回到单指之后多久内不认拖动，取自参考实现的 TouchUp2to1FingerGap。 */
+        private const val TOUCH_GAP = 1000L
     }
 }

@@ -104,6 +104,83 @@ class GraphAxes(
         refreshVisibility(Y)
     }
 
+    /**
+     * 拖动：所有刻度沿各自方向平移。
+     *
+     * 参考实现是给每个刻度 View 加偏移（`moveD`），再重新算 0 的位置、回收越界刻度。
+     */
+    fun translateBy(dx: Float, dy: Float) {
+        if (dx != 0f) xLabels.forEach { it.pos += dx }
+        if (dy != 0f) yLabels.forEach { it.pos += dy }
+        moveZero()
+        refreshVisibility()
+    }
+
+    /**
+     * 双指缩放：先按焦点缩放所有刻度，再在越界时换一档步长。
+     *
+     * 参考实现（`dealScale`）的思路是「屏幕上的网格间距始终保持在
+     * [idealPosUnit, 2×idealPosUnit) 之间」，越界就把刻度值减半/加倍，
+     * 同时重排刻度位置。这里用同样的规则，只是重排得更直接：
+     * 保持 0 那条刻度的位置不动，按新间距把刻度铺回去。
+     */
+    fun scaleBy(factor: Float, focusX: Float, focusY: Float) {
+        if (factor <= 0f || !factor.isFinite()) return
+        scaleAxis(X, focusX, factor)
+        scaleAxis(Y, focusY, factor)
+        // 两轴的格子间距是同一个值（参考实现里初始就相等，缩放系数也一样），
+        // 所以换挡只做一次，两个方向的数值步长一起变。
+        posUnit *= factor
+        if (posUnit <= 0f || !posUnit.isFinite()) {
+            reset()
+            return
+        }
+        var guard = 0
+        while (posUnit >= 2f * idealPosUnit && guard++ < 16) {
+            posUnit /= 2f
+            labelUnitX /= 2f
+            labelUnitY /= 2f
+        }
+        guard = 0
+        while (posUnit < idealPosUnit && guard++ < 16) {
+            posUnit *= 2f
+            labelUnitX *= 2f
+            labelUnitY *= 2f
+        }
+        relayout(X)
+        relayout(Y)
+        moveZero()
+        refreshVisibility()
+    }
+
+    private fun scaleAxis(axis: Int, focus: Float, factor: Float) {
+        labels(axis).forEach { it.pos = focus + (it.pos - focus) * factor }
+        setZero(axis, focus + (currentZero(axis) - focus) * factor)
+    }
+
+    /** 按当前 [posUnit] 把刻度重新铺一遍，保持 0 刻度（[zeroX]/[zeroY]）不动。 */
+    private fun relayout(axis: Int) {
+        val labels = labels(axis)
+        val labelUnit = if (axis == X) labelUnitX else labelUnitY
+        val zero = if (axis == X) zeroX else zeroY
+        val anchorIndex = labels.size / 2
+        labels.forEachIndexed { index, label ->
+            val offset = (index - anchorIndex).toFloat()
+            label.pos = zero + offset * posUnit
+            // 注意：0 这条必须写成**正零**。`0f * (-2f)` 在浮点里是 `-0.0`，
+            // 而刻度文字是 `%.4g`，会格式化成 `-0`——那样 0 刻度就认不出来，
+            // 横轴不会画成实线，文字也会偏上（参考实机在这个位置是实线 + "0"）。
+            label.label = if (offset == 0f) 0f else offset * labelUnit
+        }
+        if (axis == X) minIdxX = 0 else minIdxY = 0
+    }
+
+    private fun currentZero(axis: Int): Float = if (axis == X) zeroX else zeroY
+
+    private fun setZero(axis: Int, value: Float) {
+        if (axis == X) zeroX = value else zeroY = value
+    }
+
     private fun refreshVisibility(axis: Int) {
         val labels = labels(axis)
         val unit = posUnit
