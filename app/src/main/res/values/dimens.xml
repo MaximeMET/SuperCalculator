@@ -21,7 +21,6 @@
 
     <dimen name="toolbar_height">48dp</dimen>
     <!-- 参考实现的导航按钮是 56dp 宽的方块，右侧菜单项才是 48dp -->
-    <dimen name="toolbar_button">48dp</dimen>
     <dimen name="toolbar_nav_button">56dp</dimen>
 
     <dimen name="capsule_button_height">30dp</dimen>

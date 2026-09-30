@@ -1,9 +1,13 @@
+<!--
+  工具条左侧的抽屉汉堡键：原版是 xhdpi 位图 ic_action_normaltaggle.png（44x38px），
+  三根横线（2px 粗，中间那根短一截），坐标直接沿用位图像素、尺寸按 /2 换算成 dp。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:width="22dp"
+    android:height="19dp"
+    android:viewportWidth="44"
+    android:viewportHeight="38">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M3,18h18v-2H3v2zM3,13h18v-2H3v2zM3,6v2h18V6H3z" />
+        android:pathData="M4,3L40,3L40,5L4,5ZM4,17L32,17L32,19L4,19ZM4,31L40,31L40,33L4,33Z" />
 </vector>

@@ -1,9 +1,10 @@
+<!-- 工具行「换行」回车箭头：原版 xhdpi ic_keyboard_newline.png（50x30px），见 ic_clear.xml 说明。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:width="25dp"
+    android:height="15dp"
+    android:viewportWidth="50"
+    android:viewportHeight="30">
     <path
         android:fillColor="@color/keyboard_tool_icon"
-        android:pathData="M19,7v4H5.83l3.58,-3.59L8,6l-6,6l6,6l1.41,-1.41L5.83,13H21V7z" />
+        android:pathData="M12.6,29.5L0.6,19.5L0.6,18.5L12.5,8.4L13,9.5L13,15.5L13.5,16L43.5,16L44,15.5L44,0.5L44.5,0L49.5,0L50,0.5L50,21.5L49.5,22L13.5,22L13,22.5Z" />
 </vector>

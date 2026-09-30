@@ -1,12 +1,14 @@
+<!--
+  工具条「历史」：原版 xhdpi ic_action_history.png（48x48px）。
+  细圆环在右下角开口、开口处带小箭头（历史回退的语义），指针是直角折线。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="48"
+    android:viewportHeight="48">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8s8,3.58 8,8S16.42,20 12,20z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12.5,7H11v6l5.25,3.15l0.75,-1.23l-4.5,-2.67z" />
+        android:fillType="evenOdd"
+        android:pathData="M28.5,42.5L25.5,43L20.5,42.8L14.5,40.7L11.5,38.7L8.3,35.5L5.4,30.5L4.2,26.5L4.2,19.5L5.4,15.5L8.3,10.5L11.5,7.3L14.5,5.3L20.5,3.2L27.5,3.2L33.5,5.3L36.5,7.3L39.7,10.5L41.7,13.5L43.8,19.5L43.8,26.5L42.1,31.5L41.5,32.4L40.5,32.6L40,31.5L41.9,25.5L41.7,19.5L40.8,16.5L38.6,12.5L34.5,8.4L30.5,6.2L27.5,5.3L20.5,5.3L17.5,6.2L13.5,8.4L9.4,12.5L7.2,16.5L6,22.5L6.3,26.5L7.2,29.5L9.4,33.5L13.5,37.6L17.5,39.8L20.5,40.7L27.5,40.7L34.5,37.8L35.5,38L35.9,38.5L35.5,39.2L33.5,40.7ZM34.9,25.5L33.5,26L22.5,25.9L22,24.5L22.1,13.5L23.5,13L24.9,13.5L25,21.5L25.5,22.8L34.5,23.1Z" />
 </vector>

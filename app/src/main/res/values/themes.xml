@@ -29,8 +29,11 @@
     </style>
 
     <style name="ToolbarButton">
-        <item name="android:layout_width">@dimen/toolbar_button</item>
+        <!-- 原版 actionLayout 是 wrap_content + 左右各 12dp padding，图标按自身尺寸居中 -->
+        <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">match_parent</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
         <item name="android:background">?selectableItemBackgroundBorderless</item>
         <item name="android:scaleType">center</item>
         <item name="android:tint">#FFFFFFFF</item>
@@ -41,6 +44,8 @@
         <item name="android:layout_height">wrap_content</item>
         <!-- AppCompat Toolbar 的 titleMargins 是 4dp -->
         <item name="android:layout_marginStart">@dimen/space_little</item>
+        <!-- AppCompat 摆标题时按自己的 padding 算，实测比我们居中低 1dp，这里补回来 -->
+        <item name="android:translationY">-1dp</item>
         <item name="android:textColor">#FFFFFFFF</item>
         <item name="android:textSize">20sp</item>
     </style>

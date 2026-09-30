@@ -243,6 +243,10 @@
         <!--
           空公式时底下那行示例。原版这里是一个横向 ViewPager 套一串位图，
           点一下就把示例公式填进编辑器；我们用文字 + 自己的例题列表，功能一样、不留原版素材。
+
+          排布按原版实测来的：ViewPager 填满「全部举例」左边的整块空白，位图在里面
+          水平居中（墨迹中心 562px vs 空白区中心 563px），高度被剩下的 25dp 卡住。
+          所以正文也要居中，不能贴着「全部举例」右对齐。
         -->
         <LinearLayout
             android:id="@+id/view_empty_container"
@@ -251,7 +255,7 @@
             android:layout_gravity="bottom|start"
             android:orientation="horizontal">
 
-            <!-- 示例正文靠右贴着「全部举例」，太长从前面截断 -->
+            <!-- 示例正文在左侧空白里居中；太长时从前面截断 -->
             <TextView
                 android:id="@+id/view_empty"
                 android:layout_width="0dp"
@@ -259,7 +263,7 @@
                 android:layout_weight="1"
                 android:layout_marginBottom="@dimen/space_medium"
                 android:ellipsize="start"
-                android:gravity="end|center_vertical"
+                android:gravity="center"
                 android:paddingEnd="@dimen/space_small"
                 android:singleLine="true"
                 android:textColor="@color/example_content"

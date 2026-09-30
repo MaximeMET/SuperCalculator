@@ -1,9 +1,15 @@
+<!--
+  工具行「清除」垃圾桶：原版是 xhdpi 位图 ic_keyboard_clear.png（30x31px）。
+  这里按位图轮廓重画成矢量，坐标用位图像素当 viewport，尺寸 30/2 dp x 31/2 dp，
+  在 480dpi 屏上画出来正好 45x46.5px，与原版一致。素材本身 M6 再换。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:width="15dp"
+    android:height="15.5dp"
+    android:viewportWidth="30"
+    android:viewportHeight="31">
     <path
         android:fillColor="@color/keyboard_tool_icon"
-        android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z" />
+        android:fillType="evenOdd"
+        android:pathData="M24.8,30.5L22.5,31L7.5,31L5.5,30.7L4,29.5L3.3,28.5L3,26.5L3,7.5L2.5,7L0.5,7L0,6.5L0.5,5L8.5,5L9,4.5L9.4,1.5L10.5,0.4L17.5,0L19.5,0.4L20.6,1.5L21,4.5L21.5,5L29.5,5L30,5.5L29.5,7L27.5,7L27,7.5L26.9,27.5L26,29.5ZM18.5,5L19,4.5L19,2.5L18.5,2L11.5,2L11,2.5L11,4.5L11.5,5Z" />
 </vector>
