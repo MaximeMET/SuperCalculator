@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 键盘书签按下态：渐变圆 + 白色字形，取自原图 ic_keyboard_book2_pressed（66x66 px @xhdpi） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:angle="270"
+                android:startColor="#FFFFCC7B"
+                android:endColor="#FFFFA147"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item android:drawable="@drawable/ic_dart_glyph_2" />
+</layer-list>

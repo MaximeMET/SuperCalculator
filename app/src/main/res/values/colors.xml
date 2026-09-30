@@ -38,9 +38,6 @@
     <color name="capsule_button_text">#FF000000</color>
 
     <!-- 原版是渐变色位图，这里取它的平均色 -->
-    <color name="dart_selected">#FFFDB763</color>
-    <color name="dart_normal">#FFE4E4E4</color>
-    <color name="dart_normal_text">#FF505050</color>
 
     <!-- 抽屉 / 设置页 / 反馈页，色值同样取自参考实现的 colors.xml -->
     <color name="white">#FFFFFFFF</color>

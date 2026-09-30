@@ -184,14 +184,11 @@
         <item name="android:layout_weight">1</item>
     </style>
 
+    <!-- 左侧书签：原版是 32dp 的位图（常态浅灰圆 + 深灰字形，按下态渐变圆 + 白字） -->
     <style name="KeyboardDart">
         <item name="android:layout_width">@dimen/dart_size</item>
         <item name="android:layout_height">@dimen/dart_size</item>
         <item name="android:layout_gravity">center</item>
-        <item name="android:background">@drawable/bg_dart_normal</item>
-        <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/dart_normal_text</item>
-        <!-- 位图里的字形高约 24px（3x 屏），文字要跟上 -->
-        <item name="android:textSize">15sp</item>
+        <item name="android:scaleType">fitXY</item>
     </style>
 </resources>

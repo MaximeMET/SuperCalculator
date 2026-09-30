@@ -34,7 +34,7 @@
                 android:id="@+id/key_clear"
                 style="@style/KeyboardToolKey"
                 android:contentDescription="@string/keyboard_clear"
-                android:src="@drawable/ic_clear" />
+                android:src="@drawable/ic_keyboard_clear" />
 
             <TextView
                 android:id="@+id/key_clipboard"
@@ -45,25 +45,25 @@
                 android:id="@+id/key_newline"
                 style="@style/KeyboardToolKey"
                 android:contentDescription="@string/keyboard_newline"
-                android:src="@drawable/ic_newline" />
+                android:src="@drawable/ic_keyboard_newline" />
 
             <ImageButton
                 android:id="@+id/key_left"
                 style="@style/KeyboardToolKey"
                 android:contentDescription="@string/keyboard_left"
-                android:src="@drawable/ic_left" />
+                android:src="@drawable/ic_keyboard_left" />
 
             <ImageButton
                 android:id="@+id/key_right"
                 style="@style/KeyboardToolKey"
                 android:contentDescription="@string/keyboard_right"
-                android:src="@drawable/ic_right" />
+                android:src="@drawable/ic_keyboard_right" />
 
             <ImageButton
                 android:id="@+id/key_backspace"
                 style="@style/KeyboardToolKey"
                 android:contentDescription="@string/keyboard_backspace"
-                android:src="@drawable/ic_backspace" />
+                android:src="@drawable/ic_keyboard_backspace" />
         </LinearLayout>
 
         <View
@@ -87,36 +87,35 @@
                 android:orientation="vertical">
 
                 <FrameLayout style="@style/DartSlot">
-                    <TextView
+                    <ImageView
                         android:id="@+id/dart1"
                         style="@style/KeyboardDart"
                         android:contentDescription="@string/dart_basic"
-                        android:text="+−&#10;×÷"
-                        android:textSize="9sp" />
+                        android:src="@drawable/ic_dart_pressed_1" />
                 </FrameLayout>
 
                 <FrameLayout style="@style/DartSlot">
-                    <TextView
+                    <ImageView
                         android:id="@+id/dart2"
                         style="@style/KeyboardDart"
                         android:contentDescription="@string/dart_function"
-                        android:text="f" />
+                        android:src="@drawable/ic_keyboard_book2" />
                 </FrameLayout>
 
                 <FrameLayout style="@style/DartSlot">
-                    <TextView
+                    <ImageView
                         android:id="@+id/dart3"
                         style="@style/KeyboardDart"
                         android:contentDescription="@string/dart_variable"
-                        android:text="a-z" />
+                        android:src="@drawable/ic_keyboard_book3" />
                 </FrameLayout>
 
                 <FrameLayout style="@style/DartSlot">
-                    <TextView
+                    <ImageView
                         android:id="@+id/dart4"
                         style="@style/KeyboardDart"
                         android:contentDescription="@string/dart_formula"
-                        android:text="f(x)" />
+                        android:src="@drawable/ic_keyboard_book4" />
                 </FrameLayout>
 
                 <!-- 第 5 格刻意留空，位置和参考实现一致 -->

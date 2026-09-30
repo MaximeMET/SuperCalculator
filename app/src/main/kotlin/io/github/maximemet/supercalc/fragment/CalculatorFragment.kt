@@ -366,14 +366,21 @@ class CalculatorFragment : Fragment() {
 
     private fun updateDarts(selected: Int) {
         val darts = listOf(binding.dart1, binding.dart2, binding.dart3, binding.dart4)
-        val selectedBackground = ContextCompat.getDrawable(requireContext(), R.drawable.bg_dart_selected)
-        val normalBackground = ContextCompat.getDrawable(requireContext(), R.drawable.bg_dart_normal)
-        val selectedText = ContextCompat.getColor(requireContext(), android.R.color.white)
-        val normalText = ContextCompat.getColor(requireContext(), R.color.dart_normal_text)
+        // 参考实现是整组先设常态图标，再把当前页那张换成按下态（KeyboardConsts 里那两组 drawable）
+        val normal = intArrayOf(
+            R.drawable.ic_keyboard_book1,
+            R.drawable.ic_keyboard_book2,
+            R.drawable.ic_keyboard_book3,
+            R.drawable.ic_keyboard_book4,
+        )
+        val pressed = intArrayOf(
+            R.drawable.ic_dart_pressed_1,
+            R.drawable.ic_dart_pressed_2,
+            R.drawable.ic_dart_pressed_3,
+            R.drawable.ic_dart_pressed_4,
+        )
         darts.forEachIndexed { index, dart ->
-            val active = index == selected
-            dart.background = if (active) selectedBackground else normalBackground
-            dart.setTextColor(if (active) selectedText else normalText)
+            dart.setImageResource(if (index == selected) pressed[index] else normal[index])
         }
     }
 
