@@ -1,9 +1,17 @@
 package io.github.maximemet.supercalc
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import android.os.Bundle
 import android.graphics.Matrix
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.webkit.ConsoleMessage
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -21,6 +29,8 @@ import io.github.maximemet.supercalc.engine.SpecialPointKind
 import io.github.maximemet.supercalc.engine.SymjaEngine
 import io.github.maximemet.supercalc.graph.GraphAxes
 import io.github.maximemet.supercalc.graph.GraphPoint
+import io.github.maximemet.supercalc.graph.GraphPlotView
+import org.json.JSONObject
 import java.util.Locale
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -66,6 +76,15 @@ class GraphActivity : AppCompatActivity() {
     /** 图上所有能点的小白点：固定点 + 与 x 轴交点 + 函数之间的交点。 */
     private var tapPoints: List<GraphPoint> = emptyList()
 
+    /** 图例里被点掉（暂时不画）的函数，下标 = 第几条函数。 */
+    private val hidden = BooleanArray(MAX_FUNCTIONS)
+
+    /** 公式的 LaTeX（图例上显示的就是它，逐行倒序）。 */
+    private var formulaLatex: String = ""
+
+    /** 左下角的图例。参考实现也是一个 WebView，加载 Mathbot Legend.html。 */
+    private var legendView: WebView? = null
+
     /** 公式（Symja 形式，多函数用字面 `\n` 分隔）。 */
     private var symjaFormula: String = ""
 
@@ -76,9 +95,11 @@ class GraphActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         symjaFormula = intent.getStringExtra(EXTRA_SYMJA_FORMAT).orEmpty()
+        formulaLatex = intent.getStringExtra(EXTRA_SYMJA_LATEX).orEmpty()
         binding.btnBack.setOnClickListener { finish() }
         binding.btnShare.setOnClickListener { shareGraph() }
         setupInsets()
+        setupLegend()
     }
 
     override fun onDestroy() {
@@ -184,9 +205,130 @@ class GraphActivity : AppCompatActivity() {
                 publish()
                 // 特殊点也走 intersections（它们本来就要能点），specialPoints 留空
                 view.specialPoints = emptyList()
-                view.intersections = dots
+                applyVisibility()
+                updateLegend()
                 hideIntersectInfo()
             }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 左下角的图例
+    // ---------------------------------------------------------------
+
+    /**
+     * 图例页：`assets/matheditor/legend.html`，和参考实现的 Mathbot Legend.html 等价
+     * （React 换成了一段手写 JS，DOM 结构与量尺寸的算法照抄）。
+     *
+     * 初始给 10dp×10dp，量出真实尺寸后再改成「CSS px × 3 (+1)」——
+     * 参考实现是 `3 * dpUnit / density`，dpUnit 就是 1dp，所以这个 3 正好是密度。
+     */
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun setupLegend() {
+        val web = WebView(this)
+        web.settings.javaScriptEnabled = true
+        web.settings.allowFileAccess = true
+        web.settings.allowFileAccessFromFileURLs = true
+        // 让页面里的 width=device-width 生效：量出来的 CSS px 才和原版一个口径
+        web.settings.useWideViewPort = true
+        web.setBackgroundColor(Color.TRANSPARENT)
+        web.isHorizontalScrollBarEnabled = false
+        web.isVerticalScrollBarEnabled = false
+        web.addJavascriptInterface(LegendBridge(), LEGEND_BRIDGE)
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                Log.d(TAG, "legend JS ${message.message()} @${message.sourceId()}:${message.lineNumber()}")
+                return true
+            }
+        }
+        web.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                updateLegend()
+            }
+        }
+        val initial = resources.getDimensionPixelSize(R.dimen.space_medium)
+        binding.graphContainer.addView(
+            web,
+            FrameLayout.LayoutParams(initial, initial, Gravity.BOTTOM or Gravity.LEFT),
+        )
+        web.loadUrl(LEGEND_URL)
+        legendView = web
+    }
+
+    /**
+     * 参考实现 `getFunctionColorStr()`：把每一行公式倒过来（最后一行是第 1 条），
+     * 配上颜色拼成 `公式&#RRGGBB$$…`；被点掉的条目**不带颜色**（前端画成灰色）。
+     */
+    private fun legendText(): String? {
+        val latexs = formulaLatex.split(LATEX_NEWLINE)
+        val maxLatex = latexs.size - 1
+        val text = StringBuilder()
+        var count = 0
+        var i = 0
+        while (count < MAX_FUNCTIONS && i <= maxLatex) {
+            var line = latexs[maxLatex - i]
+            if (!line.contains("=")) line = "y=$line"
+            if (functions.getOrElse(i) { emptyList() }.isNotEmpty()) {
+                if (hidden[count] && maxLatex > 0) {
+                    text.append(line).append("$$")
+                } else {
+                    text.append(line)
+                        .append("&#")
+                        .append(String.format(Locale.US, "%X", GraphPlotView.CURVE_COLORS[count] and 0xFFFFFF))
+                        .append("$$")
+                }
+                count++
+            }
+            i++
+        }
+        return if (count != functions.size) null else text.toString()
+    }
+
+    private fun updateLegend() {
+        val web = legendView ?: return
+        val text = legendText() ?: return
+        Log.d(TAG, "legend:\"$text\"")
+        web.evaluateJavascript("window.__Legend.setFormulaColor(${JSONObject.quote(text)})", null)
+    }
+
+    /** 图例报了尺寸：按参考实现的比值换算成像素摆好这个 WebView。 */
+    private fun resizeLegend(width: Int, height: Int) {
+        val web = legendView ?: return
+        val ratio = 3f * resources.getDimension(R.dimen.dp_unit) / resources.displayMetrics.density
+        val params = web.layoutParams as FrameLayout.LayoutParams
+        params.width = (width * ratio).toInt() + resources.getInteger(R.integer.legend_width_adjust)
+        params.height = (height * ratio).toInt()
+        web.layoutParams = params
+        Log.d(TAG, "legend $width x $height css px -> ${params.width} x ${params.height} px")
+    }
+
+    /**
+     * 点图例：把这条曲线收起来 / 放出来。
+     * 参考实现只改 `mGraphStat[]` 一个数组，重画曲线和交点的可见性都从它派生。
+     */
+    private fun toggleFunction(index: Int) {
+        if (index !in hidden.indices) return
+        hidden[index] = !hidden[index]
+        applyVisibility()
+        updateLegend()
+    }
+
+    /** 按 [hidden] 重画曲线与小圆点。 */
+    private fun applyVisibility() {
+        publish()
+        binding.graphView.intersections = tapPoints.filter { it.owner < 0 || !hidden[it.owner] }
+    }
+
+    /** 图例页 <-> Android 的通道。参考实现叫 `__LegendCtrl`，方法名一致。 */
+    private inner class LegendBridge {
+        @JavascriptInterface
+        fun onLegendComplete(width: Int, height: Int) {
+            runOnUiThread { resizeLegend(width, height) }
+        }
+
+        @JavascriptInterface
+        fun onClickLegend(index: Int) {
+            runOnUiThread { toggleFunction(index) }
         }
     }
 
@@ -209,11 +351,11 @@ class GraphActivity : AppCompatActivity() {
                 SpecialPointKind.MIN -> "最小值"
                 SpecialPointKind.MAX -> "最大值"
             }
-            out += GraphPoint(point.x, point.y, "\n${index + 1}的$name")
+            out += GraphPoint(point.x, point.y, "\n${index + 1}的$name", owner = index)
         }
         branches.forEach { branch ->
             branch.valueAt(0.0)?.takeIf { it.isFinite() }?.let {
-                out += GraphPoint(0.0, it, "\n${index + 1}与y轴交点")
+                out += GraphPoint(0.0, it, "\n${index + 1}与y轴交点", owner = index)
             }
         }
         return out
@@ -239,14 +381,14 @@ class GraphActivity : AppCompatActivity() {
         // 屏幕 4px 一步，细到不会漏掉挨得近的两个根
         val step = (4.0 / axes.ratioX).toDouble().let { if (it > 0) it else 1.0 }
 
-        fun add(into: ArrayList<GraphPoint>, x: Double, y: Double, label: String) {
+        fun add(into: ArrayList<GraphPoint>, x: Double, y: Double, label: String, owner: Int) {
             if (!x.isFinite() || !y.isFinite()) return
             // 同一位置不重复叠点（参考实现的 insertSort 也会去重）
             val near = into.any { abs(it.x - x) < 1e-3 && abs(it.y - y) < 1e-3 }
-            if (!near) into += GraphPoint(x, y, label)
+            if (!near) into += GraphPoint(x, y, label, owner = owner)
         }
 
-        fun scan(into: ArrayList<GraphPoint>, f: (Double) -> Double?, label: String) {
+        fun scan(into: ArrayList<GraphPoint>, f: (Double) -> Double?, label: String, owner: Int) {
             var px = left
             var py = f(px)
             var x = left + step
@@ -255,7 +397,7 @@ class GraphActivity : AppCompatActivity() {
                 if (py != null && y != null && (py > 0) != (y > 0)) {
                     bisect(px, x, f)?.let { root ->
                         val value = f(root) ?: 0.0
-                        add(into, root, value, label)
+                        add(into, root, value, label, owner)
                     }
                 }
                 px = x
@@ -267,7 +409,7 @@ class GraphActivity : AppCompatActivity() {
         functions.forEachIndexed { index, branches ->
             val first = branches.firstOrNull()
             if (first != null) {
-                scan(xAxisPoints, first::valueAt, "\nx轴与${index + 1}交点")
+                scan(xAxisPoints, first::valueAt, "\nx轴与${index + 1}交点", index)
                 for (j in 0 until index) {
                     val other = functions[j].firstOrNull() ?: continue
                     // 两条函数的差变号 = 交点；细化后 y 取两条曲线的平均值
@@ -291,6 +433,7 @@ class GraphActivity : AppCompatActivity() {
                                         root,
                                         (a + b) / 2.0,
                                         "\n-- ${j + 1}与${index + 1}交点",
+                                        index,
                                     )
                                 }
                             }
@@ -405,8 +548,10 @@ class GraphActivity : AppCompatActivity() {
     /** 把当前曲线与额外线交给 View。 */
     private fun publish() {
         val view = binding.graphView
-        view.curves = curves.map { it.points.toFloatArray() }
-        view.curveColors = curves.map { it.colorIndex }.toIntArray()
+        // 图例里点掉的函数不画（参考实现画曲线那一步就是按 canShow 跳过的）
+        val visible = curves.filter { it.colorIndex < 0 || !hidden[it.colorIndex] }
+        view.curves = visible.map { it.points.toFloatArray() }
+        view.curveColors = visible.map { it.colorIndex }.toIntArray()
         view.extraLines = extraLines
         view.invalidate()
     }
@@ -472,6 +617,7 @@ class GraphActivity : AppCompatActivity() {
         var hit: GraphPoint? = null
         tapPoints.forEach { point ->
             if (!point.valid) return@forEach
+            if (point.owner >= 0 && hidden[point.owner]) return@forEach
             val sx = axes.toDisplayX(point.x.toFloat())
             val sy = axes.toDisplayY(point.y.toFloat())
             if (tx >= sx - POINT_OFFSET && tx <= sx + POINT_TAIL &&
@@ -659,6 +805,14 @@ class GraphActivity : AppCompatActivity() {
 
         const val EXTRA_SYMJA_FORMAT = "symja_format"
         const val EXTRA_SYMJA_LATEX = "latex_formula"
+
+        /** 图例页与 Android 之间的通道名。编辑器用的是 "Android"，两个 WebView 各注册一份。 */
+        private const val LEGEND_BRIDGE = "Android"
+
+        private const val LEGEND_URL = "file:///android_asset/matheditor/legend.html"
+
+        /** 公式里换行的 LaTeX 写法（`\newline` 命令原样输出）。 */
+        private val LATEX_NEWLINE = Regex("""\\newline""")
     }
 }
 

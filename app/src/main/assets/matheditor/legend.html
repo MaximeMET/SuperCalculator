@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="mathquill/mathquill.css">
+<link rel="stylesheet" href="legend.css">
+<title>SuperCalc Legend</title>
+</head>
+<body>
+<!--
+  图像页左下角的图例。对应参考实现的 Mathbot Legend.html：
+  同样是一个 WebView、同样的 viewport、同样把 MathQuill 的静态域画在左边
+  30px 的颜色列右边。区别只有一个：参考实现会去加载一个内网 weinre 调试脚本，
+  脚本连不上，页面要等它超时才算加载完，图例因此常常几十秒后才出现——我们不加载它。
+-->
+<div id="root"></div>
+<script src="jquery.min.js"></script>
+<script src="mathquill/mathquill.min.js"></script>
+<script src="legend.js"></script>
+</body>
+</html>

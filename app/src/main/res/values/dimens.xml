@@ -29,6 +29,8 @@
     <dimen name="dart_size">32dp</dimen>
 
     <dimen name="space_micro">0.5dp</dimen>
+    <!-- 参考实现里图例 WebView 的换算基准：1dp 的像素值（legend ratio = 3*dpUnit/density） -->
+    <dimen name="dp_unit">1dp</dimen>
     <!-- 参考实现里键盘格子之间的横竖间距用的是 space_mini（1dp） -->
     <dimen name="space_mini">1dp</dimen>
     <dimen name="space_tiny">2dp</dimen>

@@ -1,0 +1,73 @@
+/*
+ * 图像页左下角图例的样式。
+ *
+ * 两段来源：
+ *   1. 参考实现 legend 页顶部的 inline style（盒模型 + html/body/#root 铺满）；
+ *   2. legend.less 编译出来的 CSS 模块（类名被 hash 过，这里换回可读名字，
+ *      规则一条没改）。
+ *
+ * 字号不写死：参考实现的 base.css 那条 `font:12px/1.5tahoma` 因为少了空格
+ * 整条作废，页面回落到 WebView 默认的 16px——图例页写了 width=device-width，
+ * 没有编辑页那种文字自动放大，所以 16px 就是它的真实字号。
+ */
+
+* {
+  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* --- 以下来自 legend.less --- */
+
+.rowContainer {
+  *zoom: 1;
+  position: relative;
+}
+
+.rowContainer:before,
+.rowContainer:after {
+  content: "";
+  display: table;
+}
+
+/* 「1:」那一列：整列 30px 宽，单元格用 table 撑满，文字靠右（继承根节点的 text-align） */
+.legendContainer {
+  display: table;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding-left: 10px;
+}
+
+.mathContainer {
+  float: left;
+}
+
+.colorContainer {
+  float: left;
+  width: 30px;
+  font-family: Symbola, "Times New Roman", serif;
+}
+
+.formula {
+  color: #fff;
+}
+
+.legend {
+  display: table-cell;
+  padding-right: 3px;
+  font-size: 100%;
+}
