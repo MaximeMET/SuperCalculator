@@ -72,7 +72,10 @@ class MethodAdvisor(private val engine: SymjaEngine) {
                 }
                 // 等式分支的绘图判据与函数分支不同：必须 x、y 同时出现才给绘图。
                 // （基准实测：`x^2==1` 只给「求解方程」，`x^2==y` 才给「绘制图像」）
-                if (!engine.isFreeOf(expr, "x") && !engine.isFreeOf(expr, "y")) {
+                if (!engine.isFreeOf(expr, "x") &&
+                    !engine.isFreeOf(expr, "y") &&
+                    isDrawable(expr)
+                ) {
                     methods += Method.Draw
                 }
             }
