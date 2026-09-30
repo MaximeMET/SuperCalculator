@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  分享渠道选择框，结构照参考实现 action_send_image_share_dialog_view.xml：
+  提示文字 + 渠道网格（可滚动）+ 分隔线 + 取消按钮。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/default_bg"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/share_tip_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:paddingLeft="@dimen/dialog_tip_margin"
+        android:paddingTop="@dimen/space_large"
+        android:paddingRight="@dimen/dialog_tip_margin"
+        android:paddingBottom="@dimen/space_large"
+        android:text="@string/share_pic_chooser_tip"
+        android:textColor="@color/gray_text"
+        android:textSize="@dimen/text_share_title" />
+
+    <ScrollView
+        android:id="@+id/share_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="@dimen/space_null"
+        android:paddingBottom="@dimen/space_huge"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <io.github.maximemet.supercalc.view.MultipleLineLayout
+            android:id="@+id/share_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/empty_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:paddingLeft="@dimen/dialog_tip_margin"
+        android:paddingTop="@dimen/space_verylarge"
+        android:paddingRight="@dimen/dialog_tip_margin"
+        android:paddingBottom="@dimen/space_huge"
+        android:text="@string/no_third_party_share"
+        android:textColor="@color/gray_text"
+        android:textSize="@dimen/text_share_title"
+        android:visibility="gone" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/divider_width"
+        android:background="#ffadadad" />
+
+    <Button
+        android:id="@+id/share_none"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/setting_btn_height"
+        android:background="@color/default_bg"
+        android:gravity="center"
+        android:text="@string/dialog_cancel"
+        android:textColor="@color/color_blue_selector"
+        android:textSize="@dimen/text_18sp" />
+</LinearLayout>

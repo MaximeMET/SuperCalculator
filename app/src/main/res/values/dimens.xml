@@ -35,6 +35,7 @@
     <dimen name="space_mini">1dp</dimen>
     <dimen name="space_tiny">2dp</dimen>
     <dimen name="space_small">3dp</dimen>
+    <dimen name="space_null">0dp</dimen>
     <dimen name="space_little">4dp</dimen>
     <dimen name="space_normal">5dp</dimen>
     <dimen name="space_normal_6">6dp</dimen>
@@ -43,7 +44,15 @@
     <dimen name="space_common">16dp</dimen>
     <dimen name="space_big">18dp</dimen>
     <dimen name="space_large">20dp</dimen>
+    <dimen name="space_verylarge">25dp</dimen>
     <dimen name="space_huge">30dp</dimen>
+
+    <!-- 分享对话框（参考实现同名 dimen） -->
+    <dimen name="dialog_tip_margin">30dp</dimen>
+    <dimen name="share_select_icon_width">50dp</dimen>
+    <dimen name="share_select_text_width">60dp</dimen>
+    <dimen name="text_share_title">12sp</dimen>
+    <dimen name="text_share_select">11sp</dimen>
     <!-- 结果页底部操作条左右各 12dp（原版 space_normal = 12dp） -->
     <dimen name="space_normal_dp12">12dp</dimen>
 

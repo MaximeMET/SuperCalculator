@@ -5,6 +5,8 @@
       改任何一个都会让界面和基准截图对不上。
     -->
     <color name="default_bg">#FF53595E</color>
+    <!-- 分享图四周的底色（参考实现 addAppInfoAndSave 用它铺底） -->
+    <color name="share_bg">#FFD6D9DD</color>
     <color name="action_bar_bottom">#FF4C5256</color>
     <!-- 原版 colorPrimaryDark：状态栏那块比工具条略深一点 -->
     <color name="status_bar">#FF4E5459</color>

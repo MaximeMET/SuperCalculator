@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 分享出去的图片只放在 cacheDir/share/ 里，别的目录不暴露 -->
+<paths>
+    <cache-path name="share" path="share/" />
+</paths>

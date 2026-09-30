@@ -33,6 +33,20 @@
             android:exported="false"
             android:label="@string/activity_graph_title"
             android:windowSoftInputMode="stateAlwaysHidden" />
+
+        <!--
+          分享图片用。参考实现把截图写到 /sdcard/Youdao/tmp.jpg 再用 Uri.fromFile 发出去，
+          新版系统会直接抛 FileUriExposedException，所以走 FileProvider 的 cache 目录。
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="io.github.maximemet.supercalc.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

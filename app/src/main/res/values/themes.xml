@@ -191,4 +191,18 @@
         <item name="android:layout_gravity">center</item>
         <item name="android:scaleType">fitXY</item>
     </style>
+
+    <!--
+      分享渠道选择框用的对话框主题（参考实现 DialogTheme）：
+      无标题、半透明浮层、背景压暗，内容自己铺默认底色。
+    -->
+    <style name="DialogTheme" parent="@android:style/Theme.Dialog">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
 </resources>

@@ -96,4 +96,8 @@
     <string name="toast_graph_cannotdraw">这种还不会画，我会继续努力的..</string>
     <string name="toast_graph_too_small">请不要放太大，吓死宝宝啦</string>
     <string name="share_not_ready">分享还没做（M4 后续步骤）</string>
+    <string name="share_pic_chooser_tip">下列应用都表示支持分享，请选一个（选择后，请等待系统启动该应用，这个过程较慢，有些可能不够方便，可下次换个试试..）</string>
+    <string name="no_third_party_share">您暂未安装任何可以分享的渠道</string>
+    <string name="share_fail">内存不足，分享失败，建议关闭一些程序后重试</string>
+    <string name="share_banner_slogon">你身边的数学好帮手</string>
 </resources>

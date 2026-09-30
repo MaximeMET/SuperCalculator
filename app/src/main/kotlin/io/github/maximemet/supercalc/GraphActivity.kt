@@ -1,7 +1,10 @@
 package io.github.maximemet.supercalc
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
 import android.os.Bundle
 import android.graphics.Matrix
 import android.util.Log
@@ -15,6 +18,8 @@ import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -30,7 +35,10 @@ import io.github.maximemet.supercalc.engine.SymjaEngine
 import io.github.maximemet.supercalc.graph.GraphAxes
 import io.github.maximemet.supercalc.graph.GraphPoint
 import io.github.maximemet.supercalc.graph.GraphPlotView
+import io.github.maximemet.supercalc.view.ShareChooserDialog
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -777,9 +785,70 @@ class GraphActivity : AppCompatActivity() {
         }
     }
 
-    /** 分享按钮：参考实现是「截图 + 应用信息」，这里先只把公式和图片准备好留给后续步骤。 */
+    /**
+     * 分享按钮。对应参考实现的 `action_share`：
+     * 把图区截下来，四周补 75px 底色、底部接一条「应用信息」宣传图，存成图片，
+     * 然后弹一个自己画的渠道选择框（`ImgTxtChooserDialog`），选谁就发给谁。
+     *
+     * 两个新系统必须改的地方：图片走 FileProvider（原版 `Uri.fromFile` 会崩）、
+     * 宣传图不能再用原版那张带二维码的位图（M6 换素材），这里按同样尺寸画我们自己的一张。
+     */
     private fun shareGraph() {
-        Toast.makeText(this, R.string.share_not_ready, Toast.LENGTH_SHORT).show()
+        val view = binding.graphContainer
+        if (view.width <= 0 || view.height <= 0) return
+        val shot = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        view.draw(Canvas(shot))
+        val composed = composeShareImage(shot)
+        val file = File(File(cacheDir, "share").apply { mkdirs() }, SHARE_FILE_NAME)
+        val saved = runCatching {
+            FileOutputStream(file).use { composed.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }.isSuccess
+        if (!saved) {
+            Toast.makeText(this, R.string.share_fail, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+        ShareChooserDialog(this, uri).show()
+    }
+
+    /** 参考实现 `addAppInfoAndSave`：左右下各留 [SHARE_BORDER] 像素底色，底部接宣传图。 */
+    private fun composeShareImage(shot: Bitmap): Bitmap {
+        val banner = appInfoBanner(SHARE_BORDER * 2 + shot.width)
+        val out = Bitmap.createBitmap(
+            SHARE_BORDER * 2 + shot.width,
+            SHARE_BORDER + shot.height + banner.height,
+            Bitmap.Config.ARGB_8888,
+        )
+        out.eraseColor(ContextCompat.getColor(this, R.color.share_bg))
+        val canvas = Canvas(out)
+        canvas.drawBitmap(shot, SHARE_BORDER.toFloat(), SHARE_BORDER.toFloat(), null)
+        canvas.drawBitmap(banner, 0f, (SHARE_BORDER + shot.height).toFloat(), null)
+        return out
+    }
+
+    /**
+     * 分享图底部那条应用信息。原版是一张 750×1039 的宣传位图（应用图标 + 二维码 +
+     * 官网地址），属于原版素材，先按同样的长宽比画一张我们自己的，M6 换成正式素材。
+     */
+    private fun appInfoBanner(width: Int): Bitmap {
+        val height = (width * BANNER_RATIO).toInt()
+        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        canvas.drawColor(Color.WHITE)
+        val name = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF333333.toInt()
+            textSize = width * 0.075f
+            textAlign = Paint.Align.CENTER
+        }
+        val small = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0xFF999999.toInt()
+            textSize = width * 0.037f
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText(getString(R.string.app_name), width / 2f, height * 0.4f, name)
+        canvas.drawText(getString(R.string.share_banner_slogon), width / 2f, height * 0.48f, small)
+        canvas.drawText(SHARE_BANNER_URL, width / 2f, height * 0.78f, small)
+        return bmp
     }
 
     companion object {
@@ -813,6 +882,17 @@ class GraphActivity : AppCompatActivity() {
 
         /** 公式里换行的 LaTeX 写法（`\newline` 命令原样输出）。 */
         private val LATEX_NEWLINE = Regex("""\\newline""")
+
+        /** 分享图四周留的底色宽度，参考实现写死 75px。 */
+        private const val SHARE_BORDER = 75
+
+        /** 分享用的临时图片（放 cache，靠 FileProvider 给出去）。 */
+        private const val SHARE_FILE_NAME = "graph-share.png"
+
+        /** 底部宣传图的长宽比，取自参考实现那张 750×1039 的位图。 */
+        private const val BANNER_RATIO = 1039f / 750f
+
+        private const val SHARE_BANNER_URL = "github.com/MaximeMET/supercalc"
     }
 }
 

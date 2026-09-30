@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 分享渠道的一格：图标 + 应用名（参考实现 image_share_dialog_item.xml） -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:drawablePadding="5dp"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <ImageView
+        android:id="@+id/app_icon"
+        android:layout_width="@dimen/share_select_icon_width"
+        android:layout_height="50dp"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="@dimen/share_select_text_width"
+        android:layout_height="35dp"
+        android:gravity="center"
+        android:maxLines="2"
+        android:textColor="@color/text_gray"
+        android:textSize="@dimen/text_share_select" />
+</LinearLayout>
