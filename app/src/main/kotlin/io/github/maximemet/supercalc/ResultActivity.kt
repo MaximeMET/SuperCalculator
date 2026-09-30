@@ -15,6 +15,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import io.github.maximemet.supercalc.databinding.ActivityResultBinding
 import io.github.maximemet.supercalc.engine.Method
+import io.github.maximemet.supercalc.settings.AppSettings
 import org.json.JSONObject
 
 /**
@@ -116,7 +117,9 @@ class ResultActivity : AppCompatActivity() {
         webView.setBackgroundColor(Color.WHITE)
         webView.settings.javaScriptEnabled = true
         webView.settings.allowFileAccess = true
-        webView.settings.textZoom = 100
+        // 原版结果页也吃「字体大小」这一项：大/中/小 → textZoom 120/100/80
+        AppSettings.init(this)
+        webView.settings.textZoom = AppSettings.fontZoom
         webView.isVerticalScrollBarEnabled = false
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {

@@ -46,13 +46,15 @@ object AppSettings {
     /**
      * 字体大小对应的 WebView 缩放。
      *
-     * 参考实现用的是 `WebSettings.setTextSize(LARGER / NORMAL / SMALLER)`，
-     * 那三个常量落到 WebView 上就是 textZoom 120 / 100 / 80，这里直接写死这三个数。
+     * 参考实现（CalculatorFragment.setWebViewFontSize / CalculatorResultActivity.setWebViewFontSize）
+     * 用的是 `WebSettings.setTextSize(LARGER / NORMAL / SMALLER)`。
+     * WebView 内部把这三个枚举映射成 textZoom 125 / 100 / 75
+     * （Chrome 的 AwSettings 里就是 {50, 75, 100, 125, 150}），所以这里直接写死这三个数。
      */
     val fontZoom: Int
         get() = when (fontSize) {
-            FONT_BIG -> 120
-            FONT_SMALL -> 80
+            FONT_BIG -> 125
+            FONT_SMALL -> 75
             else -> 100
         }
 
