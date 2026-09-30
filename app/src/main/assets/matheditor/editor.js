@@ -693,6 +693,26 @@
 
   var resultDiv = document.getElementById('resultDiv');
   var numericResultDiv = document.getElementById('numericResultDiv');
+  var statusDiv = document.getElementById('statusDiv');
+  var opIcon = document.getElementById('resultOpIcon');
+
+  // 点结果行 = 把这个结果变成新公式（原版的 setResultAsFormula）
+  document.getElementById('resultSpan').addEventListener('click', function () {
+    useResultAsFormula(resultField);
+  });
+  document.getElementById('numericResultSpan').addEventListener('click', function () {
+    useResultAsFormula(numericField);
+  });
+
+  // 点方块按钮 = 把数值结果放进键盘上的剪贴板槽（原版的 copyNumericResult）
+  if (opIcon) {
+    opIcon.addEventListener('click', function () {
+      var bridge = window.Android;
+      if (bridge && bridge.copyNumericResult) {
+        bridge.copyNumericResult(symjaOf(numericField), numericField.latex());
+      }
+    });
+  }
 
   // ---------------------------------------------------------------
   // 3. 撤销 / 重做
@@ -720,14 +740,38 @@
     }
   }
 
+  /**
+   * 原版 `reFormatFormula` 里的那一步：把 `^\circ` 这类写法换回 `\degree`。
+   *
+   * 度数/角分/角秒三个符号内部就是 `^\circ`、`^\prime`、`^\pprime`（和原版一致，
+   * 存下来的 latex 也是这个），但这段文本**不能再喂回 MathQuill 解析**——
+   * `^` 会被当成上标，公式里就多出一个空槽位和那个尖号。所以每次把 latex
+   * 交还给编辑器之前先归一化，和原版的重排公式是同一个动作。
+   */
+  var TEX_ALIASES = {
+    '^\\circ': '\\degree',
+    '^\\prime': '\\minute',
+    '^\\pprime': '\\second',
+    '^{\\prime\\prime}': '\\second',
+  };
+  var TEX_ALIAS_PATTERN = /\^(\\(?:circ|prime|pprime)|\{\\prime\\prime\})/g;
+
+  function normalizeLatex(latex) {
+    if (!latex) return latex;
+    return latex.replace(TEX_ALIAS_PATTERN, function (match) {
+      return TEX_ALIASES[match] || match;
+    });
+  }
+
   function setLatexInternal(latex) {
     restoring = true;
-    formulaField.latex(latex || '');
+    formulaField.latex(normalizeLatex(latex) || '');
     // latex(...) 只是换掉内容，光标会脱位；不把光标放回末尾的话，
     // 接下来 write() 会静默写不进去。这个坑很隐蔽。
     formulaField.moveToRightEnd();
     restoring = false;
     current = formulaField.latex();
+    notifyEmpty(current);
   }
 
   // ---------------------------------------------------------------
@@ -741,10 +785,24 @@
     if (restoring) return;
     var latex = formulaField.latex();
     pushHistory(latex);
+    notifyEmpty(latex);
     if (timer) window.clearTimeout(timer);
     timer = window.setTimeout(function () {
       compute(latex);
     }, DEBOUNCE_MS);
+  }
+
+  /**
+   * 公式空没空告诉 Android 一声：空的时候要显示「全部举例」那行示例。
+   * 状态没变就不发，免得每敲一个键都过一次桥。
+   */
+  var lastEmpty = null;
+  function notifyEmpty(latex) {
+    var empty = !latex;
+    if (empty === lastEmpty) return;
+    lastEmpty = empty;
+    var bridge = window.Android;
+    if (bridge && bridge.onFormulaEmpty) bridge.onFormulaEmpty(empty);
   }
 
   /**
@@ -774,16 +832,21 @@
     renderResult(raw);
   }
 
-  /** 当前公式的引擎输入。 */
-  function symjaOf() {
+  /** 某个域（默认是公式域）的引擎输入。 */
+  function symjaOf(field) {
     try {
-      return formulaField.__controller.root.symja();
+      return (field || formulaField).__controller.root.symja();
     } catch (e) {
       return '';
     }
   }
 
-  /** 结果串的格式是「精确结果 $$ 数值结果」。 */
+  /**
+   * 结果串的格式是「精确结果 $$ 数值结果」。
+   *
+   * 数值结果后面那个方块按钮不是永远显示的：原版只在数值结果「像个结果」
+   * （不含 true / false / 出错标记）时才挂出来，否则点了也没东西可放。
+   */
   function renderResult(raw) {
     var parts = raw ? String(raw).split('$$') : [];
     var exact = parts[0] || '';
@@ -791,8 +854,36 @@
 
     resultDiv.style.display = exact ? '' : 'none';
     numericResultDiv.style.display = numeric ? '' : 'none';
+    if (opIcon) opIcon.style.display = isValid(numeric) ? '' : 'none';
     resultField.latex(exact);
     numericField.latex(numeric);
+  }
+
+  /** 原版 trimLatexEqImply：去掉首尾空白和开头的 `=` / `\Rightarrow`。 */
+  function trimLatexEqImply(text) {
+    return String(text || '')
+      .replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '')
+      .replace(/^=+|\\?Rightarrow/, '');
+  }
+
+  /** 原版 isValid：结果里出现 true / false / 报错标记就不算「能用的结果」。 */
+  function isValid(text) {
+    if (!text) return false;
+    var t = String(text).toLowerCase();
+    return t.indexOf('true') === -1 && t.indexOf('false') === -1;
+  }
+
+  /** 点结果行：把它当成新公式（原版的 setResultAsFormula）。 */
+  function useResultAsFormula(field) {
+    var latex = trimLatexEqImply(field.latex());
+    if (!latex) return;
+    pushHistory(formulaField.latex());
+    setLatexInternal(latex);
+    lastSent = null;
+    compute(current);
+    var bridge = window.Android;
+    if (bridge && bridge.onSetResult) bridge.onSetResult(latex);
+    formulaField.focus();
   }
 
   // ---------------------------------------------------------------
@@ -853,6 +944,25 @@
     /** 当前公式的引擎输入（调试和测试用）。 */
     getSymja: function () {
       return symjaOf();
+    },
+
+    /** 把一段 latex 追加进公式。原版的 setCopyResult 就是这个，剪贴板槽点一下会用到。 */
+    writeLatex: function (latex) {
+      if (!latex) return;
+      formulaField.write(normalizeLatex(latex));
+      formulaField.focus();
+    },
+
+    /**
+     * 显示一行状态文字（引擎启动中、方法按钮算出来的结果）。
+     *
+     * 原版没有这一块：它把结果甩给独立的结果页去渲染。在 M3 那个页面做出来之前，
+     * 这里先当临时落脚点，默认不显示。
+     */
+    setStatus: function (text) {
+      if (!statusDiv) return;
+      statusDiv.textContent = text || '';
+      statusDiv.style.display = text ? '' : 'none';
     },
 
     /**

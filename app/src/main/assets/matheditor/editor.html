@@ -4,15 +4,40 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="mathquill/mathquill.css">
+<link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="editor.css">
 <title>SuperCalc Editor</title>
 </head>
 <body>
-<div id="root">
-  <div id="leftContainer" class="leftContainer">
-    <span id="formulaSpan"></span><span id="resultDiv" class="resultDiv"><span id="resultSpan" class="result"></span></span><span id="numericResultDiv" class="resultDiv2"><span id="numericResultSpan" class="result"></span></span>
+<!--
+  DOM 结构照抄参考实现的 Mathbot Editor.html（React 渲染出来的那棵树）：
+
+    公式一行（#leftContainer），精确结果、数值结果各自一个块级 div 另起一行。
+    原版就是这样，结果不会跟在公式右边，而是左对齐排在下面 —— 这是间距和
+    字号能对上的前提，别改回行内 span。
+
+  #formulaPadding 是公式后面 40px 的空白，点它把光标移到末尾；
+  #bracketDiv 是长公式左边那条竖线（原版用位图，我们先用占位，M6 换素材时补）。
+-->
+<div id="root" class="autoWidth">
+  <div id="topSpan" style="height:8px;width:100%"></div>
+  <div id="leftContainer" class="leftContainer autoWidth">
+    <span id="bracketDiv" class="bracket" style="display:none"><img id="bracketImg" alt=""></span>
+    <span id="formulaSpan"></span><span id="formulaPadding" class="formulaPadding"></span>
   </div>
+  <div id="resultDiv" class="resultDiv" style="display:none">
+    <span id="resultSpan" class="result"></span>
+  </div>
+  <div id="numericResultDiv" class="resultDiv2" style="display:none">
+    <span id="numericResultSpan" class="result"></span><img id="resultOpIcon" class="opIcon" src="icons/op-slot.svg" alt="">
+  </div>
+  <!--
+    引擎启动中 / 方法按钮的临时文字。原版没有这一块（结果显示在独立的结果页），
+    在 M3 那个页面做出来之前先借用这里，默认不显示。
+  -->
+  <div id="statusDiv" class="status" style="display:none"></div>
 </div>
+<div class="clear endAlchor"><a id="end"></a></div>
 <script src="jquery.min.js"></script>
 <script src="mathquill/mathquill.min.js"></script>
 <script src="editor.js"></script>
