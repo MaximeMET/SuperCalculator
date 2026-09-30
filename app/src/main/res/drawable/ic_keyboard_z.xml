@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 原版键盘图标 ic_keyboard_z（21x26 px @xhdpi）的矢量重画，见 work/tools/trace_keyboard_icons.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="10.5dp"
+    android:height="13dp"
+    android:viewportWidth="21"
+    android:viewportHeight="26">
+
+    <path
+        android:fillColor="#FF505050"
+        android:pathData="M0,25.1C0,24.6 3.6,19.6 8,13.9L15.9,3.5L9,3.2C3.7,3 2,2.6 2,1.5C2,0.3 3.8,0 11,0C17.9,0 20,0.3 20,1.3C20,2.1 16.6,7.2 12.4,12.6L4.8,22.5L12.9,22.8C19.2,23 21,23.4 21,24.5C21,25.7 19,26 10.5,26C4.7,26 0,25.6 0,25.1Z" />
+</vector>

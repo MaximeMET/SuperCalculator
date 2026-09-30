@@ -6,6 +6,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -79,8 +80,13 @@ class KeyboardStrip @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        val newRowHeight = w / KeyboardModel.ROW_HEIGHT_RATIO +
-            resources.getDimensionPixelSize(R.dimen.space_micro)
+        // 参考实现（WrappedVerticalViewPager.setSubViews）算的是
+        // 「窗口宽度 × keyboardPagerWidthPercent / 100 / keyboardGridRatio + keyboard_small_divider」，
+        // 用的是窗口宽度而不是本控件的宽度，格子高 = 1088/6 + 3px = 184px。
+        val pagerWidth = resources.displayMetrics.widthPixels *
+            PAGER_WIDTH_PERCENT / 100
+        val newRowHeight = pagerWidth / KeyboardModel.ROW_HEIGHT_RATIO +
+            resources.getDimensionPixelSize(R.dimen.space_mini)
         if (newRowHeight != rowHeight) {
             rowHeight = newRowHeight
             // onSizeChanged 是在 layout 过程中被调用的，这时候增删子视图触发的
@@ -161,7 +167,7 @@ class KeyboardStrip @JvmOverloads constructor(
                 setBackgroundColor(ContextCompat.getColor(context, R.color.gray_divider))
             },
             LinearLayout.LayoutParams(
-                resources.getDimensionPixelSize(R.dimen.space_micro),
+                resources.getDimensionPixelSize(R.dimen.space_mini),
                 LinearLayout.LayoutParams.MATCH_PARENT,
             ),
         )
@@ -199,7 +205,7 @@ class KeyboardStrip @JvmOverloads constructor(
                 ).apply {
                     // 行与行之间的那条细线：让网格底色从缝隙里透出来
                     if (row > 0) {
-                        topMargin = resources.getDimensionPixelSize(R.dimen.space_micro)
+                        topMargin = resources.getDimensionPixelSize(R.dimen.space_mini)
                     }
                 },
             )
@@ -209,7 +215,7 @@ class KeyboardStrip @JvmOverloads constructor(
 
     private fun cellParams(firstInRow: Boolean): LinearLayout.LayoutParams =
         LinearLayout.LayoutParams(0, rowHeight, 1f).apply {
-            marginStart = if (firstInRow) 0 else resources.getDimensionPixelSize(R.dimen.space_micro)
+            marginStart = if (firstInRow) 0 else resources.getDimensionPixelSize(R.dimen.space_mini)
         }
 
     private fun buildKey(key: KeyItem?, keyListener: (KeyItem) -> Unit): View {
@@ -219,8 +225,38 @@ class KeyboardStrip @JvmOverloads constructor(
             }
         }
         val view = LayoutInflater.from(context).inflate(R.layout.item_key, null, false)
-        view.findViewById<TextView>(R.id.key_label).text = key.label
+        val label = view.findViewById<TextView>(R.id.key_label)
+        val iconRes = iconResId(key.icon)
+        if (iconRes != 0) {
+            view.findViewById<ImageView>(R.id.key_icon).apply {
+                setImageResource(iconRes)
+                visibility = View.VISIBLE
+            }
+            label.visibility = View.GONE
+        } else {
+            label.text = key.label
+        }
         view.setOnClickListener { keyListener(key) }
         return view
+    }
+
+    /**
+     * 图标名 → drawable 资源 id。
+     *
+     * 原版每个格子都是位图（`view_keyboard_item.xml` 里的 TintImageView），
+     * 我们换成按原图轮廓重画的矢量，尺寸仍是原图的 px/2 dp（xhdpi 的固有尺寸）。
+     */
+    private fun iconResId(name: String): Int {
+        if (name.isEmpty()) return 0
+        return iconIds.getOrPut(name) {
+            resources.getIdentifier(name, "drawable", context.packageName)
+        }
+    }
+
+    private val iconIds = HashMap<String, Int>()
+
+    private companion object {
+        /** 参考实现的 keyboardPagerWidthPercent。 */
+        const val PAGER_WIDTH_PERCENT = 85
     }
 }

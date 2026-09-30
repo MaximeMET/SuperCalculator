@@ -29,6 +29,8 @@
     <dimen name="dart_size">32dp</dimen>
 
     <dimen name="space_micro">0.5dp</dimen>
+    <!-- 参考实现里键盘格子之间的横竖间距用的是 space_mini（1dp） -->
+    <dimen name="space_mini">1dp</dimen>
     <dimen name="space_tiny">2dp</dimen>
     <dimen name="space_small">3dp</dimen>
     <dimen name="space_little">4dp</dimen>

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  键盘上的一个格子。参考实现这里是「图标 + 可选小标签」，
-  图标素材要全部替换，所以先用文字顶位，几何尺寸保持一致。
+  键盘上的一个格子。和参考实现的 view_keyboard_item.xml 一样是「居中的图标」：
+  图标来自原版位图轮廓重画的矢量（work/tools/trace_keyboard_icons.py），
+  取不到图标时退回文字（label 本来也只在少数键上有意义）。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="0dp"
@@ -9,6 +10,15 @@
     android:background="@drawable/selector_key"
     android:clickable="true"
     android:focusable="true">
+
+    <ImageView
+        android:id="@+id/key_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:contentDescription="@null"
+        android:scaleType="centerInside"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/key_label"

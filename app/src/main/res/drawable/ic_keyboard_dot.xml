@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 原版键盘图标 ic_keyboard_dot（8x46 px @xhdpi）的矢量重画，见 work/tools/trace_keyboard_icons.py -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="4dp"
+    android:height="23dp"
+    android:viewportWidth="8"
+    android:viewportHeight="46">
+
+    <path
+        android:fillColor="#FF595959"
+        android:pathData="M2,43.4C0.9,42.2 1,41.6 2.3,40.2C3.9,38.7 4.1,38.7 5.7,40.2C7,41.6 7.1,42.2 6,43.4C5.3,44.3 4.4,45 4,45C3.6,45 2.7,44.3 2,43.4Z" />
+</vector>
