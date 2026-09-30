@@ -52,3 +52,40 @@ dependencies {
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 }
+
+/*
+  javac 兼容补丁（不改产物，只是换个喂 classpath 的方式）。
+
+  某些受限环境会把 `Path.toRealPath()` 拦掉，而 JDK17 的 javac 收尾时要调它：
+  结果是 classpath 里的**目录**项解析不出来（"package 不存在"），关闭 jar 时还会
+  抛一次 AccessDenied。两者叠加，报错看上去就是「找不到 Kotlin 产物里的类」。
+
+  绕法两条：把 Kotlin 产物先打成 jar 再交给 javac（jar 读得动，只剩收尾那声
+  异常），以及 fork 成独立进程跑 javac——它自己返回 0，异常只是 stderr 噪音。
+  普通机器上这么构建也完全没问题，只是 java 编译多起一个进程。
+*/
+fun kotlinClassesJarFor(variant: String): TaskProvider<Jar> =
+    tasks.register<Jar>("kotlinClassesJarForJavac${variant.replaceFirstChar { it.uppercase() }}") {
+        dependsOn("compile${variant.replaceFirstChar { it.uppercase() }}Kotlin")
+        archiveFileName.set("kotlin-classes-$variant.jar")
+        destinationDirectory.set(layout.buildDirectory.dir("tmp/javac-kotlin-jar/$variant"))
+        from(layout.buildDirectory.dir("tmp/kotlin-classes/$variant"))
+    }
+
+val kotlinClassesJarDebug = kotlinClassesJarFor("debug")
+val kotlinClassesJarRelease = kotlinClassesJarFor("release")
+
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+    options.isFork = true
+    options.forkOptions.executable = "${System.getProperty("java.home")}/bin/javac.exe"
+}
+
+// classpath 要等 AGP 配完才有值，所以放到 afterEvaluate 里换
+afterEvaluate {
+    tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+        val kotlinJar = if (name.contains("Release")) kotlinClassesJarRelease else kotlinClassesJarDebug
+        dependsOn(kotlinJar)
+        classpath = files(kotlinJar) +
+            classpath.filter { !it.path.contains("kotlin-classes") }
+    }
+}
