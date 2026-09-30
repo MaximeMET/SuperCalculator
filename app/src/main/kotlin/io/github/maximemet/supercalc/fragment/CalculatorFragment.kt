@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
+import io.github.maximemet.supercalc.GraphActivity
 import io.github.maximemet.supercalc.MainActivity
 import io.github.maximemet.supercalc.R
 import io.github.maximemet.supercalc.ResultActivity
@@ -411,6 +412,21 @@ class CalculatorFragment : Fragment() {
     }
 
     fun runMethod(method: Method) {
+        // 「绘制图像」不进结果页：原版直接把公式交给图像页，记一条 type=25 的历史就跳走
+        if (method == Method.Draw) {
+            val current = session ?: return
+            if (current.formula.isEmpty()) return
+            saveRecord(current.formula, current.latex, method.typeCode)
+            startActivity(
+                Intent(requireContext(), GraphActivity::class.java)
+                    .putExtra(
+                        GraphActivity.EXTRA_SYMJA_FORMAT,
+                        Method.drawFormula(current.formula, current.lastFormula),
+                    )
+                    .putExtra(GraphActivity.EXTRA_SYMJA_LATEX, current.latex)
+            )
+            return
+        }
         val token = ++previewToken
         editor.setStatus(getString(R.string.calculating))
         engineExecutor.execute {

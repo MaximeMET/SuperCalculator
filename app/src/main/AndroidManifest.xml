@@ -27,6 +27,12 @@
             android:exported="false"
             android:label="@string/about_us"
             android:windowSoftInputMode="stateAlwaysHidden" />
+
+        <activity
+            android:name=".GraphActivity"
+            android:exported="false"
+            android:label="@string/activity_graph_title"
+            android:windowSoftInputMode="stateAlwaysHidden" />
     </application>
 
 </manifest>

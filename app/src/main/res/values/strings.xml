@@ -88,4 +88,12 @@
     <string name="share_history_title">历史记录</string>
     <string name="feedback_offline">反馈通道已经下线，开源版本里请到 GitHub 提 issue</string>
     <string name="exit_twice">再按一次退出应用</string>
+
+    <!-- 图像页 -->
+    <string name="activity_graph_title">图像结果</string>
+    <string name="graph_intersection">交点</string>
+    <string name="toast_graph_notprecise">图像变化太剧烈,显示不够准确,建议双指放大查看</string>
+    <string name="toast_graph_cannotdraw">这种还不会画，我会继续努力的..</string>
+    <string name="toast_graph_too_small">请不要放太大，吓死宝宝啦</string>
+    <string name="share_not_ready">分享还没做（M4 后续步骤）</string>
 </resources>

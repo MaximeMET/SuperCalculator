@@ -77,4 +77,7 @@
     <color name="about_logo_grid">#FFDC8239</color>
     <color name="whole_transparent">#00FFFFFF</color>
     <color name="popup_item_pressed">#33FFFFFF</color>
+
+    <!-- 图像页：交点浮层的半透明底（参考实现 colors.xml 的 part_transparent） -->
+    <color name="part_transparent">#AA000000</color>
 </resources>

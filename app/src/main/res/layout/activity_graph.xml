@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  图像结果页。结构照参考实现的 activity_calculator_gragh.xml：
+  工具条 + 1dp 分隔线 + 图区（FrameLayout）。
+
+  区别只有一个：参考实现是「老 targetSdk，系统让开状态栏和导航栏」，
+  我们这边是 edge-to-edge，所以上下各画一条色带，高度在
+  GraphActivity.setupInsets() 里按 insets 填。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/graph_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/nav_bar"
+    android:orientation="vertical">
+
+    <View
+        android:id="@+id/status_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@color/status_bar" />
+
+    <LinearLayout
+        android:id="@+id/graph_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/default_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            style="@style/ToolbarButton"
+            android:layout_width="@dimen/toolbar_nav_button"
+            android:contentDescription="@string/action_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            style="@style/ToolbarTitle"
+            android:text="@string/activity_graph_title" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btn_share"
+            style="@style/ToolbarButton"
+            android:layout_width="48dp"
+            android:contentDescription="@string/op_share"
+            android:src="@drawable/ic_share" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/graph_toolbar_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/action_bar_bottom" />
+
+    <FrameLayout
+        android:id="@+id/graph_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/default_bg">
+
+        <io.github.maximemet.supercalc.graph.GraphPlotView
+            android:id="@+id/graph_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/default_bg" />
+
+        <!-- 「图像变化太剧烈」提示，默认不显示 -->
+        <TextView
+            android:id="@+id/graph_warn_tip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"
+            android:text="@string/toast_graph_notprecise"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_12sp"
+            android:visibility="invisible" />
+
+        <!-- 交点的浮层，M4 后续步骤再接 -->
+        <TextView
+            android:id="@+id/graph_intersect_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="left"
+            android:background="@drawable/bg_corner_part_transparent"
+            android:text="@string/graph_intersection"
+            android:textColor="@color/white"
+            android:visibility="invisible" />
+
+        <View
+            android:id="@+id/graph_intersect_highlight"
+            android:layout_width="@dimen/graph_highlight_diameter"
+            android:layout_height="@dimen/graph_highlight_diameter"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_graph_point_highlight"
+            android:visibility="invisible" />
+    </FrameLayout>
+
+</LinearLayout>

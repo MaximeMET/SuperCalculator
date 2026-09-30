@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 交点信息浮层的底：半透明黑 + 小圆角（参考实现同名 drawable 的等价物）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="@dimen/space_small" />
+    <solid android:color="@color/part_transparent" />
+</shape>

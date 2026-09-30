@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 点中交点时套在上面的圆圈（参考实现 ic_circle_solid：白色实心圆）。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/white" />
+    <size
+        android:width="@dimen/graph_highlight_diameter"
+        android:height="@dimen/graph_highlight_diameter" />
+</shape>

@@ -53,6 +53,7 @@
     <dimen name="text_16sp">16sp</dimen>
 
     <dimen name="text_13sp">13sp</dimen>
+    <dimen name="text_12sp">12sp</dimen>
     <dimen name="text_14sp">14sp</dimen>
     <dimen name="text_15sp">15sp</dimen>
     <dimen name="text_18sp">18sp</dimen>
@@ -88,4 +89,16 @@
       放到 3x 屏上是 51px 高；16sp 的文字只有 36px，小了一大圈。
     -->
     <dimen name="key_text_size">23sp</dimen>
+
+    <!--
+      图像页：数值取自参考实现的 dimens.xml。
+      graph_axis_width 是 0.5dp（3x 屏上取整成 1px，虚线才有「半格」那种细腻感），
+      曲线 2dp、额外线 1dp、特殊点半径 3dp、刻度文字 20sp。
+    -->
+    <dimen name="graph_axis_width">0.5dp</dimen>
+    <dimen name="graph_width">2dp</dimen>
+    <dimen name="graph_extra_line_width">1dp</dimen>
+    <dimen name="graph_point_radis">3dp</dimen>
+    <dimen name="graph_highlight_diameter">10dp</dimen>
+    <dimen name="text_axis_label">20sp</dimen>
 </resources>
