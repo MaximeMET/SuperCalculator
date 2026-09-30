@@ -195,6 +195,18 @@
   defSymbol('minute', '^\\prime', '<span>&#39;</span>', 'arcminute');
   defSymbol('second', '^\\pprime', '<span>&quot;</span>', 'arcsecond');
 
+  /*
+   * 细空格 \, ——引擎给的结果串里常见（`\frac{3\,\pi}{2}`），官方 MathQuill 不认这个
+   * 命令，解析到它就直接断在半路；原版那个 MathQuill 分支是认的。这里补一个，
+   * 按原版实机效果做成零宽（它那边 \, 不占宽度，只是让解析继续往下走）。
+   */
+  defSymbol(
+    ',',
+    '\\,',
+    '<span class="mq-thinspace"></span>',
+    ' '
+  );
+
   // ---- 函数：名字 + 括号 + 一个槽位 ----
   // 官方 0.10.1 的 \sin 不带槽位（只是个函数名），原版带，所以自己定义。
   ['sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan', 'ln'].forEach(function (name) {
@@ -678,6 +690,23 @@
   // ---------------------------------------------------------------
   // 2. 建三个域
   // ---------------------------------------------------------------
+
+  /*
+   * 历史页也要用这批自定义命令（\degree \dms \lim \int …），但它不需要编辑器本体，
+   * 而且页面上根本没有 #formulaSpan 这些节点。页面在加载本文件之前设
+   * window.SUPERCALC_MQ_EXT_ONLY = true，这里把命令表交出去就直接返回，
+   * 后面的 DOM 代码一概不跑（原来这段判断放在 DOM 代码之后，历史页会先炸再挂不到
+   * window.SuperCalcMQ，导致 \degree 之类的命令丢失、公式退化成纯文本）。
+   */
+  window.SuperCalcMQ = {
+    MathQuill: MathQuill,
+    MQ: MQ,
+    LatexCmds: LatexCmds,
+    CharCmds: CharCmds,
+    defCommand: defCommand,
+    defSymbol: defSymbol,
+  };
+  if (window.SUPERCALC_MQ_EXT_ONLY) return;
 
   var formulaField = MQ.MathField(document.getElementById('formulaSpan'), {
     spaceBehavesLikeTab: false,

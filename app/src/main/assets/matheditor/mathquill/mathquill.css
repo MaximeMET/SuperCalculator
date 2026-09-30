@@ -148,12 +148,19 @@
   font-style: italic;
 }
 .mq-math-mode var.mq-f {
-  margin-right: 0.2em;
+   margin-right: 0.1em;
   margin-left: 0.1em;
 }
 .mq-math-mode .mq-roman var.mq-f {
   margin: 0;
 }
+/* 原版分支：函数名（sin / ln / log…）用正体、行高收紧，右侧留一点空隙 */
+.mq-math-mode .non-italicized-function {
+   font-family: Symbola, "Times New Roman", serif;
+   line-height: .9;
+   font-style: normal;
+   padding-right: .2em;
+   }
 .mq-math-mode big {
   font-size: 125%;
 }
@@ -180,11 +187,11 @@
   display: inline-block;
 }
 .mq-math-mode .mq-supsub {
-  font-size: 90%;
+   font-size: 70%;
   vertical-align: -0.5em;
 }
 .mq-math-mode .mq-supsub.mq-limit {
-  font-size: 80%;
+   font-size: 70%;
   vertical-align: -0.4em;
 }
 .mq-math-mode .mq-supsub.mq-sup-only {
@@ -219,7 +226,6 @@
 }
 .mq-math-mode .mq-paren {
   padding: 0 .1em;
-  vertical-align: top;
   -webkit-transform-origin: center .06em;
   -moz-transform-origin: center .06em;
   -ms-transform-origin: center .06em;
@@ -273,7 +279,7 @@
   display: block;
 }
 .mq-math-mode .mq-numerator {
-  padding: 0 0.1em;
+   padding: 0.14em 0.1em 0 0.1em;
 }
 .mq-math-mode .mq-denominator {
   border-top: 1px solid;
