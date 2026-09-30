@@ -6,16 +6,25 @@
     -->
     <color name="default_bg">#FF53595E</color>
     <color name="action_bar_bottom">#FF4C5256</color>
+    <!-- 原版 colorPrimaryDark：状态栏那块比工具条略深一点 -->
+    <color name="status_bar">#FF4E5459</color>
+    <!-- 原版不设 navigationBarColor，用的是系统默认黑 -->
+    <color name="nav_bar">#FF000000</color>
 
     <color name="keyboard_upper_bg">#FFFFFFFF</color>
     <color name="keyboard_grid_bg">#FFFFFFFF</color>
     <color name="keyboard_bookdart_bg">#FFF4F4F4</color>
     <color name="gray_divider">#FFD2D2D2</color>
+    <!-- 格子之间那条细线：原版是 ?android:listDivider（12% 黑），比 gray_divider 浅 -->
+    <color name="key_grid_divider">#FFE0E0E0</color>
+    <color name="keyboard_tool_icon">#FF53595E</color>
 
     <color name="key_pressed">#FFEDEDED</color>
-    <color name="key_text">#FF2B2F36</color>
+    <color name="key_text">#FF505050</color>
 
     <color name="example_text">#FFFFCD7C</color>
+    <!-- 原版这行的正文是位图，实测是纯白 -->
+    <color name="example_content">#FFFFFFFF</color>
     <color name="editor_hint">#80FFFFFF</color>
     <color name="editor_result">#FFA4A8AC</color>
 
@@ -23,7 +32,8 @@
     <color name="capsule_button_stroke">#F0000000</color>
     <color name="capsule_button_text">#FF000000</color>
 
-    <color name="dart_selected">#FFF0A24B</color>
-    <color name="dart_normal">#FFE6E6E6</color>
-    <color name="dart_normal_text">#FF8A8F96</color>
+    <!-- 原版是渐变色位图，这里取它的平均色 -->
+    <color name="dart_selected">#FFFDB763</color>
+    <color name="dart_normal">#FFE4E4E4</color>
+    <color name="dart_normal_text">#FF505050</color>
 </resources>

@@ -2,6 +2,8 @@
 <resources>
     <style name="Theme.SuperCalc" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@color/default_bg</item>
+        <!-- AppCompat 会把 colorPrimaryDark 用到状态栏上，原版就是这么来的 -->
+        <item name="colorPrimaryDark">@color/status_bar</item>
         <item name="colorAccent">@color/capsule_button_pressed</item>
     </style>
 
@@ -37,7 +39,8 @@
     <style name="ToolbarTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginStart">@dimen/space_middle</item>
+        <!-- AppCompat Toolbar 的 titleMargins 是 4dp -->
+        <item name="android:layout_marginStart">@dimen/space_little</item>
         <item name="android:textColor">#FFFFFFFF</item>
         <item name="android:textSize">20sp</item>
     </style>
@@ -65,6 +68,7 @@
         <item name="android:background">@drawable/bg_dart_normal</item>
         <item name="android:gravity">center</item>
         <item name="android:textColor">@color/dart_normal_text</item>
-        <item name="android:textSize">11sp</item>
+        <!-- 位图里的字形高约 24px（3x 屏），文字要跟上 -->
+        <item name="android:textSize">15sp</item>
     </style>
 </resources>

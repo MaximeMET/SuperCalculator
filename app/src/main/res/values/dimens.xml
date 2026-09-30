@@ -7,13 +7,27 @@
     <dimen name="keyboard_height">400dp</dimen>
     <dimen name="keyboard_top_height">48dp</dimen>
     <dimen name="example_height">35dp</dimen>
+    <dimen name="example_text_size">12sp</dimen>
+    <!-- 原版示例正文是位图，按屏幕缩放；我们用文字，略小一档才放得下最长那条 -->
+    <dimen name="example_content_text_size">11sp</dimen>
+
+    <!--
+      顶区（公式区）的三个间距，取自参考实现 fragment_calculator.xml：
+      WebView 底下留 10dp 给方法按钮条，方法按钮条自己再离底 15dp。
+    -->
+    <dimen name="space_normalmethodbutton">10dp</dimen>
+    <dimen name="methodbutton_margin">15dp</dimen>
+    <dimen name="setting_enter_width">0dp</dimen>
 
     <dimen name="toolbar_height">48dp</dimen>
+    <!-- 参考实现的导航按钮是 56dp 宽的方块，右侧菜单项才是 48dp -->
     <dimen name="toolbar_button">48dp</dimen>
+    <dimen name="toolbar_nav_button">56dp</dimen>
 
     <dimen name="capsule_button_height">30dp</dimen>
     <dimen name="capsule_button_radius">14dp</dimen>
-    <dimen name="dart_size">30dp</dimen>
+    <!-- 原版的圆形书签位图是 64px(xhdpi)=32dp -->
+    <dimen name="dart_size">32dp</dimen>
 
     <dimen name="space_micro">0.5dp</dimen>
     <dimen name="space_tiny">2dp</dimen>
@@ -29,5 +43,9 @@
 
     <dimen name="text_13sp">13sp</dimen>
     <dimen name="text_14sp">14sp</dimen>
-    <dimen name="key_text_size">16sp</dimen>
+    <!--
+      键盘格子在原版里是位图（xhdpi 的 ic_keyboard_7 是 22x34px），
+      放到 3x 屏上是 51px 高；16sp 的文字只有 36px，小了一大圈。
+    -->
+    <dimen name="key_text_size">23sp</dimen>
 </resources>

@@ -5,6 +5,7 @@
     <string name="no_result">算不出来</string>
     <string name="engine_starting">引擎启动中…</string>
     <string name="calculating">计算中…</string>
+    <string name="toast_result_too_slow">当前运算较复杂，耗时较长，如需继续计算请点计算按钮</string>
 
     <string name="title_calculate">计算</string>
     <string name="all_examples">全部举例</string>

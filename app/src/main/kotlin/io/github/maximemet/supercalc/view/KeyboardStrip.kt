@@ -179,7 +179,8 @@ class KeyboardStrip @JvmOverloads constructor(
     ): ViewGroup {
         val grid = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(ContextCompat.getColor(context, R.color.gray_divider))
+            // 格子之间的细线是网格底色从缝隙里透出来的，颜色和 gray_divider 不同
+            setBackgroundColor(ContextCompat.getColor(context, R.color.key_grid_divider))
         }
         val rows = (keys.size + columns - 1) / columns
         for (row in 0 until rows) {

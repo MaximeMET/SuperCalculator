@@ -94,6 +94,18 @@ class MathEditor(
     /** 重新算一次当前公式（引擎比编辑器晚就绪时用）。 */
     fun refresh() = call("SuperCalcEditor.refresh()")
 
+    /** 把一段 latex 追加进公式（键盘上那个剪贴板槽点一下时用）。 */
+    fun writeLatex(latex: String) =
+        call("SuperCalcEditor.writeLatex(${JSONObject.quote(latex)})")
+
+    /** 直接把公式设成一段 latex（点示例时用）。 */
+    fun setLatex(latex: String) =
+        call("SuperCalcEditor.setLatex(${JSONObject.quote(latex)})")
+
+    /** 在公式下面显示一行状态文字；传空串就收起来。 */
+    fun setStatus(text: String) =
+        call("SuperCalcEditor.setStatus(${JSONObject.quote(text)})")
+
     /** 布局变化（键盘高度、旋转）之后让 MathQuill 重排一次。 */
     fun reflow() = call("SuperCalcEditor.reflow()")
 
