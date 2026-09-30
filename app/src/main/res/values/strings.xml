@@ -44,4 +44,48 @@
     <string name="dart_function">函数</string>
     <string name="dart_variable">变量</string>
     <string name="dart_formula">公式</string>
+
+    <!-- 抽屉 / 各页面标题，文案取自参考实现 -->
+    <string name="navigation_calculator">计算</string>
+    <string name="navigation_tutorial">教程</string>
+    <string name="navigation_settings">设置</string>
+    <string name="navigation_feedback">反馈</string>
+    <string name="navigation_shareme">推荐给朋友</string>
+    <string name="navigation_game">超级24点</string>
+    <string name="navigation_history">历史记录</string>
+
+    <string name="action_more">更多</string>
+    <string name="game_not_ready">超级24点还没做（M5）</string>
+
+    <!-- 设置页 -->
+    <string name="setting_group_regular">常规</string>
+    <string name="setting_group_result">结果</string>
+    <string name="setting_group_other">其他</string>
+    <string name="setting_font_size">字体大小</string>
+    <string name="setting_example_visibility">举例展示</string>
+    <string name="setting_fraction">保留小数位</string>
+    <string name="setting_process_visibility">过程展示</string>
+    <string name="setting_feedback_announce">推荐加入超级计算器QQ群：530100431\n反馈更及时</string>
+    <string name="setting_advice_send">发送</string>
+    <string name="feedback_hint">我想说</string>
+    <string name="check_update">检查更新</string>
+    <string name="about_us">关于我们</string>
+    <string name="about_version">当前版本：%1$s</string>
+    <string name="about_web">官方网站：math.youdao.com</string>
+    <string name="about_copyright">Copyright © 2017, NetEase,Inc. All Rights Reserved.</string>
+    <string name="about_version_newest">当前已是最新版本</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_confirm">确定</string>
+    <string name="font_size_big">大</string>
+    <string name="font_size_mid">中</string>
+    <string name="font_size_sm">小</string>
+
+    <!-- 历史页 -->
+    <string name="history_empty">还没有历史记录</string>
+    <string name="history_clear_confirm">要清空历史记录吗？</string>
+    <string name="share_slogon">向朋友推荐超级计算器</string>
+    <string name="share_app">我觉得超级计算器很好用，推荐你也来试试</string>
+    <string name="share_history_title">历史记录</string>
+    <string name="feedback_offline">反馈通道已经下线，开源版本里请到 GitHub 提 issue</string>
+    <string name="exit_twice">再按一次退出应用</string>
 </resources>

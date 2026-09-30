@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 弹出菜单里的一项：按下时比底色亮一点，和参考实现那套 holo 深色选择器一个意思 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:drawable="@color/popup_item_pressed" />
+    <item android:drawable="@color/whole_transparent" />
+</selector>

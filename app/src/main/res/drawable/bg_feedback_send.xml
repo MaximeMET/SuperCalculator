@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  参考实现的「发送」按钮是 9-patch 位图（原素材，M6 要整体替换），
+  这里按实机取到的颜色和形状重画：纯色 #F44336，圆角 2dp。
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="2dp" />
+    <solid android:color="@color/feedback_send" />
+</shape>

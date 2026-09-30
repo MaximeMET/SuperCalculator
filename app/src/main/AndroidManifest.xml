@@ -21,6 +21,12 @@
             android:name=".ResultActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="@string/about_us"
+            android:windowSoftInputMode="stateAlwaysHidden" />
     </application>
 
 </manifest>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  工具条上的 ⋮（历史页才有）。
+
+  原版走 AppCompat 的 actionOverflowButtonStyle：位图 abc_ic_menu_moreoverflow_mtrl_alpha
+  是 48x48px@xhdpi 的三颗 8px 圆点，纵向中心在 12/24/36，横向中心 24；
+  这里按同样的几何重画（viewport 48 单位 = 24dp）。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,12a4,4 0 1,0 8,0a4,4 0 1,0 -8,0ZM20,24a4,4 0 1,0 8,0a4,4 0 1,0 -8,0ZM20,36a4,4 0 1,0 8,0a4,4 0 1,0 -8,0Z" />
+</vector>

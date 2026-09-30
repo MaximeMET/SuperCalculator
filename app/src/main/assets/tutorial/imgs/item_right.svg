@@ -1,0 +1,4 @@
+<!-- 折叠项收起时的三角：原版 item_up.png（12x22px，#DADADA） -->
+<svg xmlns="http://www.w3.org/2000/svg" width="12" height="22" viewBox="0 0 12 22">
+  <path fill="#DADADA" d="M0.5,21.5 L0.2,20.5 L8.8,11 L0.2,1.5 L0.5,0.5 L11.5,10.4 L11.5,11.6 Z"/>
+</svg>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 参考实现的 bg_corner_semi_transparent：#F0000000 的圆角盒子 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="@dimen/space_normal_6" />
+    <solid android:color="@color/semi_transparent" />
+</shape>

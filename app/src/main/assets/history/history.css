@@ -1,0 +1,69 @@
+/*
+ * 历史页样式。
+ *
+ * 数值全部来自参考实现打包进去的 less（historyItem.less / mathItem.less /
+ * ListLoadingItem.less），一个都没改：日期条 12px #323232 底 #F2F2F2、
+ * 每行 15px 上下留白 + 20px 左留白、公式 18px #393939、结果 18px #999、
+ * 行之间 1px #EAEAEA，底部加载条 60px 高、内阴影、#F2F2F2 底。
+ */
+* {
+  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background-color: #ffffff;
+}
+
+.title {
+  font-size: 12px;
+  color: #323232;
+  background-color: #f2f2f2;
+  padding: 6px 20px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.formulaContainer {
+  white-space: nowrap;
+  padding: 15px 0 15px 20px;
+  border-bottom: 1px solid #eaeaea;
+  overflow-x: auto;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.formulaStyle {
+  color: #393939 !important;
+  font-size: 18px !important;
+  display: inline-block;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.resultStyle {
+  color: #999 !important;
+  font-size: 18px !important;
+  display: inline-block;
+}
+
+.outerDiv {
+  height: 60px;
+  box-shadow: inset 0 0 2px 0 #aaa;
+  background-color: #f2f2f2;
+  text-align: center;
+  padding-top: 20px;
+}
+
+.text {
+  text-align: center;
+  color: #aaa;
+}
+
+.hide {
+  display: none;
+}

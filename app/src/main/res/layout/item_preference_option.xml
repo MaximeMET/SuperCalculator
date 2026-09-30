@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 设置对话框里的一行：圆圈 + 文案，对应参考实现的 dialog_select_item.xml -->
+<CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/PreferenceOption"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/setting_select_height"
+    android:drawableStart="@drawable/ic_radio"
+    android:drawablePadding="@dimen/space_medium"
+    android:paddingStart="0dp"
+    android:paddingEnd="0dp" />

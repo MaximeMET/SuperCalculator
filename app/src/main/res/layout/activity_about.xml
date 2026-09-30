@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  关于我们，照参考实现的 activity_about.xml。
+  最外层多套了一个 FrameLayout：edge-to-edge 下状态栏/导航栏那两条色带要自己画，
+  原版是系统直接给的不透明条（状态栏主题色、导航栏纯黑）。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/about_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/status_bar">
+
+    <LinearLayout
+        android:id="@+id/about_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/about_toolbar"
+            layout="@layout/view_page_toolbar" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/bg_white"
+            android:paddingBottom="@dimen/space_huge">
+
+            <TextView
+                android:id="@+id/tv_about_copyright"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:gravity="center"
+                android:text="@string/about_copyright"
+                android:textColor="@color/gray_text"
+                android:textSize="@dimen/text_13sp" />
+
+            <TextView
+                android:id="@+id/tv_privacy_declaration"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_above="@id/tv_about_copyright"
+                android:gravity="center"
+                android:text="@string/about_web"
+                android:textColor="@color/gray_text"
+                android:textSize="@dimen/text_13sp" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <include
+                    android:id="@+id/about_logo"
+                    layout="@layout/view_about_logo"
+                    android:layout_width="@dimen/about_logo_width"
+                    android:layout_height="@dimen/about_logo_width"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="@dimen/logo_margin_top" />
+
+                <TextView
+                    android:id="@+id/tv_about_content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/about_logo"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="@dimen/space_huge"
+                    android:gravity="center"
+                    android:text="@string/app_name"
+                    android:textColor="@color/text_gray"
+                    android:textSize="@dimen/text_26sp" />
+
+                <TextView
+                    android:id="@+id/tv_about_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/tv_about_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="@dimen/space_medium"
+                    android:gravity="center"
+                    android:textColor="@color/about_version_text"
+                    android:textSize="@dimen/text_15sp" />
+            </RelativeLayout>
+        </RelativeLayout>
+    </LinearLayout>
+
+    <!-- 导航栏那 24dp 在原版是系统画的不透明黑条，edge-to-edge 下要自己补 -->
+    <View
+        android:id="@+id/nav_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_gravity="bottom"
+        android:background="@color/nav_bar" />
+</FrameLayout>

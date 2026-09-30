@@ -1,0 +1,116 @@
+/*
+ * 教程页样式，数值照参考实现的 assets/tutorial/style.css：
+ * 字号全用 rem，根字号在页面里按「屏幕宽度 / 7.5」算（宽屏封顶 500）。
+ */
+* {
+  box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  font-family: -apple-system, "Helvetica Neue", "Arial", "PingFang SC", "Hiragino Sans GB",
+    "STHeiti", "Microsoft YaHei", "Microsoft JhengHei", "Source Han Sans SC", "Noto Sans CJK SC",
+    "Source Han Sans CN", "Noto Sans SC", "Source Han Sans TC", "Noto Sans CJK TC",
+    "WenQuanYi Micro Hei", SimSun, sans-serif;
+}
+
+div,
+p,
+span,
+img,
+a,
+ul,
+li {
+  padding: 0;
+  margin: 0 auto;
+}
+
+ul {
+  list-style: none;
+}
+
+#directory {
+  width: 100%;
+}
+
+.dir-item {
+  font-size: 0;
+  height: 1.1rem;
+  line-height: 1.1rem;
+  border-bottom: 1px solid #ddd;
+  position: relative;
+  margin: 0 .4rem;
+}
+
+.directory-title {
+  color: #505050;
+  font-size: .34rem;
+  position: absolute;
+  left: .3rem;
+}
+
+.directory-arrow {
+  vertical-align: middle;
+}
+
+.arrow-up {
+  height: .22rem;
+}
+
+.arrow-down {
+  height: .12rem;
+  display: none;
+}
+
+.dir-item.open .arrow-down {
+  display: inline-block;
+}
+
+.dir-item.open .arrow-up {
+  display: none;
+}
+
+.ct-item {
+  display: none;
+  width: 100%;
+  font-size: .28rem;
+  color: #4d4d4d;
+  line-height: 1.7;
+  background-color: #f8f8f8;
+}
+
+.ct-item.show {
+  display: block;
+}
+
+.ct-item-wrap {
+  margin: 0 .4rem;
+  padding: .27rem 0 .3rem;
+  border-bottom: 1px solid #ddd;
+}
+
+#case {
+  margin: 0 .4rem;
+  padding: .27rem .3rem .3rem;
+  border-bottom: 1px solid #ddd;
+}
+
+#case li {
+  font-size: .3rem;
+  line-height: 2.6;
+  color: #e29a3a;
+}
+
+.tutorial-icon {
+  height: .24rem;
+  vertical-align: middle;
+  margin-left: 3px;
+}
+
+.tutorial-icon.large {
+  height: .34rem;
+}

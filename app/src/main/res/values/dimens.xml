@@ -52,6 +52,35 @@
 
     <dimen name="text_13sp">13sp</dimen>
     <dimen name="text_14sp">14sp</dimen>
+    <dimen name="text_15sp">15sp</dimen>
+    <dimen name="text_18sp">18sp</dimen>
+    <dimen name="text_20sp">20sp</dimen>
+    <dimen name="text_26sp">26sp</dimen>
+
+    <!-- 抽屉：整宽 230dp、每行 56dp、图标 24dp（原版 NavigationView 的实测值） -->
+    <dimen name="navigation_width">230dp</dimen>
+    <dimen name="nav_header_font_size">20sp</dimen>
+    <dimen name="nav_item_height">56dp</dimen>
+    <dimen name="nav_item_icon">24dp</dimen>
+    <!-- 图标右边 32dp，加起来文字正好从 72dp 开始 -->
+    <dimen name="nav_item_text_margin">32dp</dimen>
+
+    <!-- 设置页：行高 50dp、分组标题上下留白 24dp -->
+    <dimen name="setting_height">50dp</dimen>
+    <dimen name="setting_margin">24dp</dimen>
+    <dimen name="setting_dialog_width">286dp</dimen>
+    <dimen name="setting_dialog_height">234dp</dimen>
+    <dimen name="setting_btn_width">80dp</dimen>
+    <dimen name="setting_btn_height">50dp</dimen>
+    <dimen name="setting_select_height">50dp</dimen>
+    <dimen name="divider_width">1dp</dimen>
+
+    <!-- 反馈页底部输入栏 -->
+    <dimen name="min_height">48dp</dimen>
+    <dimen name="loading_width">180dp</dimen>
+    <dimen name="loading_wheel">40dp</dimen>
+    <dimen name="about_logo_width">90dp</dimen>
+    <dimen name="logo_margin_top">80dp</dimen>
     <!--
       键盘格子在原版里是位图（xhdpi 的 ic_keyboard_7 是 22x34px），
       放到 3x 屏上是 51px 高；16sp 的文字只有 36px，小了一大圈。

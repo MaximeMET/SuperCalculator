@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 抽屉里的一行：24dp 图标 + 文字，整行 56dp，图标左边 16dp、文字左边 72dp -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/nav_item_height"
+    android:background="@drawable/bg_drawer_item"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/drawer_item_icon"
+        android:layout_width="@dimen/nav_item_icon"
+        android:layout_height="@dimen/nav_item_icon"
+        android:layout_marginStart="@dimen/space_common"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/drawer_item_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/nav_item_text_margin"
+        android:singleLine="true"
+        android:textColor="@color/primary_text"
+        android:textSize="@dimen/text_14sp" />
+</LinearLayout>

@@ -1,284 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  结构照抄参考实现的 activity_main.xml / fragment_calculator.xml / view_keyboard.xml：
-  上面是工具条，下面固定高度键盘，中间是「公式编辑器 + 运算按钮 + 空输入示例区」。
+  外层骨架照参考实现的 activity_main.xml：抽屉 + 一条公共工具条 + 一个内容容器。
 
-  顶区是个 FrameLayout 而不是 LinearLayout —— 原版就是叠的：
-  编辑器 WebView 铺满（底部留 10dp），方法按钮条和示例条各按 layout_gravity="bottom"
-  浮在上面。这样公式多长都不会把按钮挤下去，几何也和原版一致。
+  原版这里还套了 ScrimInsetsFrameLayout（给抽屉留状态栏），我们这套是
+  edge-to-edge，两条系统栏色带直接画在最上层，抽屉自己留出状态栏的高度。
 -->
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/default_bg">
 
+    <androidx.drawerlayout.widget.DrawerLayout
+        android:id="@+id/drawer_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="false">
+
+        <LinearLayout
+            android:id="@+id/page_root"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/default_bg"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                android:background="@color/default_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btn_menu"
+                    style="@style/ToolbarButton"
+                    android:layout_width="@dimen/toolbar_nav_button"
+                    android:contentDescription="@string/action_menu"
+                    android:src="@drawable/ic_menu" />
+
+                <ImageButton
+                    android:id="@+id/btn_back"
+                    style="@style/ToolbarButton"
+                    android:layout_width="@dimen/toolbar_nav_button"
+                    android:contentDescription="@string/action_back"
+                    android:src="@drawable/ic_chevron_left"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/toolbar_title"
+                    style="@style/ToolbarTitle"
+                    android:text="@string/title_calculate" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <ImageButton
+                    android:id="@+id/btn_history"
+                    style="@style/ToolbarButton"
+                    android:contentDescription="@string/action_history"
+                    android:src="@drawable/ic_history" />
+
+                <ImageButton
+                    android:id="@+id/btn_undo"
+                    style="@style/ToolbarButton"
+                    android:contentDescription="@string/action_undo"
+                    android:src="@drawable/ic_undo" />
+
+                <ImageButton
+                    android:id="@+id/btn_redo"
+                    style="@style/ToolbarButton"
+                    android:contentDescription="@string/action_redo"
+                    android:src="@drawable/ic_redo" />
+
+                <ImageButton
+                    android:id="@+id/btn_overflow"
+                    style="@style/ToolbarOverflowButton"
+                    android:contentDescription="@string/action_more"
+                    android:src="@drawable/ic_overflow"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <View
+                android:id="@+id/toolbar_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/action_bar_bottom" />
+
+            <FrameLayout
+                android:id="@+id/content_frame"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <include
+            android:id="@+id/drawer_view"
+            layout="@layout/view_drawer" />
+    </androidx.drawerlayout.widget.DrawerLayout>
+
     <!--
-      状态栏和导航栏那两条。原版是 targetSdk 28 的老应用，系统直接拿
-      colorPrimaryDark 给状态栏上色、导航栏用系统默认黑；我们是 edge-to-edge，
-      两条都由系统透明化，所以自己画。高度由 MainActivity 按 insets 填。
+      状态栏 / 导航栏那两条。原版是 targetSdk 22 的老应用，系统直接拿
+      colorPrimaryDark 给状态栏上色、导航栏用系统默认黑；我们这边系统栏是透明的，
+      所以自己画，并压在最上层（抽屉滑出来时状态栏那条也得保持深色）。
+      高度由 MainActivity 按 insets 填。
     -->
     <View
         android:id="@+id/status_bar_scrim"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_alignParentTop="true"
+        android:layout_gravity="top"
         android:background="@color/status_bar" />
 
     <View
         android:id="@+id/nav_bar_scrim"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_alignParentBottom="true"
+        android:layout_gravity="bottom"
         android:background="@color/nav_bar" />
-
-    <LinearLayout
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:layout_alignParentTop="true"
-        android:background="@color/default_bg"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageButton
-            android:id="@+id/btn_menu"
-            style="@style/ToolbarButton"
-            android:layout_width="@dimen/toolbar_nav_button"
-            android:contentDescription="@string/action_menu"
-            android:src="@drawable/ic_menu" />
-
-        <TextView
-            style="@style/ToolbarTitle"
-            android:text="@string/title_calculate" />
-
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
-        <ImageButton
-            android:id="@+id/btn_history"
-            style="@style/ToolbarButton"
-            android:contentDescription="@string/action_history"
-            android:src="@drawable/ic_history" />
-
-        <ImageButton
-            android:id="@+id/btn_undo"
-            style="@style/ToolbarButton"
-            android:contentDescription="@string/action_undo"
-            android:src="@drawable/ic_undo" />
-
-        <ImageButton
-            android:id="@+id/btn_redo"
-            style="@style/ToolbarButton"
-            android:contentDescription="@string/action_redo"
-            android:src="@drawable/ic_redo" />
-    </LinearLayout>
-
-    <View
-        android:id="@+id/toolbar_divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_below="@id/toolbar"
-        android:background="@color/action_bar_bottom" />
-
-    <!-- 键盘：48dp 工具行 + 1px 分隔线 + (左书签栏 15% / 垂直翻页 85%) -->
-    <LinearLayout
-        android:id="@+id/math_keyboard"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/keyboard_height"
-        android:layout_alignParentBottom="true"
-        android:background="@color/keyboard_grid_bg"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:id="@+id/keyboard_top"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/keyboard_top_height"
-            android:background="@color/keyboard_upper_bg"
-            android:orientation="horizontal">
-
-            <ImageButton
-                android:id="@+id/key_clear"
-                style="@style/KeyboardToolKey"
-                android:contentDescription="@string/keyboard_clear"
-                android:src="@drawable/ic_clear" />
-
-            <TextView
-                android:id="@+id/key_clipboard"
-                style="@style/KeyboardToolKey"
-                android:singleLine="true" />
-
-            <ImageButton
-                android:id="@+id/key_newline"
-                style="@style/KeyboardToolKey"
-                android:contentDescription="@string/keyboard_newline"
-                android:src="@drawable/ic_newline" />
-
-            <ImageButton
-                android:id="@+id/key_left"
-                style="@style/KeyboardToolKey"
-                android:contentDescription="@string/keyboard_left"
-                android:src="@drawable/ic_left" />
-
-            <ImageButton
-                android:id="@+id/key_right"
-                style="@style/KeyboardToolKey"
-                android:contentDescription="@string/keyboard_right"
-                android:src="@drawable/ic_right" />
-
-            <ImageButton
-                android:id="@+id/key_backspace"
-                style="@style/KeyboardToolKey"
-                android:contentDescription="@string/keyboard_backspace"
-                android:src="@drawable/ic_backspace" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/gray_divider" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:weightSum="100">
-
-            <LinearLayout
-                android:id="@+id/keyboard_darts"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="15"
-                android:background="@color/keyboard_bookdart_bg"
-                android:orientation="vertical">
-
-                <FrameLayout style="@style/DartSlot">
-                    <TextView
-                        android:id="@+id/dart1"
-                        style="@style/KeyboardDart"
-                        android:contentDescription="@string/dart_basic"
-                        android:textSize="9sp"
-                        android:text="+−&#10;×÷" />
-                </FrameLayout>
-
-                <FrameLayout style="@style/DartSlot">
-                    <TextView
-                        android:id="@+id/dart2"
-                        style="@style/KeyboardDart"
-                        android:contentDescription="@string/dart_function"
-                        android:text="f" />
-                </FrameLayout>
-
-                <FrameLayout style="@style/DartSlot">
-                    <TextView
-                        android:id="@+id/dart3"
-                        style="@style/KeyboardDart"
-                        android:contentDescription="@string/dart_variable"
-                        android:text="a-z" />
-                </FrameLayout>
-
-                <FrameLayout style="@style/DartSlot">
-                    <TextView
-                        android:id="@+id/dart4"
-                        style="@style/KeyboardDart"
-                        android:contentDescription="@string/dart_formula"
-                        android:text="f(x)" />
-                </FrameLayout>
-
-                <!-- 第 5 格刻意留空，位置和参考实现一致 -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:visibility="invisible"
-                    android:layout_weight="1" />
-            </LinearLayout>
-
-            <io.github.maximemet.supercalc.view.KeyboardStrip
-                android:id="@+id/keyboard_scroll"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="85"
-                android:background="@color/keyboard_grid_bg"
-                android:scrollbars="none" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <FrameLayout
-        android:id="@+id/ll_top_area"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_above="@id/math_keyboard"
-        android:layout_below="@id/toolbar_divider"
-        android:layout_marginStart="@dimen/space_large"
-        android:layout_marginTop="@dimen/space_big"
-        android:layout_marginEnd="@dimen/space_large">
-
-        <!--
-          公式区就是原版那个 MathQuill 编辑器页（assets/matheditor/editor.html）。
-          公式、精确结果、数值结果三块都在页面里渲染，Kotlin 侧只负责算。
-          底部那 10dp 是留给方法按钮条的，和原版的 space_normalmethodbutton 一致。
-        -->
-        <WebView
-            android:id="@+id/editor"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginBottom="@dimen/space_normalmethodbutton"
-            android:background="@android:color/transparent"
-            android:scrollbars="none" />
-
-        <io.github.maximemet.supercalc.view.AutoLineLayout
-            android:id="@+id/calculator_ops"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom|start"
-            android:layout_marginBottom="@dimen/methodbutton_margin"
-            app:columns="4"
-            app:columnSpace="@dimen/space_normal_6"
-            app:rowSpace="@dimen/space_normal_6" />
-
-        <!--
-          空公式时底下那行示例。原版这里是一个横向 ViewPager 套一串位图，
-          点一下就把示例公式填进编辑器；我们用文字 + 自己的例题列表，功能一样、不留原版素材。
-
-          排布按原版实测来的：ViewPager 填满「全部举例」左边的整块空白，位图在里面
-          水平居中（墨迹中心 562px vs 空白区中心 563px），高度被剩下的 25dp 卡住。
-          所以正文也要居中，不能贴着「全部举例」右对齐。
-        -->
-        <LinearLayout
-            android:id="@+id/view_empty_container"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/example_height"
-            android:layout_gravity="bottom|start"
-            android:orientation="horizontal">
-
-            <!-- 示例正文在左侧空白里居中；太长时从前面截断 -->
-            <TextView
-                android:id="@+id/view_empty"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:layout_marginBottom="@dimen/space_medium"
-                android:ellipsize="start"
-                android:gravity="center"
-                android:paddingEnd="@dimen/space_small"
-                android:singleLine="true"
-                android:textColor="@color/example_content"
-                android:textSize="@dimen/example_content_text_size" />
-
-            <TextView
-                android:id="@+id/tv_example"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_marginBottom="@dimen/space_medium"
-                android:gravity="end|center_vertical"
-                android:text="@string/all_examples"
-                android:textColor="@color/example_text"
-                android:textSize="@dimen/example_text_size" />
-        </LinearLayout>
-    </FrameLayout>
-
-</RelativeLayout>
+</FrameLayout>

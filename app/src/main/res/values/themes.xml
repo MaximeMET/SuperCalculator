@@ -2,9 +2,43 @@
 <resources>
     <style name="Theme.SuperCalc" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowBackground">@color/default_bg</item>
+        <!--
+          原版 targetSdk 停在 2019 年，TextView 的 fallbackLineSpacing 走的是兼容分支（false）；
+          新 targetSdk 默认 true，中文字体（Noto Sans CJK）的行盒会比原版高 5px，
+          整页文字跟着下移。这里把默认 TextView 样式对齐回原版行为。
+        -->
+        <item name="android:textViewStyle">@style/AppTextView</item>
+        <item name="android:checkedTextViewStyle">@style/AppCheckedTextView</item>
+        <item name="android:buttonStyle">@style/AppButton</item>
         <!-- AppCompat 会把 colorPrimaryDark 用到状态栏上，原版就是这么来的 -->
         <item name="colorPrimaryDark">@color/status_bar</item>
         <item name="colorAccent">@color/capsule_button_pressed</item>
+        <!-- 设置页那两个开关：选中是主色，未选中是浅橙（原版 BaseAppTheme） -->
+        <item name="colorControlActivated">@color/color_primary</item>
+        <item name="colorSwitchThumbNormal">@color/primary_light</item>
+    </style>
+
+    <!--
+      AppCompat 的默认 TextView 样式 + 原版的行盒行为。
+      minSdk 21 上 fallbackLineSpacing 属性还不存在，低版本系统忽略即可（老系统本来就是旧行为）。
+    -->
+    <style name="AppTextView" parent="Widget.AppCompat.TextView">
+        <item name="android:fallbackLineSpacing">false</item>
+    </style>
+
+    <!--
+      CheckedTextView / Button 有自己的主题样式入口，不走 android:textViewStyle，
+      这里各配一份，保证对话框里的选项文字和按钮文字也按原版的行盒排。
+    -->
+    <!-- 框架那个 Widget.CheckedTextView 是私有的，这里不给父样式，只补这一条属性 -->
+    <style name="AppCheckedTextView">
+        <item name="android:fallbackLineSpacing">false</item>
+    </style>
+
+    <style name="AppButton" parent="Widget.AppCompat.Button">
+        <item name="android:fallbackLineSpacing">false</item>
+        <!-- 原版对话框按钮是常规字重（AppCompat 默认那套会给到 Medium） -->
+        <item name="android:fontFamily">sans-serif</item>
     </style>
 
     <!-- 对应参考实现的 BtnOperation -->
@@ -39,13 +73,26 @@
         <item name="android:tint">#FFFFFFFF</item>
     </style>
 
+    <!--
+      ⋮ 在原版是 AppCompat 的 actionOverflowButtonStyle：
+      paddingStart 6dp / paddingEnd 10dp / minWidth 36dp，
+      内容宽 = max(36dp, 6+24+10) = 40dp，图标中心距按钮右缘 22dp（实测 66px@480dpi）。
+    -->
+    <style name="ToolbarOverflowButton" parent="ToolbarButton">
+        <item name="android:paddingStart">6dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:minWidth">36dp</item>
+    </style>
+
     <style name="ToolbarTitle">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
+        <!-- 原版工具条标题走的是 AppCompat 的 ActionBar 标题样式，中文落在 Medium 字重上 -->
+        <item name="android:fontFamily">sans-serif-medium</item>
         <!-- AppCompat Toolbar 的 titleMargins 是 4dp -->
         <item name="android:layout_marginStart">@dimen/space_little</item>
-        <!-- AppCompat 摆标题时按自己的 padding 算，实测比我们居中低 1dp，这里补回来 -->
-        <item name="android:translationY">-1dp</item>
+        <!-- 字重换成 Medium 后行盒变了，这里按实测把标题压回原版的位置 -->
+        <item name="android:translationY">0dp</item>
         <item name="android:textColor">#FFFFFFFF</item>
         <item name="android:textSize">20sp</item>
     </style>
@@ -72,6 +119,62 @@
         <item name="android:drawablePadding">@dimen/space_common</item>
         <item name="android:textSize">@dimen/text_16sp</item>
         <item name="android:textColor">@color/result_op_text</item>
+    </style>
+
+    <!-- 历史页溢出菜单的弹窗样式：只改背景，其余沿用 AppCompat 默认 -->
+    <style name="AppPopupMenu" parent="Widget.AppCompat.PopupMenu">
+        <item name="android:popupBackground">@color/default_bg</item>
+    </style>
+
+    <!-- 设置页的分组标题：14sp #BBBBBB（原版 SettingCategoryTitle，注意它盖掉了 16sp） -->
+    <style name="SettingCategoryTitle">
+        <item name="android:textSize">@dimen/text_14sp</item>
+        <item name="android:textColor">@color/gray_setting_title</item>
+    </style>
+
+    <!-- 设置页的行文案：16sp #393939（原版 SettingItemPrimaryText） -->
+    <style name="SettingItemPrimaryText">
+        <item name="android:textSize">@dimen/text_16sp</item>
+        <item name="android:textColor">@color/primary_text</item>
+    </style>
+
+    <!-- 可点的行：居中偏左 + 点击涟漪（原版 SettingItemButton） -->
+    <style name="SettingItemButton" parent="SettingItemPrimaryText">
+        <item name="android:gravity">center|start</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+    </style>
+
+    <!-- 原版设置页的开关样式（SettingSwitchStyle），配合框架 Switch 使用 -->
+    <style name="SettingSwitchStyle">
+        <item name="android:colorForeground">@color/primary_light</item>
+        <item name="colorControlActivated">@color/color_primary</item>
+        <item name="colorSwitchThumbNormal">@color/primary_light</item>
+    </style>
+
+    <!-- 设置对话框里的单选项 -->
+    <style name="PreferenceOption">
+        <item name="android:textSize">@dimen/text_16sp</item>
+        <item name="android:textColor">@color/black_select_text</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:singleLine">true</item>
+    </style>
+
+    <!--
+      历史页 ⋮ 弹出的菜单：照抄参考实现的 ActionBarPopupThemeOverlay——
+      父样式是 ThemeOverlay.AppCompat.Light（只覆盖颜色，不动别的），
+      windowBackground 给主题色底、正文色给白色。
+    -->
+    <style name="ThemeOverlay.SuperCalc.Popup" parent="ThemeOverlay.AppCompat.Light">
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:windowBackground">@color/default_bg</item>
+        <item name="android:popupBackground">@color/default_bg</item>
+        <item name="android:colorBackgroundFloating">@color/default_bg</item>
+        <!-- AppCompat 的菜单弹窗背景是从 popupMenuStyle 上取的 -->
+        <item name="popupMenuStyle">@style/AppPopupMenu</item>
+        <item name="android:itemTextAppearance">?android:textAppearanceLarge</item>
+        <item name="android:itemBackground">@drawable/bg_popup_item</item>
     </style>
 
     <!-- 左侧书签：等分的槽位，圆形图标居中放在里面 -->

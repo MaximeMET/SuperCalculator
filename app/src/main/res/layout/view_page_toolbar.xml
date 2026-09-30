@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  独立页面（目前只有「关于我们」）用的工具条：
+  左边一个返回箭头 + 标题，没有右侧按钮，和参考实现的 toolbar_actionbar 一致。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="?attr/actionBarSize"
+    android:background="@color/default_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageButton
+        android:id="@+id/btn_page_back"
+        style="@style/ToolbarButton"
+        android:layout_width="@dimen/toolbar_nav_button"
+        android:contentDescription="@string/action_back"
+        android:src="@drawable/ic_back" />
+
+    <TextView
+        android:id="@+id/page_title"
+        style="@style/ToolbarTitle"
+        android:text="@string/about_us" />
+</LinearLayout>

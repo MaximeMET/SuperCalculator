@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  反馈页，照参考实现的 fragment_feedback.xml：
+  上面一行居中提示（16sp #757575），底部一条 #E5E5E5 的输入栏
+  （白底圆角输入框 + 80dp 红色「发送」）。原版中间那块是反馈列表，
+  走的是友盟服务器，这里已经没有可拉的记录了。
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <TextView
+        android:id="@+id/feedback_info_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="@dimen/space_medium"
+        android:text="@string/setting_feedback_announce"
+        android:textColor="@color/feedback_info_text"
+        android:textSize="@dimen/text_16sp" />
+
+    <RelativeLayout
+        android:id="@+id/rl_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@color/reply_frame_bg"
+        android:padding="@dimen/space_medium">
+
+        <Button
+            android:id="@+id/umeng_fb_send"
+            android:layout_width="@dimen/setting_btn_width"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="@drawable/bg_feedback_send"
+            android:minHeight="@dimen/min_height"
+            android:text="@string/setting_advice_send"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_16sp" />
+
+        <EditText
+            android:id="@+id/umeng_fb_reply_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="@dimen/space_little"
+            android:layout_toStartOf="@id/umeng_fb_send"
+            android:background="@drawable/bg_feedback_input"
+            android:hint="@string/feedback_hint"
+            android:minHeight="@dimen/min_height"
+            android:padding="@dimen/space_normal"
+            android:textColor="@color/text_gray"
+            android:textColorHint="@color/text_light_gray" />
+    </RelativeLayout>
+
+    <FrameLayout
+        android:id="@+id/feedback_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/rl_bottom"
+        android:layout_below="@id/feedback_info_text" />
+</RelativeLayout>

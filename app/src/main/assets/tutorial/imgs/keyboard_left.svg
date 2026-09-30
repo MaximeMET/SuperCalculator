@@ -1,0 +1,5 @@
+<!-- 工具行左移键：跟键盘上那个图标同一份轮廓（原版 ic_keyboard_left.png，20x26px） -->
+<svg xmlns="http://www.w3.org/2000/svg" width="20" height="26" viewBox="0 0 20 26">
+  <path fill="#53595E"
+        d="M19.7,25.5 L17.5,24.9 L3.5,15.9 L0.5,13.8 L0.1,12.5 L15.5,2.2 L19.5,0.1 L19.9,1.5 L17.3,12.5 L19.9,24.5 Z"/>
+</svg>

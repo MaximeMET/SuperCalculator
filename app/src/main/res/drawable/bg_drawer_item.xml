@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 参考实现的 navigation_item_bg_selector：选中 #EFEFEF，其余白 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:drawable="@color/navigation_item_active" />
+    <item android:drawable="@color/white" />
+</selector>

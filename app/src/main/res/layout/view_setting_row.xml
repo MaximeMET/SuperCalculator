@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  设置页里那种「标题 …… 当前值 ›」的行，对应参考实现的 view_setting.xml。
+  默认文案只是个占位，真正的内容由 SettingsFragment 填。
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/setting_height"
+    android:background="?attr/selectableItemBackground">
+
+    <TextView
+        android:id="@+id/tv_pref_title"
+        style="@style/SettingItemPrimaryText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/space_large"
+        android:text="@string/setting_font_size" />
+
+    <TextView
+        android:id="@+id/tv_pref_content"
+        style="@style/SettingItemPrimaryText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="@dimen/space_large"
+        android:drawableEnd="@drawable/ic_arrow_right"
+        android:drawablePadding="@dimen/space_medium"
+        android:gravity="center_vertical"
+        android:text="@string/font_size_mid" />
+</RelativeLayout>

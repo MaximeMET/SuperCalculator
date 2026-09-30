@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SuperCalc History</title>
+<!--
+  公式排版用的是编辑器那套 MathQuill（StaticMath），字体和渲染规则跟编辑页完全一致，
+  和参考实现的做法一样：历史页里的公式也是用 MathQuill 静态渲染的，不是 MathJax。
+-->
+<link rel="stylesheet" href="../matheditor/mathquill/mathquill.css">
+<link rel="stylesheet" href="../matheditor/fonts.css">
+<link rel="stylesheet" href="history.css">
+</head>
+<body>
+<div id="root"></div>
+
+<script src="../matheditor/jquery.min.js"></script>
+<script src="../matheditor/mathquill/mathquill.min.js"></script>
+<script>
+  // 让 editor.js 只注册它那批自定义命令（\degree \dms \lim \int …）就收工，
+  // 不要启动编辑器本体——历史页只借用这些命令的定义。
+  window.SUPERCALC_MQ_EXT_ONLY = true;
+</script>
+<script src="../matheditor/editor.js"></script>
+<script src="history.js"></script>
+</body>
+</html>

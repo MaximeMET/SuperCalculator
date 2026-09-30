@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <title>超级计算器</title>
+    <link rel="stylesheet" type="text/css" href="./style.css">
+    <script src="../matheditor/jquery.min.js"></script>
+    <script>
+        // 根字号 = 屏宽 / 7.5（宽屏封顶 500），rem 数值才能对上参考实现的排版
+        if (document.documentElement.clientWidth > 500) {
+            document.documentElement.style.fontSize = 500 / 7.5 + 'px';
+        } else {
+            document.documentElement.style.fontSize = document.documentElement.clientWidth / 7.5 + 'px';
+        }
+    </script>
+</head>
+<body>
+<div id="directory">
+    <div class="dir-item open">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">支持哪些运算</span>
+    </div>
+    <div class="ct-item show">
+        <ul id="case">
+            <li>化简</li>
+            <li>求解方程</li>
+            <li>求解方程组</li>
+            <li>绘制图像</li>
+            <li>多项式分解</li>
+            <li>多项式展开</li>
+            <li>求导</li>
+            <li>积分</li>
+            <li>定积分数值解</li>
+        </ul>
+    </div>
+    <div class="dir-item">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">如何移动输入光标</span>
+    </div>
+    <div class="ct-item">
+        <div class="ct-item-wrap">
+            点击键盘上方的<img class="tutorial-icon" src="./imgs/keyboard_left.svg">
+            <img class="tutorial-icon" src="./imgs/keyboard_right.svg">
+            ，或直接点击输入区域的位置，可进行光标移动。
+        </div>
+    </div>
+
+    <div class="dir-item">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">如何一键清空内容</span>
+    </div>
+    <div class="ct-item">
+        <div class="ct-item-wrap">
+            点击<img class="tutorial-icon" src="./imgs/keyboard_clear.svg">，清空输入区。
+        </div>
+    </div>
+
+    <div class="dir-item">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">如何对结果进行操作</span>
+    </div>
+    <div class="ct-item">
+        <div class="ct-item-wrap">
+            点击计算结果右边的<img class="tutorial-icon large" src="./imgs/op_icon.svg">
+            ，计算结果会暂存在键盘上方<img class="tutorial-icon" src="./imgs/keyboard_clear.svg">
+            右侧空白处。需再次使用该结果时，点击暂存的数据即可。
+            如直接点击计算结果，则会用该结果替换之前输入的式子，以继续计算。
+        </div>
+    </div>
+
+    <div class="dir-item">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">如何使用历史记录</span>
+    </div>
+    <div class="ct-item">
+        <div class="ct-item-wrap">
+            点击计算页面右上角的历史纪录按钮，进入历史记录列表。点击任意式子，即将该式带回到计算界面，可进行再次修改或查看原式计算结果。
+        </div>
+    </div>
+
+    <div class="dir-item">
+        <img class="directory-arrow arrow-up" src="./imgs/item_right.svg"/>
+        <img class="directory-arrow arrow-down" src="./imgs/item_down.svg"/>
+        <span class="directory-title">如何使用参数和未知数</span>
+    </div>
+    <div class="ct-item">
+        <div class="ct-item-wrap">
+            键盘中，a、b、c、k、h、p、n为参数，不可用做方程中的未知数求解。方程中有参数时，方程的解会用参数表示。x、y、z为未知数，用在方程中可求解，也可当做参数表示，比如2x=y → x=y/2
+        </div>
+    </div>
+</div>
+
+<script>
+    var injectHistory = '__HistoryCtrl';
+    // 点第一条里的例式 → 交回 Android 填进计算页（和参考实现一致）
+    var formulaArr = [
+            '\\frac{5}{12}-\\frac{1}{8}',
+            'x^2+2x+1=0',
+            '30x+15y=675\\newline42x+20y=940',
+            'y=x^2+2x',
+            'x^4-1',
+            '(1+x^2)(1+x^4)',
+            'x^3',
+            'x',
+            '\\int_{0}^{1}{x}d{x}'
+    ];
+
+    $(function () {
+        $('.dir-item').click(function () {
+            if ($(this).hasClass('open')) {
+                $(this).removeClass('open').next().hide();
+            } else {
+                $(this).addClass('open').next().show();
+            }
+        });
+
+        $('#case li').click(function () {
+            var index = $(this).index();
+            window[injectHistory].clickFormula(formulaArr[index]);
+        });
+    });
+</script>
+</body>
+</html>

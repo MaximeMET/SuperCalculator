@@ -41,6 +41,8 @@ android {
 
     buildFeatures {
         viewBinding = true
+        // 关于页要显示版本号（参考实现也是读 BuildConfig.VERSION_NAME）
+        buildConfig = true
     }
 }
 
