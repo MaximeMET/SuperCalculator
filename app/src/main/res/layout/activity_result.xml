@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  运算结果页。结构照抄参考实现的 activity_calculator_result.xml：
+  工具条 + 白色内容区（上面是结果 WebView，底部一排三个操作）。
+
+  原版是老 targetSdk，状态栏/导航栏由系统上色；我们是 edge-to-edge，
+  所以上下各画一条色带，高度在 ResultActivity.setupInsets() 里按 insets 填。
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/result_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/result_page_bg">
+
+    <View
+        android:id="@+id/status_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_alignParentTop="true"
+        android:background="@color/status_bar" />
+
+    <LinearLayout
+        android:id="@+id/result_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:layout_alignParentTop="true"
+        android:background="@color/default_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btn_back"
+            style="@style/ToolbarButton"
+            android:layout_width="@dimen/toolbar_nav_button"
+            android:contentDescription="@string/action_back"
+            android:src="@drawable/ic_back" />
+
+        <TextView
+            style="@style/ToolbarTitle"
+            android:text="@string/activity_result_title" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btn_share"
+            style="@style/ToolbarButton"
+            android:layout_width="48dp"
+            android:contentDescription="@string/op_share"
+            android:src="@drawable/ic_share" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/result_toolbar_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/result_toolbar"
+        android:background="@color/action_bar_bottom" />
+
+    <RelativeLayout
+        android:id="@+id/result_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/result_toolbar_divider"
+        android:background="@color/result_page_bg"
+        android:paddingTop="@dimen/space_huge"
+        android:paddingBottom="@dimen/space_huge">
+
+        <LinearLayout
+            android:id="@+id/ll_bottom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginStart="@dimen/space_normal_dp12"
+            android:layout_marginTop="@dimen/space_large"
+            android:layout_marginEnd="@dimen/space_normal_dp12"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btn_resume"
+                style="@style/ResultOperation"
+                android:drawableTop="@drawable/ic_result_resume"
+                android:text="@string/result_op_resume" />
+
+            <TextView
+                android:id="@+id/btn_clear"
+                style="@style/ResultOperation"
+                android:drawableTop="@drawable/ic_result_clear"
+                android:text="@string/result_op_clear" />
+
+            <TextView
+                android:id="@+id/btn_new"
+                style="@style/ResultOperation"
+                android:drawableTop="@drawable/ic_result_new"
+                android:text="@string/result_op_new" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/fl_content_webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@id/ll_bottom"
+            android:layout_marginStart="@dimen/space_large">
+
+            <WebView
+                android:id="@+id/result_webview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/result_page_bg"
+                android:scrollbars="none" />
+        </FrameLayout>
+    </RelativeLayout>
+
+    <View
+        android:id="@+id/nav_bar_scrim"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_alignParentBottom="true"
+        android:background="@color/nav_bar" />
+</RelativeLayout>

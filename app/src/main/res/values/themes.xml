@@ -59,6 +59,21 @@
         <item name="android:gravity">center</item>
     </style>
 
+    <!-- 结果页底部操作按钮：原版 styles.xml 里的 ResultOperation -->
+    <style name="ResultOperation">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:background">?selectableItemBackground</item>
+        <item name="android:paddingTop">@dimen/space_small</item>
+        <item name="android:paddingBottom">@dimen/space_small</item>
+        <item name="android:minWidth">@dimen/result_op_width</item>
+        <item name="android:drawablePadding">@dimen/space_common</item>
+        <item name="android:textSize">@dimen/text_16sp</item>
+        <item name="android:textColor">@color/result_op_text</item>
+    </style>
+
     <!-- 左侧书签：等分的槽位，圆形图标居中放在里面 -->
     <style name="DartSlot">
         <item name="android:layout_width">match_parent</item>

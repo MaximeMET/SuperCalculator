@@ -28,6 +28,11 @@
     <color name="editor_hint">#80FFFFFF</color>
     <color name="editor_result">#FFA4A8AC</color>
 
+    <!-- 结果页：白底 + 三个操作按钮的文字色（原版实测值） -->
+    <color name="result_page_bg">#FFFFFFFF</color>
+    <color name="result_op_text_enabled">#FF757575</color>
+    <color name="result_op_text_disabled">#FFDBDBDB</color>
+
     <color name="capsule_button_pressed">#FFFFB560</color>
     <color name="capsule_button_stroke">#F0000000</color>
     <color name="capsule_button_text">#FF000000</color>

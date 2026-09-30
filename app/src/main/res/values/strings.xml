@@ -10,8 +10,28 @@
     <string name="title_calculate">计算</string>
     <string name="all_examples">全部举例</string>
 
+    <string name="activity_result_title">运算结果</string>
+    <string name="result_op_resume">继续编辑</string>
+    <string name="result_op_clear">清空</string>
+    <string name="result_op_new">用结果继续运算</string>
+    <string name="op_share">分享</string>
+    <!-- 原版把方法名和这句拼在一起，例如「求解方程，得」 -->
+    <string name="result_label_suffix">，得</string>
+    <string name="share_result_prefix">运算结果：</string>
+
+    <!--
+      结果页橙色问号里的提示文案。取自参考实现，但原版内嵌的 tipimg/*.png
+      位图（原素材）在这里已经去掉，M6 换文案时一并重写。
+    -->
+    <string name="tip_integrate">不定积分是积分的一种，即函数 f 的全体原函数，结果中的 C 代表任意常数。若想求解定积分，请在键盘第二屏选择定积分符号，并在全部输入完毕后点击“定积分”按钮。</string>
+    <string name="tip_ninte">定积分是积分的一种，即函数 f 在区间 [a,b] 上的积分和的极限。若想求解不定积分，请直接输入式子（不需要输入积分符号），并点击随后出现的“积分”按钮。</string>
+    <string name="tip_diff">导数定义为：当自变量的增量趋于零时，因变量的增量与自变量的增量之商的极限。常用函数的导数可通过几个通用公式来求。不是所有的函数都有导数，一个函数也不一定在所有的点上都有导数，这种我们暂无结果。</string>
+    <string name="tip_solve">解方程时要合并同类项、取反函数等尽量转化成一元 1-4 次等已知方程来解，很多方程常常只能近似求数值解。</string>
+    <string name="tip_setsolve">方程组通常采用的是消元法进行求解，消元法又分为加减消元法和代入消元法。</string>
+
     <string name="action_menu">菜单</string>
     <string name="action_history">历史</string>
+    <string name="action_back">返回</string>
     <string name="action_undo">撤销</string>
     <string name="action_redo">重做</string>
     <string name="keyboard_clear">清空</string>

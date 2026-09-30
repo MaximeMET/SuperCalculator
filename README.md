@@ -280,6 +280,7 @@ GPL-3.0。这不是随便选的：引擎依赖的 Symja 是 GPL-3.0，链接它�
 | Hipparchus | Apache-2.0 | 数值方法 |
 | [MathQuill](https://github.com/mathquill/mathquill) | MPL-2.0 | 公式编辑器（`app/src/main/assets/matheditor/mathquill/`） |
 | [jQuery](https://jquery.com/) 2.1.4 | MIT | MathQuill 的运行时依赖 |
+| [MathJax](https://www.mathjax.org/) 3.2.2 | Apache-2.0 | 结果页公式排版（`app/src/main/assets/mathjax/`） |
 | AndroidX / Material | Apache-2.0 | Android 界面基础库 |
 
 `engine/libs/symja-2016-04-15.jar` 是 Symja 的**修改版**（GPL-3.0）。
@@ -300,6 +301,16 @@ pwsh tools/build-mathquill.ps1
 
 > MathQuill 自带的 `Symbola` 字体也是从上游仓库取的（哈希与 `mathquill-0.10.1/src/font/`
 > 逐个一致），不是从原版 App 里抠出来的素材。
+
+`app/src/main/assets/mathjax/` 是从官方 npm 包 `mathjax@3.2.2` 的 `es5/` 目录里
+挑出来的一小套离线运行时（`tex-svg.js`、`output/svg/fonts/tex.js`、
+几个 TeX 扩展、`ui/menu.js`、`a11y/assistive-mml.js`），
+不是原版 App 里那份 MathJax 2.7 / STIX-Web 的拷贝。
+重建命令：
+
+```powershell
+pwsh tools/fetch-mathjax.ps1
+```
 
 ## 与参考实现的关系
 

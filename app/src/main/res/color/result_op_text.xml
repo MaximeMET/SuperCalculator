@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  结果页底部三个操作按钮的文字色。原版不可用时是整块 alpha 0.5，
+  实测禁用态文字渲染出来是 #EDEDED，反推原色约 #DBDBDB。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:color="@color/result_op_text_disabled" />
+    <item android:color="@color/result_op_text_enabled" />
+</selector>

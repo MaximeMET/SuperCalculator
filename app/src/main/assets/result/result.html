@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <!--
+      结果页。参考实现是 React + MathJax v2（result.min.js + MinMathJax），
+      这里自己写一版：结构、字号、颜色按实机截图逐项对齐，渲染用官方 MathJax v3。
+
+      原版的 rem 基准是 document.documentElement.clientWidth / 7.5，
+      所以下面所有尺寸都用 rem，换屏幕宽度时比例跟着走。
+    -->
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; width: 100%; background: #fff; }
+        body {
+            /* 原版正文左边距 16px（实测墨迹从 36dp 处开始，减去外层 20dp） */
+            padding: 0 0.295rem;
+            font-family: tahoma, arial, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: rgba(255, 255, 255, 0);
+        }
+        #root { width: 100%; overflow: hidden; }
+        /* 公式字号按实机截图反推：墨迹高 ≈ 33 CSS px，TeX 数学大约 0.75em */
+        #formula { margin-top: 0.365rem; font-size: 0.81rem; color: #53595e; }
+        #method {
+            margin-top: 0.585rem;
+            color: #a4a8ac;
+            font-size: 0.37rem;
+            line-height: 1.4;
+        }
+        #result { margin-top: 0.4rem; font-size: 0.59rem; color: #a4a8ac; }
+        #tip { margin-top: 0.42rem; height: 0.48rem; }
+        /* 原版这里是一张橙色问号位图（tipimg/q_mark.png），我们用自己的画法 */
+        .tip-mark {
+            display: inline-block;
+            width: 0.48rem;
+            height: 0.48rem;
+            border-radius: 50%;
+            background: #f59241;
+            position: relative;
+            cursor: pointer;
+        }
+        .tip-mark::before {
+            content: "";
+            position: absolute;
+            left: 0.225rem;
+            top: 0.125rem;
+            width: 0.035rem;
+            height: 0.235rem;
+            background: #fff;
+            transform: skewX(-12deg);
+            border-radius: 0.02rem;
+        }
+        .tip-mark::after {
+            content: "";
+            position: absolute;
+            left: 0.225rem;
+            top: 0.075rem;
+            width: 0.055rem;
+            height: 0.055rem;
+            border-radius: 50%;
+            background: #fff;
+        }
+        .tip-content {
+            display: none;
+            margin-top: 0.24rem;
+            padding: 0.22rem;
+            color: #797979;
+            font-size: 0.295rem;
+            line-height: 1.5;
+            box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.22);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .tip-content.open { display: block; }
+        .hidden { display: none; }
+        mjx-container { display: block !important; text-align: left !important; margin: 0 !important; }
+    </style>
+</head>
+<body>
+<div id="root">
+    <div id="formula"></div>
+    <div id="method"></div>
+    <div id="result"></div>
+    <div id="tip" class="hidden">
+        <span id="tipMark" class="tip-mark"></span>
+        <div id="tipContent" class="tip-content"></div>
+    </div>
+</div>
+<script>
+    /*
+     * 原版在 <head> 里直接读 clientWidth / 7.5 设 rem 基准，
+     * 但那会儿布局宽度可能还是 0（WebView 起页面时抓到过 0px，
+     * 于是所有 rem 尺寸全塌成 0）。这里改成能算就算、以后每次
+     * 尺寸变化再补一次，语义和原版一致。
+     */
+    function applyRemBase() {
+        var width = document.documentElement.clientWidth || window.innerWidth || 0;
+        if (width > 0) {
+            document.documentElement.style.fontSize = width / 7.5 + 'px';
+        }
+    }
+    applyRemBase();
+    document.addEventListener('DOMContentLoaded', applyRemBase);
+    window.addEventListener('resize', applyRemBase);
+    window.MathJax = {
+        options: {
+            enableMenu: false,
+            renderActions: { assistiveMml: [] },
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+        },
+        // file:// 页面用不了 localStorage，关掉字体缓存免得控制台报错
+        svg: { fontCache: 'none', scale: 1 },
+        startup: { typeset: false }
+    };
+</script>
+<script src="../mathjax/tex-svg.js"></script>
+<script src="result.js"></script>
+</body>
+</html>

@@ -1,5 +1,8 @@
 package io.github.maximemet.supercalc
 
+import android.app.Activity
+import android.content.Intent
+import android.graphics.LightingColorFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +12,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.Toast
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -375,8 +379,12 @@ class MainActivity : AppCompatActivity() {
         for (method in methods) {
             val button = Button(this, null, 0)
             button.setText(method.label)
-            button.setBackgroundResource(R.drawable.bg_method_button)
-            button.setTextColor(ContextCompat.getColor(this, R.color.capsule_button_text))
+            // 原版：胶囊 drawable 上套 LightingColorFilter(-1, method.color) 给边框上色，
+            // 文字直接用同一个颜色。每个方法的颜色是规格的一部分，不能统一成黑色。
+            val capsule = ContextCompat.getDrawable(this, R.drawable.bg_method_button)!!.mutate()
+            capsule.colorFilter = LightingColorFilter(-1, method.color)
+            button.background = capsule
+            button.setTextColor(method.color)
             button.textSize = 13f
             button.gravity = Gravity.CENTER
             button.minHeight = resources.getDimensionPixelSize(R.dimen.capsule_button_height)
@@ -396,10 +404,50 @@ class MainActivity : AppCompatActivity() {
                 return@execute
             }
             val output = runCatching { current.evaluate(method) }.getOrNull()
+            val latex = current.latex
             mainHandler.post {
                 if (token != previewToken) return@post
-                // 结果页（M3）还没做，先借用编辑器里那行状态文字显示
-                editor.setStatus(output ?: getString(R.string.no_result))
+                editor.setStatus("")
+                if (output == null) {
+                    // 参考实现在这里是 toast_result_error，我们沿用自己那条文案
+                    Toast.makeText(this, R.string.no_result, Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                startResultPage(method, latex, output)
+            }
+        }
+    }
+
+    /** 打开运算结果页（参考实现的 CalculatorResultActivity，请求码 1024）。 */
+    private fun startResultPage(method: Method, latex: String, result: String) {
+        val intent = Intent(this, ResultActivity::class.java)
+            .putExtra(ResultActivity.EXTRA_LATEX, latex)
+            .putExtra(ResultActivity.EXTRA_METHOD, method.label)
+            .putExtra(ResultActivity.EXTRA_METHOD_KEY, method.key)
+            .putExtra(ResultActivity.EXTRA_RESULT, result)
+            .putExtra(ResultActivity.EXTRA_NEW_ENABLED, ResultActivity.allowsReuse(method))
+        @Suppress("DEPRECATION")
+        startActivityForResult(intent, ResultActivity.REQUEST_CODE)
+    }
+
+    /**
+     * 结果页回来的三条命令。
+     *
+     * 参考实现：CONTINUE(2) 什么都不做；CLEAR(1) 清空公式；NEW(3) 把结果当新公式填回去。
+     */
+    @Deprecated("参考实现走的就是 startActivityForResult")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != ResultActivity.REQUEST_CODE || resultCode != Activity.RESULT_OK) {
+            return
+        }
+        when (data?.getIntExtra(ResultActivity.EXTRA_BACK_CMD, ResultActivity.CMD_RESUME)) {
+            ResultActivity.CMD_CLEAR -> editor.clear()
+            ResultActivity.CMD_NEW -> {
+                val formula = data?.getStringExtra(ResultActivity.EXTRA_BACK_FORMULA).orEmpty()
+                if (formula.isNotEmpty()) {
+                    editor.setLatex(formula)
+                }
             }
         }
     }

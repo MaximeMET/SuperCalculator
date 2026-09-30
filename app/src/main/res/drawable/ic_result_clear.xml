@@ -1,0 +1,20 @@
+<!-- 结果页「清空」按钮图标：原版 xhdpi ic_result_clear.png（152x152px），见 ic_result_resume.xml 说明。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="76dp"
+    android:height="76dp"
+    android:viewportWidth="152"
+    android:viewportHeight="152">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FFF0F0F0"
+        android:strokeWidth="2"
+        android:pathData="M16,75.5A59.5,59.5 0 1,1 135,75.5A59.5,59.5 0 1,1 16,75.5Z" />
+    <path
+        android:fillColor="#FF53595E"
+        android:fillType="evenOdd"
+        android:pathData="M100,86.5L99.5,87L85.5,87L85,86.5L85,85.5L85.5,85L99.5,85L100,85.5ZM79.8,86.5L78.5,86.8L72.5,86L66.5,86L59,78.5L58.6,76.5L59.1,74.5L60,73.5L85.5,48L87.5,47L88.5,47L89.5,48L90.5,48L102,59.5L102.1,60.5L103,61.5L103,62.5L102,64.5ZM62,86.5L61.5,87L49.5,87L49,86.5L49,85.5L49.5,85L61.5,85L62,85.5ZM79.5,84L82,81.5L82,80.5L69.5,68L68.5,68.1L61,75.5L61,77.5L67.5,84ZM57,81.5L56.5,82L46.5,82L46,81.5L46,80.5L46.5,80L56.5,80L57,80.5ZM84.5,78.8L99.8,63.5L100,62.5L99.9,60.5L89.5,50.1L86.5,50L71.3,65.5L71.5,66.5L81.5,76.5L83,78.5L83.5,79Z" />
+    <path
+        android:fillColor="#FFFED7AF"
+        android:fillType="evenOdd"
+        android:pathData="M79.6,81.5L78.5,82L66.5,82L61,76.5L61,75.5L68.5,68.2L69.5,68L81,79.5ZM83.8,76.5L83.5,76.9L83.2,76.5L85.5,74.4ZM60,73.5L59.5,74.1L58.2,73.5L58,70.5L72.5,56.4L74.5,55.5L75.5,56.5L74.6,58.5Z" />
+</vector>

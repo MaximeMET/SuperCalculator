@@ -39,6 +39,16 @@
     <dimen name="space_common">16dp</dimen>
     <dimen name="space_big">18dp</dimen>
     <dimen name="space_large">20dp</dimen>
+    <dimen name="space_huge">30dp</dimen>
+    <!-- 结果页底部操作条左右各 12dp（原版 space_normal = 12dp） -->
+    <dimen name="space_normal_dp12">12dp</dimen>
+
+    <!--
+      结果页底部三个操作按钮：原版 ResultOperation 样式
+      （minWidth 100dp、上下 padding 3dp、drawablePadding 16dp）。
+    -->
+    <dimen name="result_op_width">100dp</dimen>
+    <dimen name="text_16sp">16sp</dimen>
 
     <dimen name="text_13sp">13sp</dimen>
     <dimen name="text_14sp">14sp</dimen>
