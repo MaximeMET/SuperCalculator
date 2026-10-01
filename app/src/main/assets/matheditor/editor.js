@@ -200,21 +200,70 @@
   defSymbol('parabola', '\\parabola', '<span class="mq-parabola"></span>', '');
 
   /**
-   * `\Rightarrow` 的左右间距。
+   * 箭头族的左右间距。
    *
-   * MathQuill 把它注册成 VanillaSymbol
-   * （`LatexCmds.rArr = LatexCmds.Rightarrow = bind(VanillaSymbol, '\\Rightarrow ', '&rArr;')`），
-   * 不带 .mq-binary-operator，所以「算式 ⇒ 结果」会直接贴在一起；而同一族的
-   * `\to` 是 BinaryOperator，是有 padding 的。LaTeX 里 `\Rightarrow` 本来就是二元
-   * 关系，这里按同样宽度重挂一遍（.mq-binary-operator 给 0.2em），别名一起换。
+   * MathQuill 只把五个「单词形」箭头注册成了 BinaryOperator（带
+   * .mq-binary-operator，padding 0.2em）：`\to`、`\gets`、`\implies`、
+   * `\impliedby`、`\iff`；其余箭头全是 VanillaSymbol，前后不留空。于是同一个
+   * 符号换个写法就两种排版：`\to` 有空而 `\rightarrow` 贴死，`\implies` 有空而
+   * `\Rightarrow` 贴死。LaTeX 里它们同为二元关系（\mathrel），原版位图里
+   * 「算式 ⇒ 结果」的箭头两侧也是留空的，所以这里照 BinaryOperator 重挂一遍，
+   * 每个写法的别名（\rArr、\larr、\harr…）一并接上。
+   *
+   * text 传空串是有意的：MathQuill 的 Symbol.init 在没给 text 时会把命令名当
+   * 正文（`\leftarrow ` → `leftarrow `），而 text 正是送给 Symja 引擎的字符串，
+   * 送过去只会让引擎不认。这些箭头目前只用于显示（举例行、历史、结果），编辑器
+   * 键盘也打不出来，所以干脆不参与引擎表达式。
+   *
+   * ctrlSeq 末尾的空格按 MathQuill 原样保留：latex 导出时它能把
+   * `\leftarrow b` 和 `\leftarrowb` 分开，省得再解析时命令名把后面的字母吃进去。
    */
-  var rightArrow = defSymbol(
-    'Rightarrow',
-    '\\Rightarrow',
-    '<span class="mq-binary-operator">&rArr;</span>',
-    ''
-  );
-  LatexCmds.rArr = LatexCmds.Rightarrow = rightArrow;
+  [
+    // 单线箭头
+    ['\\leftarrow ', '&larr;', ['leftarrow', 'larr']],
+    ['\\rightarrow ', '&rarr;', ['rightarrow', 'rarr']],
+    ['\\leftrightarrow ', '&harr;', ['leftrightarrow', 'harr', 'lrarr']],
+    // 双线箭头
+    ['\\Leftarrow ', '&lArr;', ['Leftarrow', 'lArr']],
+    ['\\Rightarrow ', '&rArr;', ['Rightarrow', 'rArr']],
+    ['\\Leftrightarrow ', '&hArr;', ['Leftrightarrow', 'hArr', 'lrArr']],
+    // 长箭头
+    ['\\longleftarrow ', '&#8592;', ['longleftarrow']],
+    ['\\longrightarrow ', '&#8594;', ['longrightarrow']],
+    ['\\longleftrightarrow ', '&#8596;', ['longleftrightarrow']],
+    ['\\Longleftarrow ', '&#8656;', ['Longleftarrow']],
+    ['\\Longrightarrow ', '&#8658;', ['Longrightarrow']],
+    ['\\Longleftrightarrow ', '&#8660;', ['Longleftrightarrow']],
+    // 上下箭头
+    ['\\uparrow ', '&uarr;', ['uparrow', 'uarr', 'diverges']],
+    ['\\downarrow ', '&darr;', ['downarrow', 'darr', 'dnarr', 'dnarrow', 'converges']],
+    ['\\updownarrow ', '&#8597;', ['updownarrow']],
+    ['\\Uparrow ', '&uArr;', ['Uparrow', 'uArr']],
+    ['\\Downarrow ', '&dArr;', ['Downarrow', 'dArr', 'dnArr', 'dnArrow']],
+    ['\\Updownarrow ', '&#8661;', ['Updownarrow']],
+    // 映射、斜向、钩形、鱼叉
+    ['\\mapsto ', '&#8614;', ['mapsto']],
+    ['\\nearrow ', '&#8599;', ['nearrow']],
+    ['\\searrow ', '&#8600;', ['searrow']],
+    ['\\swarrow ', '&#8601;', ['swarrow']],
+    ['\\nwarrow ', '&#8598;', ['nwarrow']],
+    ['\\hookleftarrow ', '&#8617;', ['hookleftarrow']],
+    ['\\hookrightarrow ', '&#8618;', ['hookrightarrow']],
+    ['\\leftharpoonup ', '&#8636;', ['leftharpoonup']],
+    ['\\leftharpoondown ', '&#8637;', ['leftharpoondown']],
+    ['\\rightharpoonup ', '&#8640;', ['rightharpoonup']],
+    ['\\rightharpoondown ', '&#8641;', ['rightharpoondown']],
+  ].forEach(function (row) {
+    var klass = defSymbol(
+      row[2][0],
+      row[0],
+      '<span class="mq-binary-operator">' + row[1] + '</span>',
+      ''
+    );
+    row[2].forEach(function (key) {
+      LatexCmds[key] = klass;
+    });
+  });
 
   // 度、分、秒是三个独立符号，latex 借用了 ^\circ / ^\prime / ^\pprime
   defSymbol('degree', '^\\circ', '<span>&deg;</span>', 'degree');
