@@ -134,6 +134,18 @@ html {
   border: none;
 }
 
+/*
+ * 聚焦时也不画 MathQuill 默认那圈蓝框（box-shadow: #8bd ...）。
+ * 原版 MathQuill 自带这条规则，但实机点进公式后并没有蓝框（只有橙色光标），
+ * 用户也反馈蓝框难看；直接覆盖掉。光标是另一个元素，不受影响。
+ */
+.mq-editable-field.mq-focused,
+.mq-math-mode .mq-editable-field.mq-focused {
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  border: none;
+}
+
 /* 空槽位高亮成土黄色，左右描橙边 */
 .mq-editable-field .mq-empty,
 .mq-math-mode .mq-empty {
