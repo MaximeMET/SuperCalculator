@@ -8,7 +8,8 @@
     <string name="toast_result_too_slow">当前运算较复杂，耗时较长，如需继续计算请点计算按钮</string>
 
     <string name="title_calculate">计算</string>
-    <string name="all_examples">全部举例</string>
+    <!-- 参考实现里这条带下划线（str_all_example 是 <u> 包起来的） -->
+    <string name="all_examples"><u>全部举例</u></string>
 
     <string name="activity_result_title">运算结果</string>
     <string name="result_op_resume">继续编辑</string>

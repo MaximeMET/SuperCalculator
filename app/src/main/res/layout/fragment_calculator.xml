@@ -150,7 +150,11 @@
           公式、精确结果、数值结果三块都在页面里渲染，Kotlin 侧只负责算。
           底部那 10dp 是留给方法按钮条的，和原版的 space_normalmethodbutton 一致。
         -->
-        <WebView
+        <!--
+          用 NoImeWebView：编辑器里光标一获得焦点，系统就会弹输入法盖住自绘键盘，
+          原版不会。见 view/NoImeWebView.kt。
+        -->
+        <io.github.maximemet.supercalc.view.NoImeWebView
             android:id="@+id/editor"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

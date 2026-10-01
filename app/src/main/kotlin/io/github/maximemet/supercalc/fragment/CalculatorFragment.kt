@@ -495,6 +495,10 @@ class CalculatorFragment : Fragment() {
         currentExample = example
         binding.viewEmpty.text = example.text
         binding.viewEmpty.setOnClickListener { editor.setLatex(example.latex) }
+        // 「全部举例」= 切到教程页（参考实现点它走的就是抽屉的 nav_tutorial）
+        binding.tvExample.setOnClickListener {
+            (activity as? MainActivity)?.openTutorial()
+        }
         updateExampleVisibility(formulaEmpty)
     }
 

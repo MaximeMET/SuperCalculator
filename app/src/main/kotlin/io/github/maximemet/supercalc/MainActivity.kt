@@ -179,6 +179,17 @@ class MainActivity : AppCompatActivity() {
         showPage(ITEM_HISTORY)
     }
 
+    /**
+     * 计算页那行「全部举例」。
+     *
+     * 参考实现里这个按钮就是切到抽屉的 nav_tutorial（教程页，里面是全部例题），
+     * 所以这里也走同一套「选中抽屉项 + 切页」，抽屉高亮跟着一起动。
+     */
+    fun openTutorial() {
+        selectDrawerItem(ITEM_TUTORIAL)
+        showPage(ITEM_TUTORIAL)
+    }
+
     private fun goBackFromHistory() {
         if (currentItem != ITEM_HISTORY) return
         selectDrawerItem(ITEM_CALCULATOR)

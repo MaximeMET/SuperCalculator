@@ -95,7 +95,9 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
   `width=device-width` 带来的自动放大，等效基准字号 ≈ **17.6px**
 - 「全部举例」那行原版是九张预渲染位图（`ic_emptytip_0..8`），文案烤在图里。
   位图要全部替换掉，所以这里按图里的**文字内容**重写：左边白字
-  「标签：算式 ⇒ 答案」，右边橙字「全部举例」，点一下把算式填进编辑器
+  「标签：算式 ⇒ 答案」，右边橙字（带下划线）「全部举例」。
+  点左边白字把算式填进编辑器；点「全部举例」跳教程页——参考实现里它走的就是
+  抽屉的 `nav_tutorial`（`CalculatorFragment$4` → `onNavItemSelected`）。
 
 ### M3 现状：结果页、历史、设置、教程、反馈、关于
 
@@ -121,6 +123,10 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
   新 targetSdk 强制边到边，那一条要自己补（`@color/nav_bar`）。
 - **字体大小**。原版用 `WebSettings.setTextSize(LARGER/NORMAL/SMALLER)`，
   对应 textZoom 125/100/75；原版自己在新 WebView 上已经不生效了，我们按源码意图实现。
+- **系统输入法**。公式编辑器是个 WebView，MathQuill 的光标其实是隐藏 textarea，
+  一拿到焦点系统就把输入法顶上来盖住自绘键盘（原版不会）。编辑器因此换成
+  `view/NoImeWebView`：`onCreateInputConnection` 返回 null，系统拿不到输入连接
+  就不会弹输入法，触摸、滚动和 JS 侧的焦点/光标都照常。
 
 界面图标早期是**按原位图轮廓重画成矢量**（描图脚本在 `work/tools/`）。M6 已经
 整批换掉：键盘那批由 `tools/make_keyboard_icons.py` **从开源字体生成**（工具行与
