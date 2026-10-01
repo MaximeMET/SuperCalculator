@@ -8,15 +8,18 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
+import androidx.core.view.doOnLayout
 import io.github.maximemet.supercalc.GraphActivity
 import io.github.maximemet.supercalc.MainActivity
 import io.github.maximemet.supercalc.R
@@ -505,13 +508,35 @@ class CalculatorFragment : Fragment() {
     private fun setupExamples() {
         val example = EMPTY_EXAMPLES.random()
         currentExample = example
-        binding.viewEmpty.text = example.text
-        binding.viewEmpty.setOnClickListener { editor.setLatex(example.latex) }
+        val exampleView = binding.viewEmpty
+        exampleView.text = example.text
+        exampleView.setOnClickListener { editor.setLatex(example.latex) }
+        exampleView.doOnLayout { fitExampleText(exampleView) }
         // 「全部举例」= 切到教程页（参考实现点它走的就是抽屉的 nav_tutorial）
         binding.tvExample.setOnClickListener {
             (activity as? MainActivity)?.openTutorial()
         }
         updateExampleVisibility(formulaEmpty)
+    }
+
+    /**
+     * 让示例正文在可用宽度里放得下。
+     *
+     * 原版这一行是预渲染位图，按可用宽度整体缩放：短句字号大，最长的
+     * 「求解方程组：{30x + 15y = 675, …}」那条字号明显小一档。我们这里是文字，
+     * 13sp 时最长那条会被 ellipsize 截成「…组: {30x…」。所以照原版的做法，
+     * 从 13sp 起按 0.5sp 逐档往下量，直到整串都放得下（最低 10sp）。
+     */
+    private fun fitExampleText(tv: TextView) {
+        val available = tv.width - tv.paddingStart - tv.paddingEnd
+        if (available <= 0) return
+        val text = tv.text?.toString().orEmpty()
+        var sizeSp = EXAMPLE_TEXT_MAX_SP
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        while (sizeSp > EXAMPLE_TEXT_MIN_SP && tv.paint.measureText(text) > available) {
+            sizeSp -= EXAMPLE_TEXT_SIZE_STEP_SP
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        }
     }
 
     /** 「举例展示」开关关掉之后这行整个不显示。 */
@@ -544,6 +569,11 @@ class CalculatorFragment : Fragment() {
 
         /** 结果串里精确解和数值解之间的分隔符，参考实现里就是 `$$`。 */
         const val DIVIDER = "$$"
+
+        /** 示例正文的字号区间：常规 13sp（对齐原版位图墨迹高），最长那条自动缩到放得下。 */
+        const val EXAMPLE_TEXT_MAX_SP = 13f
+        const val EXAMPLE_TEXT_MIN_SP = 10f
+        const val EXAMPLE_TEXT_SIZE_STEP_SP = 0.5f
 
         val EMPTY_EXAMPLES = listOf(
             Example("求导：x³ ⇒ 3x²", "x^3"),

@@ -8,8 +8,11 @@
     <dimen name="keyboard_top_height">48dp</dimen>
     <dimen name="example_height">35dp</dimen>
     <dimen name="example_text_size">12sp</dimen>
-    <!-- 原版示例正文是位图，按屏幕缩放；我们用文字，略小一档才放得下最长那条 -->
-    <dimen name="example_content_text_size">11sp</dimen>
+    <!--
+      示例正文的字号。原版这一行是位图，量下来汉字墨迹高 36~39px（本机 1280×2800），
+      我们 11sp 只有 31px，用户反馈「看不清」；13sp 的墨迹高 37px，和原版对得上。
+    -->
+    <dimen name="example_content_text_size">13sp</dimen>
 
     <!--
       顶区（公式区）的三个间距，取自参考实现 fragment_calculator.xml：
@@ -33,6 +36,8 @@
     <dimen name="dp_unit">1dp</dimen>
     <!-- 参考实现里键盘格子之间的横竖间距用的是 space_mini（1dp） -->
     <dimen name="space_mini">1dp</dimen>
+    <!-- 键盘栏目之间那条加粗分隔线的高度（用户要求跨栏目有明显的横线） -->
+    <dimen name="keyboard_page_divider_height">1.5dp</dimen>
     <dimen name="space_tiny">2dp</dimen>
     <dimen name="space_small">3dp</dimen>
     <dimen name="space_null">0dp</dimen>

@@ -334,7 +334,7 @@ M6 的另一件大事是键盘图标。原来那 84 个 drawable（71 个功能�
 左侧书签 4 个，加上按下态的白色字形）是照着原版位图**描轮廓**画出来的——形状虽然是
 自绘矢量，但仍然是原素材的衍生物。现在整批换成 `tools/make_keyboard_icons.py` 生成：
 
-- 字形走 **Noto Sans SC Light**（SIL OFL-1.1）：用 uharfbuzz 排版、fontTools 取轮廓，
+- 字形走 **Noto Sans SC Regular**（SIL OFL-1.1）：用 uharfbuzz 排版、fontTools 取轮廓，
   直接输出成 vector drawable 的 path。字体只在生成时用，**不随仓库分发**，
   脚本会按需从 noto-cjk 上游下载并核对 SHA-256；
 - 工具行（垃圾桶 / 回车 / 箭头 / 退格）和书签的圆底是脚本里自绘的几何图形；

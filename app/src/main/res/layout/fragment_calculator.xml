@@ -187,7 +187,14 @@
             android:layout_gravity="bottom|start"
             android:orientation="horizontal">
 
-            <!-- 示例正文在左侧空白里居中；太长时从前面截断 -->
+            <!--
+              示例正文在左侧空白里居中。
+              原版这一行是预渲染位图，按可用宽度整体缩放，最短的和最长的
+              （求解方程组那条）字号不一样大。这里用同样的做法：
+              常规是 @dimen/example_content_text_size(13sp，墨迹高和原版对得上)，
+              放不下时由 CalculatorFragment.fitExampleText 逐档缩到放得下。
+              ellipsize="start" 只是最后兜底，正常不会触发。
+            -->
             <TextView
                 android:id="@+id/view_empty"
                 android:layout_width="0dp"
@@ -196,6 +203,7 @@
                 android:layout_weight="1"
                 android:ellipsize="start"
                 android:gravity="center"
+                android:maxLines="1"
                 android:paddingEnd="@dimen/space_small"
                 android:singleLine="true"
                 android:textColor="@color/example_content"

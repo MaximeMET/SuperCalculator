@@ -39,6 +39,7 @@ class KeyboardStrip @JvmOverloads constructor(
     private var onKey: ((KeyItem) -> Unit)? = null
     private var rowHeight = 0
     private val pageOffsets = mutableListOf<Int>()
+    private val pageViews = mutableListOf<View>()
     private var pendingPage: Int? = null
 
     /** 当前页变化时回调，用来同步左侧书签的高亮。 */
@@ -113,9 +114,27 @@ class KeyboardStrip @JvmOverloads constructor(
         val keyListener = onKey ?: return
         if (rowHeight <= 0 || pages.isEmpty()) return
         container.removeAllViews()
-        pages.forEach { page ->
+        pageViews.clear()
+        pages.forEachIndexed { index, page ->
+            // 栏目之间那条加粗的分隔线。参考实现是每页高度里留 keyboardPageGapHeight=4dp
+            // 的空隙加一条 1px 细线，实机上几乎看不出来；用户要求「跨栏目要有横着的、
+            // 加粗的分隔线」，所以这里画一条明显的：颜色沿用工具行下面那条，
+            // 高度 1.5dp（本机约 4px）。
+            if (index > 0) {
+                container.addView(
+                    View(context).apply {
+                        setBackgroundColor(ContextCompat.getColor(context, R.color.gray_divider))
+                    },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        resources.getDimensionPixelSize(R.dimen.keyboard_page_divider_height),
+                    ),
+                )
+            }
+            val pageView = buildPage(page, keyListener)
+            pageViews.add(pageView)
             container.addView(
-                buildPage(page, keyListener),
+                pageView,
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -124,14 +143,15 @@ class KeyboardStrip @JvmOverloads constructor(
         }
     }
 
-    /** 四页之间没有间距，所以每页的起点就是前面所有页的高度之和。 */
+    /**
+     * 每页的起点用页视图自己的 top。
+     *
+     * 不能再用「前面所有子视图高度之和」：页与页之间现在夹着分隔线，
+     * 累加会把起点算到分隔线上。
+     */
     private fun updateOffsets() {
         pageOffsets.clear()
-        var offset = 0
-        for (i in 0 until container.childCount) {
-            pageOffsets.add(offset)
-            offset += container.getChildAt(i).measuredHeight
-        }
+        pageViews.forEach { pageOffsets.add(it.top) }
     }
 
     private fun buildPage(page: KeyboardPage, keyListener: (KeyItem) -> Unit): View {

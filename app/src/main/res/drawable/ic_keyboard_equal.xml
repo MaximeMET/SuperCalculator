@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Regular（SIL OFL-1.1），
      几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="16dp"
@@ -9,5 +9,5 @@
 
   <path
       android:fillColor="#FF505050"
-      android:pathData="M3.18 3.26H28.32V0.75H3.18ZM3.18 15.75H28.32V13.19H3.18Z" />
+      android:pathData="M4.06 4.06H27.44V0.75H4.06ZM4.06 15.75H27.44V12.44H4.06Z" />
 </vector>

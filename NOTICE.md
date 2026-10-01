@@ -20,7 +20,7 @@ supercalc 以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](L
 | jQuery | 2.1.4 | MIT | [licenses/jquery-MIT.txt](licenses/jquery-MIT.txt) | MathQuill 的依赖 |
 | TeX Gyre Termes | 2.004（CTAN 上游） | GUST Font License | [licenses/GUST-Font-License.txt](licenses/GUST-Font-License.txt) | 编辑器里 `"Times New Roman"` 指向它 |
 | STIX Two Math | 2.12（stixfonts / Google Fonts） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 编辑器的主字体 |
-| Noto Sans SC Light | 上游 noto-cjk（生成时下载） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 生成键盘图标轮廓；字体本身不随仓库分发 |
+| Noto Sans SC Regular | 上游 noto-cjk（生成时下载） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 生成键盘图标轮廓；字体本身不随仓库分发 |
 | AndroidX / Material Components | 见 `gradle/libs.versions.toml` | Apache-2.0 | 见上游 | Android 界面 |
 
 > 上表按 `engine/libs/symja-2016-04-15.jar` 里**实际打进去的包**列的，
@@ -71,7 +71,7 @@ pwsh tools/build-mathquill.ps1
 
 界面图形全部是**本项目自己产出**的：键盘那批 drawable（`ic_keyboard_*`、`ic_dart_glyph_*`）
 由 `tools/make_keyboard_icons.py` 生成——字形用 uharfbuzz 排版、fontTools 从
-Noto Sans SC Light（SIL OFL-1.1）取轮廓，工具行和书签的几何图形是脚本里自绘的；
+Noto Sans SC Regular（SIL OFL-1.1）取轮廓，工具行和书签的几何图形是脚本里自绘的；
 结果页那三个按钮图标和工具条上的返回 / 分享图标由 `tools/make_result_icons.py`
 生成，形状只按「继续编辑 / 清空 / 用结果继续运算 / 返回 / 分享」这几个含义
 重新设计（线稿 #53595E、品牌橙 #FFB560，见脚本开头的风格说明），不是原版图形的临摹；

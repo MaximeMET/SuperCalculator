@@ -3,9 +3,13 @@
 
 来源说明：
 
-- 字形：Noto Sans SC Light（SIL OFL-1.1），用 uharfbuzz 排版、fontTools 取轮廓，
+- 字形：Noto Sans SC Regular（SIL OFL-1.1），用 uharfbuzz 排版、fontTools 取轮廓，
   只把轮廓写进 drawable，不随仓库分发字体文件本身。字体按需从 noto-cjk 上游下载
   （URL 与 SHA-256 见 FONT_URL / FONT_SHA256）。
+
+  字重是按原版键盘位图定的：拿原版 res/drawable-xhdpi-v4/ic_keyboard_*.png 量
+  「4」「7」「x」的竖干宽度，Regular 是 4/4/8px，原版是 4/4/7px，而 Light 只有
+  2/3/5px（用户反馈「字都偏细，看着累」）。Medium（5/5/9）又偏粗，所以用 Regular。
 - 几何（工具行垃圾桶/回车/箭头/退格、书签圆底、占位方块）：本项目自绘。
 - 画布尺寸和占位方块位置沿用键盘的版式规格（和原参考实现一致），改布局时同步改
   这里的 ICONS 表。
@@ -32,9 +36,9 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FONT_URL = "https://github.com/notofonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Light.otf"
-FONT_SHA256 = "35CCA31CEA56B2720C096EFAEA2CFDFFDF1B523BF5DE0A80552D16EDCCFA9C70"
-FONT_PATH = os.path.join(REPO, "tools", ".cache", "NotoSansSC-Light.otf")
+FONT_URL = "https://github.com/notofonts/noto-cjk/raw/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf"
+FONT_SHA256 = "FAA6C9DF652116DDE789D351359F3D7E5D2285A2B2A1F04A2D7244DF706D5EA9"
+FONT_PATH = os.path.join(REPO, "tools", ".cache", "NotoSansSC-Regular.otf")
 
 # 颜色（沿用现有配色）
 KEY = "#FF505050"       # 功能键字形
@@ -385,8 +389,16 @@ ICONS = {
                       glyph=[G(T("!"), (36, 0, 41, 37))]),
     "frac": dict(canvas=(42, 61), slots=[(11, 0, 22, 24), (11, 37, 22, 24)],
                  paths=[(rect_cmds(0, 29, 42, 3), KEY)]),
+    # 根号是自绘几何，不是字形：字形版的横杠会压到右边那个占位方块上（用户反馈
+    # 「灰色方块和根号符号重合」）。下面这两段按原版位图 ic_keyboard_sqrt.png 量出来的
+    # 形状画：横杠 y≈9..11、从 x=20 拉到 x=52，左边折钩从 (2,43) 下到 (11.5,53.5)
+    # 再斜上到横杠左端。
     "sqrt": dict(canvas=(53, 56), slots=[(2, 0, 14, 14), (25, 18, 24, 36)],
-                 glyph=[G(T("√"), (0, 9, 53, 55))]),
+                 paths=[
+                     ([("M", [20.5, 10.5]), ("L", [51.5, 10.5])], KEY, 3.0, "butt", "miter"),
+                     ([("M", [2.5, 42.5]), ("L", [11.5, 53.5]), ("L", [21.5, 10.5])],
+                      KEY, 4.0, "butt", "miter"),
+                 ]),
     "int": dict(canvas=(42, 53), slots=[(24, 4, 18, 20), (24, 27, 18, 20)],
                 glyph=[G(T("∫"), (0, 0, 16, 53))]),
     "log": dict(canvas=(85, 38), slots=[(49, 14, 12, 14), (65, 3, 20, 25)],
@@ -501,9 +513,19 @@ def book_glyphs(kind, box, dx=0.0, dy=0.0):
     return [G(T(text), b, KEY)]
 
 
+# 书签字形的墨迹框，逐个按原版位图 ic_keyboard_book*.png 量的：
+# 「f」高 38px、「a-z」宽 40px、「f(x)」42×38 —— 之前一律用 (17,17,47,48)，
+# 比原版小一圈，用户反馈「圆圈里的字偏小」。
+BOOK_GLYPH_BOX = {
+    1: (17, 17, 47, 48),
+    2: (24, 14, 38, 51),
+    3: (12, 24, 51, 39),
+    4: (11, 13, 52, 50),
+}
+
 for i in range(1, 5):
     ICONS[f"book{i}"] = dict(canvas=(64, 64), paths=[(circle_cmds(32, 32, 32), BOOK)],
-                             glyph=book_glyphs(i, (17, 17, 47, 48)))
+                             glyph=book_glyphs(i, BOOK_GLYPH_BOX[i]))
 
 
 # --------------------------------------------------------------------------
@@ -511,7 +533,7 @@ for i in range(1, 5):
 # --------------------------------------------------------------------------
 
 VECTOR_HEAD = """<?xml version="1.0" encoding="utf-8"?>
-<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Regular（SIL OFL-1.1），
      几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="{w}dp"
@@ -612,7 +634,7 @@ def main():
         n += 1
     # 书签按下态的白色字形
     for i in range(1, 5):
-        glyphs = book_glyphs(i, (17, 17, 47, 48), dx=1.0, dy=1.0)
+        glyphs = book_glyphs(i, BOOK_GLYPH_BOX[i], dx=1.0, dy=1.0)
         solids = []
         for node, box, _ in glyphs:
             cmds, _, _ = node_layout(sha, node, 100.0)
