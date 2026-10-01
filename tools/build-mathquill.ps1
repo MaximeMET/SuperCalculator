@@ -92,7 +92,7 @@ Copy-Item "$src/build/mathquill.css" $target -Force
 $fontTarget = Join-Path $target "font"
 if (Test-Path $fontTarget) { Remove-Item $fontTarget -Recurse -Force }
 # 上游 src/font 里是 Symbola，许可不允许再分发，所以不复制（见 NOTICE.md）；
-# 编辑器要的字体（TeX Gyre Termes + DejaVu Math TeX Gyre）从各自的上游取。
+# 编辑器要的字体（TeX Gyre Termes 从 CTAN、STIX Two Math 从 Google Fonts）脚本里取。
 Write-Host "补齐公式编辑器字体 ..."
 & (Join-Path $repo "tools/fetch-editor-fonts.ps1")
 

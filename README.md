@@ -31,7 +31,7 @@ Android 14 起连安装都会被系统拒绝。
 | M2 | 计算器主界面（键盘 / 公式编辑 / 方法按钮） | ✅ |
 | M3 | 结果页 / 历史 / 设置 / 教程 / 反馈 / 关于 | ✅ |
 | M4 | 函数图像 | ✅ 绘图 / 拖动 / 缩放 / 最多 3 条函数 / 交点与点选气泡 / 图例 / 分享 |
-| M6 | 素材替换 + 开源发布 | 🔄 品牌素材与文案已换，字体许可待处理 |
+| M6 | 素材替换 + 开源发布 | 🔄 品牌素材、文案与字体许可都已换干净，收尾中 |
 
 > 原版抽屉里的「超级 24 点」不在复刻范围内，已按设计取消（M5 阶段整段跳过）：
 > 抽屉项、图标、字符串和历史记录里那个类型号都删掉了。
@@ -258,7 +258,7 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 | 设置/反馈页的「超级计算器 QQ 群：530100431」 | 「开源版本不收集反馈数据 / 有问题请到 GitHub 提 issue」 |
 | 分享底图（带二维码的原版位图） | 自绘：底色 + 曲线 + 项目地址 |
 | 抽屉里的「超级 24 点」 | 整项删除，连那条分组分隔线一起 |
-| 公式编辑器的数学字体 `Symbola` | `DejaVu Math TeX Gyre`（Bitstream/DejaVu 许可，允许再分发） |
+| 公式编辑器的数学字体 `Symbola` | `STIX Two Math`（SIL OFL-1.1，科技出版领域的标准字体） |
 
 启动图标是脚本生成的，改配色或比例只要改一处：
 
@@ -272,34 +272,55 @@ python tools/make_launcher_icon.py
 自适应图标外圈 18dp 可能被启动器裁掉，缩完之后标记两端离中心 34.3 格，
 正好落在圆形蒙版的 36 格半径以内。
 
-#### 编辑器换字体：Symbola → DejaVu Math TeX Gyre
+#### 编辑器换字体：Symbola → STIX Two Math
 
 MathQuill 上游把 `Symbola` 放在 `src/font/` 里一起分发，但字体作者现在的 UFAS 许可
 只给个人非商业使用、**不允许再分发**（引文见 NOTICE.md），所以这个仓库不能带它。
-替代品选了 DejaVu Math TeX Gyre 2.37：
+M6 初版先换成了 DejaVu Math TeX Gyre，之后升级为 **STIX Two Math**——它是 IEEE 牵头
+为科技出版做的字体（LaTeX 里用 `stix2` 宏包的那套），以 SIL OFL-1.1 发布：
 
-- 许可干净：Bitstream Vera + DejaVu（数学扩展部分是公有领域），允许再分发，
-  全文随仓库放在 `licenses/DejaVu-Fonts-License.txt`；
-- 覆盖够用：把编辑器可能用到的 245 个字形导出来比对，Symbola 覆盖 243 个、
-  DejaVu Math 覆盖 238 个，只差 `ϒ` `ϝ` `▱` `◇` `⬜` 这 5 个冷门符号，
-  它们会落到系统字体上（不会出现豆腐块）；
-- 只有一个文件（577 KB），换掉了 Symbola 那一套 10 个文件、约 5.8 MB。
+- 许可干净：OFL-1.1 允许再分发、允许随 GPL 项目一起打包，全文随仓库放在
+  `licenses/OFL-1.1.txt`，比 DejaVu 那套 Bitstream/DejaVu 混合许可更省心；
+- 覆盖率跟原版打平：把编辑器可能用到的 245 个码位逐个查 cmap，Symbola 覆盖 243 个、
+  STIX 覆盖 243 个，缺的两个还完全一样——`U+0086`/`U+0087`，是上游 MathQuill 把
+  `\dagger`/`\ddagger` 写成 `&#0134;`/`&#135;` 留下的坏引用，本来就是控制字符，
+  任何字体都不会有。也就是说编辑器里 Symbola 能出的字形，STIX 一个不少；
+- 把 14 个科学符号 Unicode 区段并起来（2784 个码位）再比：STIX 覆盖 2622 个（94%），
+  之前的 Termes Math / DejaVu 只有 56%。STIX 缺的 162 个全部落在编辑器出不到的地方
+  （数字形式 52 个、希腊字母变体 51 个、数学字母 28 个、上下标字母 19 个……），
+  真碰上也会落回系统字体，不会出现豆腐块；
+- DejaVu / Termes 缺的那 5 个符号（`ϒ` `ϝ` `▱` `◇` `⬜`）其实编辑器能打出来：
+  `\Upsilon`（`&upsih;`）、`\digamma`、`\parallelogram`、`\diamond`、`\square`，
+  STIX 全部接住，不会再掉到系统字体；
+- 只有一个文件（1.45 MB），换掉了 Symbola 那一套 10 个文件、约 5.8 MB。比 DejaVu
+  的 577 KB 大，换来的是上面的覆盖率和"论文公式"的观感。
 
-换完实测（模拟器 1280×2800 @480，同一串按键）：
+覆盖率对比（同一份语料，两种统计口径）：
 
-| 指标 | 原版（Symbola） | 现在（DejaVu Math） |
-|---|---|---|
-| 单个 `8` 的字形墨迹 | 37 × 60 px | 43 × 64 px |
-| 单个 `8` 的墨迹点数 | 742 | 1239 |
-| 光标高度（与字体无关） | 84 px | 84 px |
-| `x^2+1/2` 整行墨迹宽 | 356 px | 265 px |
+| 字体 | 编辑器 245 码位 | 科学区段 2784 码位 | 许可 |
+|---|---|---|---|
+| Symbola（原版） | 243 | 2784（100%） | UFAS，禁止再分发 |
+| TeX Gyre Termes Math | 238 | 1564（56%） | GUST FL |
+| DejaVu Math TeX Gyre（M6 初版） | 238 | 1566（56%） | Bitstream / DejaVu |
+| **STIX Two Math（现在）** | **243** | **2622（94%）** | **SIL OFL-1.1** |
 
-光标高度一致，说明字号和行盒没动；差的是字体本身——DejaVu Math 的数字更重、
-更宽，行内间距也更紧，公式整体比原版短一截，视觉上更接近正体。
+换完实测（模拟器 1280×2800 @480，同一串按键；判定方法：裁 (0,250)-(900,560)，
+数 RGB 三通道都 > 150 的像素——白色字形墨迹，橙色光标不算）：
+
+| 指标 | 原版（Symbola） | DejaVu Math | 现在（STIX Two） |
+|---|---|---|---|
+| 单个 `8` 的字形墨迹 | 37 × 60 px | 43 × 64 px | 34 × 56 px |
+| 单个 `8` 的墨迹点数 | 742 | 1239 | 865 |
+| 光标高度（与字体无关） | 84 px | 84 px | 84 px |
+| `x^2+1/2` 整行墨迹宽 | 350 px | 264 px | 234 px |
+
+光标高度一致，说明字号和行盒没动；STIX 的数字比 DejaVu 轻、窄，尺寸和墨迹量都更接近
+原版（865 对 742 点），衬线也回到了论文公式的观感。
 
 因为 MathQuill 的 CSS 是 `tools/build-mathquill.ps1` 从上游生成的，
 字体替换落在 `tools/mathquill-css-patch.js` 里（换掉 `@font-face` + 按词边界替换
-字体栈里的 `Symbola`，`.mq-nonSymbola` 这个类名不能被误伤），构建时会自动套用。
+字体栈里的 `Symbola`，`.mq-nonSymbola` 这个类名不能被误伤），构建时会自动套用；
+补丁脚本对 Symbola / DejaVu / Termes Math / STIX 四种输入都幂等，重复跑不会改坏。
 
 #### 这一步之后还剩什么
 
@@ -538,11 +559,12 @@ pwsh tools/build-mathquill.ps1
 
 编辑器还要两套字体，来源都能查：
 
-- `DejaVuMathTeXGyre.ttf`：数学字体，排在字体栈最前面。上游原本是 MathQuill 带的
+- `STIXTwoMath-Regular.ttf`：数学字体，排在字体栈最前面。上游原本是 MathQuill 带的
   `Symbola`，但那个字体的许可不允许再分发（详见 [NOTICE.md](NOTICE.md)），
-  所以换成了这个——Bitstream/DejaVu 许可，数学扩展部分是公有领域，
-  全文见 [licenses/DejaVu-Fonts-License.txt](licenses/DejaVu-Fonts-License.txt)。
-  脚本里记了它的 SHA-256（`40DA67C0…94FE`），换文件必须同步改哈希。
+  换成了 STIX Two Math 2.12——SIL OFL-1.1，科技出版领域的事实标准字体，
+  全文见 [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt)。
+  脚本里记了它的 SHA-256（`562551B1…36DE`），换文件必须同步改哈希；
+  这个 ttf 取自 Google Fonts 的官方镜像（与 stixfonts 上游同源）。
 - `texgyretermes-*.otf`：编辑器的 `fonts.css` 把 `"Times New Roman"` 指向它，
   取自 CTAN 上游 2.004 版，GUST Font License，允许原样再分发。重建命令：
 
@@ -573,4 +595,5 @@ pwsh tools/fetch-mathjax.ps1
 
 本项目不包含、也不再分发原版的任何代码、图片或品牌素材；
 界面图形全部是本项目自己画（或按轮廓重画）的矢量/生成素材，
-字体只从各自的上游发布获取（CTAN、DejaVu 上游），并在 [NOTICE.md](NOTICE.md) 里逐项说明。
+字体只从各自的上游发布获取（CTAN、stixfonts / Google Fonts），并在
+[NOTICE.md](NOTICE.md) 里逐项说明。

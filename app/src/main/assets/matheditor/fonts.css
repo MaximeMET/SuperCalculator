@@ -12,8 +12,9 @@
  * 允许原样再分发。字体名注册成 "Times New Roman" 是参考实现的写法，
  * 这里保持一致，否则 MathQuill 的字体栈会对不上。
  *
- * 栈里排头的那套数学字体（原本是 Symbola）在 M6 换成了 DejaVu Math TeX Gyre，
- * 原因见 NOTICE.md：Symbola 的许可不允许再分发。
+ * 栈里排头的那套数学字体（原本是 Symbola）在 M6 换成了 STIX Two Math，
+ * 原因见 NOTICE.md：Symbola 的许可不允许再分发。STIX Two 是科技出版领域的
+ * 标准数学字体（SIL OFL-1.1），覆盖率和 Symbola 基本持平。
  */
 @font-face {
   font-family: "Times New Roman";

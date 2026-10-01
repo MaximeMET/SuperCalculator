@@ -10,13 +10,13 @@
          GUST Font License（LPPL 家族），允许原样再分发，全文见
          licenses/GUST-Font-License.txt。
 
-      2. DejaVu Math TeX Gyre（1 个 ttf）—— 数学字体，排在字体栈最前面。
+      2. STIX Two Math（1 个 ttf）—— 数学字体，排在字体栈最前面。
          上游原本用的是 Symbola，但它的许可不允许再分发（见 NOTICE.md），
-         M6 换成了 DejaVu Math TeX Gyre：DejaVu/Bitstream 许可允许再分发，
-         全文见 licenses/DejaVu-Fonts-License.txt。
+         M6 换成了 STIX Two Math：科技出版领域的标准数学字体，SIL OFL-1.1，
+         随软件分发没有障碍，覆盖率和 Symbola 基本持平（245 个字形里 243 个）。
+         这份 ttf 是 Google Fonts 镜像的 OFL 发布版，和 stixfonts 上游同源。
 
-    注意：DejaVu 那条下载地址是在没有网络的沙箱里写的，还没实际跑过；
-    真正下载时以 SHA-256 为准，对不上就直接报错，不会悄悄换成一个别的文件。
+    五个文件逐个核对 SHA-256；对不上就直接报错，不会悄悄换成一个别的文件。
 
 .EXAMPLE
     pwsh tools/fetch-editor-fonts.ps1
@@ -35,14 +35,11 @@ $expected = [ordered]@{
     "texgyretermes-bold.otf"       = "2FB3E952065FA153C7E4E64E04B98B9D79225739B6025AA3F0F0782D299FF61E"
     "texgyretermes-italic.otf"     = "6DD103A1672E50568CD2F8A706CCD48443D44D7D073A59D2286F4E6F746575D6"
     "texgyretermes-bolditalic.otf" = "1BF6AF99CB0E26C12951317032D79B96AE009551E59CCF02A5B24F325ECFEC87"
-    "DejaVuMathTeXGyre.ttf"        = "40DA67C0B6B03076504FBDA4BF3E7B4F20B35999C98063019A3392FE9B1294FE"
+    "STIXTwoMath-Regular.ttf"      = "562551B15B836E6E01D1B7350909BAF3C8C8D83260C1190FBF4544333E6936DE"
 }
 
-# DejaVu Math TeX Gyre 2.37 的候选下载地址（依次尝试，哪个对得上哈希用哪个）
-$dejavuUrls = @(
-    "https://mirrors.ctan.org/fonts/dejavu/DejaVuMathTeXGyre.ttf"
-    "https://www.tug.org/svn/texlive/trunk/Master/texmf-dist/fonts/truetype/public/dejavu/DejaVuMathTeXGyre.ttf"
-)
+# STIX Two Math 不在 CTAN，走 Google Fonts 的官方镜像
+$stixUrl = "https://raw.githubusercontent.com/google/fonts/main/ofl/stixtwomath/STIXTwoMath-Regular.ttf"
 
 New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
 
@@ -58,7 +55,7 @@ foreach ($name in $expected.Keys) {
         }
     }
 
-    $urls = if ($name -eq "DejaVuMathTeXGyre.ttf") { $dejavuUrls } else { @("$Mirror/$name") }
+    $urls = if ($name -eq "STIXTwoMath-Regular.ttf") { @($stixUrl) } else { @("$Mirror/$name") }
     $ok = $false
     foreach ($url in $urls) {
         Write-Host "  下载 $name ...`n    $url"
@@ -76,16 +73,22 @@ foreach ($name in $expected.Keys) {
     if (-not $ok) {
         throw @"
 取不到 $name。请手动下载后放到 $fontDir，然后重跑本脚本。
-  TeX Gyre Termes 2.004: https://mirrors.ctan.org/fonts/tex-gyre/opentype/
-  DejaVu Math TeX Gyre 2.37: https://www.gust.org.pl/projects/e-foundry/tex-gyre/ 或 CTAN fonts/dejavu
+  TeX Gyre Termes 2.004:  https://mirrors.ctan.org/fonts/tex-gyre/opentype/
+  STIX Two Math 2.12:     https://github.com/google/fonts/tree/main/ofl/stixtwomath
+                          （或上游 https://github.com/stipub/stixfonts）
   期望 SHA-256: $want
 "@
     }
 }
 
-$stale = Get-ChildItem $fontDir -Filter "Symbola*" -File -ErrorAction SilentlyContinue
+$stale = Get-ChildItem $fontDir -File -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -like "Symbola*" -or
+        $_.Name -like "DejaVuMath*" -or
+        $_.Name -like "texgyretermes-math*"
+    }
 if ($stale) {
-    Write-Warning "字体目录里还有 Symbola（$($stale.Count) 个文件）。它的许可不允许再分发，请从仓库里删掉。"
+    Write-Warning "字体目录里还有用不上的旧字体（$($stale.Name -join ', ')）：Symbola 不允许再分发，DejaVu Math / Termes Math 已经被 STIX Two Math 取代，请从仓库里删掉。"
 }
 
-Write-Host "编辑器字体就位：TeX Gyre Termes 2.004 + DejaVu Math TeX Gyre 2.37（SHA-256 全部匹配）"
+Write-Host "编辑器字体就位：TeX Gyre Termes 2.004 + STIX Two Math 2.12（SHA-256 全部匹配）"

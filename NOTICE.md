@@ -19,7 +19,7 @@ supercalc 以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](L
 | MathQuill | 0.10.1（修改版） | MPL-2.0 | [licenses/MPL-2.0.txt](licenses/MPL-2.0.txt) | 公式编辑器 |
 | jQuery | 2.1.4 | MIT | [licenses/jquery-MIT.txt](licenses/jquery-MIT.txt) | MathQuill 的依赖 |
 | TeX Gyre Termes | 2.004（CTAN 上游） | GUST Font License | [licenses/GUST-Font-License.txt](licenses/GUST-Font-License.txt) | 编辑器里 `"Times New Roman"` 指向它 |
-| DejaVu Math TeX Gyre | 2.37（DejaVu 上游） | Bitstream Vera / DejaVu 许可 | [licenses/DejaVu-Fonts-License.txt](licenses/DejaVu-Fonts-License.txt) | 编辑器的主字体 |
+| STIX Two Math | 2.12（stixfonts / Google Fonts） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 编辑器的主字体 |
 | AndroidX / Material Components | 见 `gradle/libs.versions.toml` | Apache-2.0 | 见上游 | Android 界面 |
 
 > 上表按 `engine/libs/symja-2016-04-15.jar` 里**实际打进去的包**列的，
@@ -84,16 +84,15 @@ pwsh tools/build-mathquill.ps1
 原样再分发是允许的，许可证全文已在 `licenses/`。`tools/fetch-editor-fonts.ps1`
 会从 CTAN 重新拉一遍并逐个核对 SHA-256，脚本里记的哈希与仓库里的文件一致。
 
-**DejaVu Math TeX Gyre 2.37** —— 编辑器的主字体（`DejaVuMathTeXGyre.ttf`，577 KB）。
-只含一套常规字重，数学扩展部分（B. Jackowski 等为 TeX 用户组所做）是公有领域，
-其余部分走 Bitstream Vera 许可，允许再分发，全文见 `licenses/DejaVu-Fonts-License.txt`。
+**STIX Two Math 2.12** —— 编辑器的主字体（`STIXTwoMath-Regular.ttf`，1.45 MB）。
+STIX（Scientific and Technical Information Exchange）是 IEEE 牵头、为科技出版
+做的一套字体（LaTeX 的 `stix2` 宏包同源）。这份 ttf 取自 Google Fonts 仓库里的
+OFL 发布版 `ofl/stixtwomath/`，与 stixfonts 上游同源，SIL OFL-1.1 允许自由再分发，
+全文见 `licenses/OFL-1.1.txt`。
 
-SHA-256 `40DA67C0B6B03076504FBDA4BF3E7B4F20B35999C98063019A3392FE9B1294FE`，
-记在 `tools/fetch-editor-fonts.ps1` 里；脚本会先核对，找不到就按候选地址去下。
-
-> 这个文件在仓库里的副本是从本机字体目录取的（Windows 上由第三方软件安装，
-> 与 DejaVu 上游 2.37 同名同版本）。写脚本时沙箱没有网络，脚本里那两条候选下载地址
-> 还没实际跑通；真跑的时候以 SHA-256 为准，对不上会直接报错，不会悄悄换成别的文件。
+SHA-256 `562551B15B836E6E01D1B7350909BAF3C8C8D83260C1190FBF4544333E6936DE`，
+记在 `tools/fetch-editor-fonts.ps1` 里；脚本会从 Google Fonts 的 raw 地址下载并核对
+（这条地址已经实测跑通、哈希一致），对不上会直接报错，不会悄悄换成别的文件。
 
 **Symbola —— 已删除，不再随仓库分发。** MathQuill 上游把它放在 `src/font/` 里
 一起发（与 `v0.10.1` 逐字节一致），但字体的著作权人 George Douros 现在给出的
@@ -104,7 +103,8 @@ UFAS 许可写的是：
 > Public use of ufas requires the purchase of a Public License.
 
 换句话说，再分发 Symbola 不符合这份许可，MathQuill 上游当年把它放进仓库
-也不能替我们拿到授权，所以 M6 把它整批删掉换成了上面的 DejaVu Math。
+也不能替我们拿到授权，所以 M6 把它整批删掉，换成了上面的 STIX Two Math
+（中间短暂用过 DejaVu Math TeX Gyre，后来因为覆盖率差一截被替换）。
 `tools/build-mathquill.ps1` 现在不再复制上游的 `src/font/`，
 `tools/mathquill-css-patch.js` 负责把生成出来的 CSS 里的 `@font-face` 和字体栈
 换成新字体（按词边界替换，不动 `.mq-nonSymbola` 这个类名）。
