@@ -1,10 +1,26 @@
-<!-- 结果页右上角分享：原版 xhdpi ic_action_share.png（37x35px）轮廓重画。 -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  工具条分享图标，本项目自绘：开口方框 + 右上方箭头，白色圆头线条。
+    画布沿用布局里原来的 37x35，换掉图形不会挪动工具条排版。
+-->
+<vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="18.5dp"
     android:height="17.5dp"
     android:viewportWidth="37"
     android:viewportHeight="35">
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M31.7,34.5L29.5,35L1.5,34.6L0.4,33.5L0,31.5L0.4,8.5L2.5,7L10.5,7L11.8,7.5L11.8,8.5L10.5,9L3.5,9L2.2,9.5L2,31.5L2.5,32.8L30.5,32.8L31,31.5L31.2,23.5L32.5,23.2L33,24.5L33,32.5ZM13.9,25.5L12.5,25.6L12.1,24.5L13.1,21.5L15.2,17.5L18.4,13.5L23.5,9.2L31.2,5.5L24.5,2.8L24,1.5L24.5,0.9L26.5,1.3L36.2,5.5L30.5,16.7L29.5,16.4L29,15.5L32.8,8.5L32.5,8L31.5,8L27.5,9.3L21.5,13.2L18.4,16.5L16.4,19.5Z" />
+        android:pathData="M12,9.4H6.4Q3.4,9.4 3.4,12.4V28.6Q3.4,31.6 6.4,31.6H29.6Q32.6,31.6 32.6,28.6V21.4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M13.6,25.4L30.6,8.4"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M34.8,5.6Q34.8,4.2 33.4,4.2L27,4.2Q25.6,4.2 26.59,5.19L33.81,12.41Q34.8,13.4 34.8,12Z"
+        android:fillColor="#FFFFFFFF" />
 </vector>

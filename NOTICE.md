@@ -72,14 +72,17 @@ pwsh tools/build-mathquill.ps1
 界面图形全部是**本项目自己产出**的：键盘那批 drawable（`ic_keyboard_*`、`ic_dart_glyph_*`）
 由 `tools/make_keyboard_icons.py` 生成——字形用 uharfbuzz 排版、fontTools 从
 Noto Sans SC Light（SIL OFL-1.1）取轮廓，工具行和书签的几何图形是脚本里自绘的；
+结果页那三个按钮图标和工具条上的返回 / 分享图标由 `tools/make_result_icons.py`
+生成，形状只按「继续编辑 / 清空 / 用结果继续运算 / 返回 / 分享」这几个含义
+重新设计（线稿 #53595E、品牌橙 #FFB560，见脚本开头的风格说明），不是原版图形的临摹；
 关于页 logo 和启动图标是项目自己的标记（`tools/make_launcher_icon.py` 生成，
 `bg_about_logo` / `ic_about_logo_mark` / `ic_launcher_foreground` 三处矢量），
 分享底图是画布现画的。仓库里没有原版的 382 张位图，也没有原版那份品牌 logo。
 
-> 键盘图标早期是照原版位图轮廓描的（描图脚本 `work/tools/trace_*` 只在开发时用，
-> 不随仓库分发）。M6 后段已整批换成从开源字体生成的版本：字形、几何、版式都由
-> 生成脚本定义，不再依赖原素材。生成用的字体只在本地缓存（`tools/.cache/`，已忽略），
-> 不随仓库分发。
+> 键盘图标和结果页图标早期都照原版位图轮廓描过一版（描图脚本 `work/tools/trace_*`
+> 只在开发时用，不随仓库分发）。M6 后段已全部换掉：键盘改成从开源字体生成，
+> 结果页与工具条改成按含义重新设计，形状都由生成脚本定义，不再依赖原素材。
+> 生成用的字体只在本地缓存（`tools/.cache/`，已忽略），不随仓库分发。
 
 字体一共三处，都已经收口：
 

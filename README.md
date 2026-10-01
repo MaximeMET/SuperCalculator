@@ -9,9 +9,9 @@
 
 ## 界面
 
-| 计算 | 函数图像 | 关于 |
-|---|---|---|
-| ![计算页](docs/screenshots/calculator.png) | ![图像页](docs/screenshots/graph.png) | ![关于页](docs/screenshots/about.png) |
+| 计算 | 运算结果 | 函数图像 | 关于 |
+|---|---|---|---|
+| ![计算页](docs/screenshots/calculator.png) | ![结果页](docs/screenshots/result.png) | ![图像页](docs/screenshots/graph.png) | ![关于页](docs/screenshots/about.png) |
 
 截图是模拟器（1280×2800 @480dpi）上跑这个仓库自己构建出来的，不是原版的截图。
 
@@ -31,7 +31,7 @@ Android 14 起连安装都会被系统拒绝。
 | M2 | 计算器主界面（键盘 / 公式编辑 / 方法按钮） | ✅ |
 | M3 | 结果页 / 历史 / 设置 / 教程 / 反馈 / 关于 | ✅ |
 | M4 | 函数图像 | ✅ 绘图 / 拖动 / 缩放 / 最多 3 条函数 / 交点与点选气泡 / 图例 / 分享 |
-| M6 | 素材替换 + 开源发布 | 🔄 品牌、文案、字体、键盘图标都已自有，收尾中 |
+| M6 | 素材替换 + 开源发布 | 🔄 品牌、文案、字体、全部图标都已自有，收尾中 |
 
 > 原版抽屉里的「超级 24 点」不在复刻范围内，已按设计取消（M5 阶段整段跳过）：
 > 抽屉项、图标、字符串和历史记录里那个类型号都删掉了。
@@ -122,9 +122,10 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
 - **字体大小**。原版用 `WebSettings.setTextSize(LARGER/NORMAL/SMALLER)`，
   对应 textZoom 125/100/75；原版自己在新 WebView 上已经不生效了，我们按源码意图实现。
 
-界面图标早期是**按原位图轮廓重画成矢量**（描图脚本在 `work/tools/`）。M6 已经把
-键盘那批换成由 `tools/make_keyboard_icons.py` **从开源字体生成**的版本，
-工具行与书签的几何图形也是脚本里自绘的，见下面 M6 一节。
+界面图标早期是**按原位图轮廓重画成矢量**（描图脚本在 `work/tools/`）。M6 已经
+整批换掉：键盘那批由 `tools/make_keyboard_icons.py` **从开源字体生成**（工具行与
+书签的几何图形是脚本里自绘的），结果页三个按钮和工具条的返回 / 分享由
+`tools/make_result_icons.py` 按含义**重新设计**，见下面 M6 一节。
 
 > 关于页那个 logo 早先也是这么描出来的（`trace_logo.py`），但那是网易的品牌素材，
 > M6 已经整体换成项目自己的标记。
@@ -346,6 +347,38 @@ python tools/make_keyboard_icons.py --fetch
 和原版并排比过（`work/logs/cmpKB_page*.png`），字号、位置、留白都对得上，
 差别只在字形本身——现在用的是 Noto，不再是原版那套字。
 
+#### 结果页与工具条图标：按含义重画，不临摹
+
+结果页底部那三个按钮（继续编辑 / 清空 / 用结果继续运算）加上工具条上的
+返回、分享，一共 5 个图标，早先也是照原版位图描的轮廓。现在由
+`tools/make_result_icons.py` 生成，形状只按**这几个图标要表达什么意思**重新设计，
+不追求和原版逐像素一致：
+
+| 图标 | 画的是什么 |
+| --- | --- |
+| `ic_result_resume` | 一张稿纸 + 一支压在右下角的铅笔 |
+| `ic_result_clear` | 一块斜放的橡皮，擦头是品牌橙，下面一道擦痕 |
+| `ic_result_new` | 一台计算器：橙色显示屏 + 六个按键 |
+| `ic_back` | 通用返回箭头（横杆 + 箭头两笔） |
+| `ic_share` | 开口方框 + 右上方箭头 |
+
+风格和其它自绘素材是同一套，脚本开头写死了这几个常量，改一处全套跟着变：
+
+- 线稿 `#53595E`——和键盘上的工具图标、字形图标同色；
+- 线宽 4/152 ≈ 2dp，圆头线帽 + 圆角接合，和键盘那批细线图标读起来是一套；
+- 强调色 `#FFB560`（`values/colors.xml` 的 `brand_accent`），结果页三个图标
+  用的是它的极浅色圆底衬；
+- 结果页图标沿用布局里的 76dp，`ic_share` 沿用原来的 37×35 画布，
+  所以换图形不会挪动工具条和按钮的排版。
+
+只用到纯色，没有 API 24 才认的矢量渐变，minSdk 21 上照样渲染。重建命令：
+
+```powershell
+python tools/make_result_icons.py
+```
+
+脚本支持 `--check`：文件不是最新时返回非 0，方便接进 CI 或发布前自检。
+
 #### 这一步之后还剩什么
 
 - **应用名仍然是「超级计算器」**：抽屉标题、关于页和桌面图标都读 `app_name`，
@@ -540,9 +573,11 @@ adb shell am broadcast -n com.youdao.calculator/com.youdao.calculator.probe.Prob
 
 Windows 上把 `./gradlew` 换成 `gradlew.bat` 即可。
 
-素材都能从脚本重建：启动图标 `tools/make_launcher_icon.py`、
-编辑器字体 `tools/fetch-editor-fonts.ps1`、MathQuill `tools/build-mathquill.ps1`、
-MathJax `tools/fetch-mathjax.ps1`。这些只在改素材时用，正常构建不需要跑。
+素材都能从脚本重建：键盘图标 `tools/make_keyboard_icons.py`、
+结果页与工具条图标 `tools/make_result_icons.py`、启动图标
+`tools/make_launcher_icon.py`、编辑器字体 `tools/fetch-editor-fonts.ps1`、
+MathQuill `tools/build-mathquill.ps1`、MathJax `tools/fetch-mathjax.ps1`。
+这些只在改素材时用，正常构建不需要跑。
 
 ## 许可
 
@@ -615,5 +650,6 @@ pwsh tools/fetch-mathjax.ps1
 
 本项目不包含、也不再分发原版的任何代码、图片或品牌素材；
 界面图形全部是本项目自己画、或由开源字体生成的矢量素材（键盘图标见
-`tools/make_keyboard_icons.py`），字体只从各自的上游发布获取
+`tools/make_keyboard_icons.py`，结果页与工具条图标见 `tools/make_result_icons.py`），
+字体只从各自的上游发布获取
 （CTAN、stixfonts / Google Fonts、noto-cjk），并在 [NOTICE.md](NOTICE.md) 里逐项说明。

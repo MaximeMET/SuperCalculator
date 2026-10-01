@@ -1,13 +1,23 @@
 <!--
-  结果页左上角返回箭头：原版用 AppCompat 的 abc_ic_ab_back_mtrl_am_alpha（48x48px），
-  这里按位图轮廓重画（viewport 用位图像素，尺寸 /2 换算 dp）。
+  工具条返回箭头，本项目自绘：就是通用的「箭头 + 横杆」两笔，
+    白色、2dp 线宽、圆头线帽，和工具条上其它图标一个风格。
 -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
+<vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="48"
-    android:viewportHeight="48">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M24.6,39.5L23.5,39.6L8.4,24.5L8.4,23.5L23.5,8.5L24.5,8.5L26.5,10.5L26.2,11.5L17.1,20.5L16.2,21.5L16.5,21.8L38.5,22L40,22.5L40,25.5L39.5,26L17.5,26L16.2,26.5L26.2,36.5L26.5,37.5Z" />
+        android:pathData="M14.5,5.5L8,12L14.5,18.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M10.5,12L19.5,12"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
 </vector>
