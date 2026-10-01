@@ -251,11 +251,14 @@ html {
  * 空公式时底下那行示例。
  *
  * 位置对着 native 那边的示例行：编辑区底下留的 10px（space_normalmethodbutton）
- * 就是示例行的下边距，所以整行贴着页面底边。
+ * 就是示例行的下边距。WebView 本身铺到编辑区最底（见 fragment_calculator.xml），
+ * 这 10px 由这里的 bottom 让出来 —— 好处是示例行的算式可以往下探 10px 而不被
+ * WebView 裁掉：MathQuill 的分数、积分比一行高，位图那版画多高都不会被裁。
  *
- * 盒子比行高大 9px：文字行盒占满上面 25px（35px 行高 − 10px 下边距），底下那 9px
- * 是留给分数、积分的下沉部分的 —— 它们比一行高，行盒按 25px 摆的话会被 WebView 的
- * 下边缘裁掉（行盒里的内容是从顶部开始排的，所以基线位置不受这 9px 影响）。
+ * 盒高就是那 25px 文字带：位图那版是把整张图在行里**垂直居中**（九张位图墨迹
+ * 中心都落在 1296，和右边「全部举例」的中线 1297 齐平），所以文字行盒也得占满
+ * 这一带、贴着 WebView 下边缘。盒子一旦比行盒高（以前写过 height: 34px），
+ * 多出来的部分全跑到行的上面，行盒留在顶部，整行文字就整体偏上了 ~27px。
  * 右边要空出「全部举例」按钮的宽度（native 侧量好之后用 setExampleTip 传进来），
  * 算式在这块空白里居中 —— 参考实现的位图也是居中的。
  *
@@ -264,15 +267,15 @@ html {
  * 点击交给盖在 WebView 上面的透明 View，这里不收事件；文字颜色就是原来的
  * @color/example_content(#FFFFFFFF)。
  *
- * overflow 不能裁：分数、积分这些比一行高的算式要往上顶出去一点 —— 上面就是
- * 空着的公式区，够用（顶太高由 fitExampleTip 缩字号兜住）。
+ * overflow 不能裁：分数、积分、抛物线这些比一行高的算式要往上下顶出去一点 ——
+ * 上面是空着的公式区，下面到 WebView 下边缘还有 10px 余量（行盒 25px + 10px）。
  */
 .exampleTip {
   position: fixed;
   left: 0;
   right: 48px;
-  bottom: 0;
-  height: 34px;
+  bottom: 10px;
+  height: 25px;
   line-height: 25px;
   display: none;
   text-align: center;
@@ -290,17 +293,55 @@ html {
   vertical-align: middle;
 }
 
+/* 标题单独成块：alignExampleTip() 要按实际位置把它平移回行盒中线 */
+.exampleTipLabel {
+  display: inline-block;
+}
+
+/*
+ * 算式不参与行盒高度。
+ *
+ * MathQuill 的分数、积分、根号都比一行高，做成普通 inline 会把行盒撑高 ——
+ * 行盒一变高，整行文字（包括左边那串中文标题）的基线就被顶下去，于是同一行
+ * 示例看着「一会儿居中、一会儿偏下」（化简、积分这两条最明显，分数还会被
+ * WebView 下边缘切掉）。
+ *
+ * 这里把算式压成 1em 高的 inline-block：它自己的基线仍然和标题对齐，超出的
+ * 部分照常画出去（overflow 不裁），行盒高度却只按这 1em 算。
+ */
+.exampleTip .mq-math-mode {
+  display: inline-block;
+  height: 1em;
+  vertical-align: baseline;
+}
+
 /*
  * 抛物线的示意图（示例行「绘制图像：y = x² + 2x ⇒ ⌣」的结果）。
  *
  * 尺寸按原版位图来：那条曲线 41×52 xhdpi px、描边 2px，换算到屏上约 20dp 宽、
  * 26dp 高、1dp 粗。用 em 写是为了跟着示例行的字号一起缩（fitExampleTip 会改字号）。
- * vertical-align 把曲线往下压一点，让它的顶点落在文字基线下方 —— 位图里也是这么摆的。
+ *
+ * 高度写 0、图形挂在 ::before 上：inline-block 只要有高度就会撑高行盒，把整行
+ * 文字的基线顶下去（之前「绘制图像」那条比别的示例低 13px 就是这么来的）。
+ * 现在它只按 vertical-align 占一个点，曲线从那个点往上画，行盒高度不受影响。
+ *
+ * 位置对着原版位图量：曲线墨迹中心与文字视觉中心齐平（位图里两者都是居中），
+ * 下沿落在基线下方 0.47em —— 也就是 WebView 下边缘再往上 2px，不会被裁。
  */
 .mq-parabola {
   display: inline-block;
-  width: 1.7em;
-  height: 2.16em;
-  vertical-align: -0.62em;
+  position: relative;
+  width: 1.3em;
+  height: 0;
+  vertical-align: -0.52em;
+}
+
+.mq-parabola::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1.3em;
+  height: 1.65em;
   background: url(icons/parabola.svg) no-repeat center / 100% 100%;
 }

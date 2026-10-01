@@ -800,9 +800,8 @@
   var exampleTipBox = document.getElementById('exampleTip');
   var exampleTipLabel = document.getElementById('exampleTipLabel');
   var exampleTipInner = document.getElementById('exampleTipInner');
-  var exampleTipField = exampleTipBox
-    ? MQ.StaticMath(document.getElementById('exampleTipMath'))
-    : null;
+  var exampleTipMath = document.getElementById('exampleTipMath');
+  var exampleTipField = exampleTipBox ? MQ.StaticMath(exampleTipMath) : null;
 
   /** 示例行的字号：和 native 那行 TextView 一样是 13px，放不下再整体缩。 */
   var EXAMPLE_TIP_MAX_PX = 13;
@@ -832,6 +831,36 @@
       exampleTipBox.style.fontSize = size + 'px';
       exampleTipField.reflow();
     }
+    alignExampleTip();
+  }
+
+  /**
+   * 把这一行摆正：标题和算式各自回到行盒中线上。
+   *
+   * MathQuill 的分数、积分、根号比一行高，而且是**按基线**排的：内容一高，行盒
+   * 就被撑高，整行（含左边那串中文标题）跟着往下掉 —— 化简、积分两条就是这么偏的
+   * （实测 5px）。位图那版是整张图在行里居中，所以这里也按居中收尾：渲染完量一次
+   * 实际位置，用 transform 把标题和算式的墨迹各自平移回中线。
+   *
+   * 用 transform 而不是改 margin：它不参与布局，宽度测量（要不要缩字号）不受影响，
+   * 也不会因为行盒已经被撑高而互相牵扯。
+   */
+  function alignExampleTip() {
+    if (!exampleTipBox || !exampleTipLabel || !exampleTipMath) return;
+    exampleTipLabel.style.transform = '';
+    exampleTipMath.style.transform = '';
+    var box = exampleTipBox.getBoundingClientRect();
+    if (!box.height) return;
+    var target = box.top + box.height / 2;
+    var labelRect = exampleTipLabel.getBoundingClientRect();
+    exampleTipLabel.style.transform =
+      'translateY(' + (target - (labelRect.top + labelRect.height / 2)) + 'px)';
+    var root = exampleTipMath.querySelector('.mq-root-block');
+    if (!root) return;
+    var rootRect = root.getBoundingClientRect();
+    if (!rootRect.height) return;
+    exampleTipMath.style.transform =
+      'translateY(' + (target - (rootRect.top + rootRect.height / 2)) + 'px)';
   }
 
   var resultDiv = document.getElementById('resultDiv');
