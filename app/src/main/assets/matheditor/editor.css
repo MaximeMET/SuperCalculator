@@ -97,7 +97,8 @@ html {
   cursor: pointer;
 }
 
-/* 多行公式左边那个花括号（原版是位图，这里按轮廓重画成 SVG） */
+/* 多行公式左边那个花括号（原版是位图，这里是本项目的几何 SVG：
+   竖干 + 中间左突的尖，取两档高度见 bracket-2-7.svg / bracket-8.svg） */
 .bracket {
   display: inline-block;
   height: 100%;
