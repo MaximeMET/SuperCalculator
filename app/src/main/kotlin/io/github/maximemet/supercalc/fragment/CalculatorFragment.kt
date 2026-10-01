@@ -8,8 +8,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -76,6 +78,12 @@ class CalculatorFragment : Fragment() {
 
     /** 公式为空时左下角那行示例。 */
     private var currentExample: Example? = null
+
+    /** 当前这条示例在 [EMPTY_EXAMPLES] 里的下标，左右滑动时在它上面加减。 */
+    private var exampleIndex = 0
+
+    /** 示例行当前是不是显示着（用来只在「显示 → 隐藏」那一帧重抽）。 */
+    private var exampleTipVisible = false
 
     /** 编辑器那侧回传的最近状态，工具条和示例行都读它。 */
     private var formulaEmpty = true
@@ -508,19 +516,68 @@ class CalculatorFragment : Fragment() {
      * 一起、分数只能用斜杠，和原版位图差着一眼。
      */
     private fun setupExamples() {
-        val example = EMPTY_EXAMPLES.random()
-        currentExample = example
-        binding.viewEmpty.setOnClickListener { editor.setLatex(example.latex) }
+        binding.viewEmpty.setOnClickListener {
+            currentExample?.let { editor.setLatex(it.latex) }
+        }
+        // 原版这行是 ViewPager：点一下把示例填进编辑器，左右滑翻下一条/上一条
+        // （CalculatorFragment$3.onPageSelected 会同步 mCurEmptyTipIdx）。
+        // 这里把触摸全交给手势探测器：轻点走 onSingleTapUp -> performClick，
+        // 滑动走 onFling，不再走 View 自己的点击判定。
+        binding.viewEmpty.setOnTouchListener { _, event -> exampleGesture.onTouchEvent(event) }
         // 算式要居中在「全部举例」左边那块空白里，所以得知道按钮多宽；按钮宽度
         // 要等布局完成，这里挂一次布局回调，顺带把示例推到编辑器页。
-        binding.tvExample.doOnLayout {
-            pushExampleTip(example)
-        }
+        binding.tvExample.doOnLayout { showRandomExample() }
         // 「全部举例」= 切到教程页（参考实现点它走的就是抽屉的 nav_tutorial）
         binding.tvExample.setOnClickListener {
             (activity as? MainActivity)?.openTutorial()
         }
         updateExampleVisibility(formulaEmpty)
+    }
+
+    /** 左右滑动翻示例。原版是 ViewPager，翻到头会绕回另一端。 */
+    private val exampleGesture by lazy {
+        GestureDetector(
+            requireContext(),
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: MotionEvent) = true
+
+                override fun onSingleTapUp(e: MotionEvent): Boolean {
+                    binding.viewEmpty.performClick()
+                    return true
+                }
+
+                override fun onFling(
+                    e1: MotionEvent?,
+                    e2: MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float,
+                ): Boolean {
+                    // 手指往左滑 = 看下一条（和 ViewPager 翻页方向一致）
+                    if (Math.abs(velocityX) < Math.abs(velocityY)) return false
+                    stepExample(if (e2.x < (e1?.x ?: e2.x)) 1 else -1)
+                    return true
+                }
+            },
+        )
+    }
+
+    /** 随机抽一条（原版 randTipId + setCurrentItem）。 */
+    private fun showRandomExample() {
+        exampleIndex = EMPTY_EXAMPLES.indices.random()
+        applyExample()
+    }
+
+    /** 翻到相邻的一条，绕回到另一端。 */
+    private fun stepExample(delta: Int) {
+        val count = EMPTY_EXAMPLES.size
+        exampleIndex = ((exampleIndex + delta) % count + count) % count
+        applyExample()
+    }
+
+    private fun applyExample() {
+        val example = EMPTY_EXAMPLES[exampleIndex]
+        currentExample = example
+        pushExampleTip(example)
     }
 
     /** 把示例推给编辑器页（算式渲染 + 右边留出「全部举例」的宽度）。 */
@@ -531,12 +588,26 @@ class CalculatorFragment : Fragment() {
         editor.setExampleTip(example.label, example.tipLatex, insetDp)
     }
 
-    /** 「举例展示」开关关掉之后这行整个不显示。 */
+    /**
+     * 「举例展示」开关关掉之后这行整个不显示。
+     *
+     * 隐藏的瞬间要重新抽一条 —— 原版 hideEmptyTip() 里就是
+     * `mCurEmptyTipIdx = randTipId()`，所以清空公式之后看到的示例会换一条；
+     * 只在 Fragment 创建时抽一次的话，整个进程里都盯着同一条不动。
+     * 抽完不立刻排版：那时候行还是 GONE，量不出宽度，等下次显示时再推。
+     */
     private fun updateExampleVisibility(editorEmpty: Boolean) {
         if (_binding == null) return
         val visible = editorEmpty && AppSettings.exampleVisible
+        if (exampleTipVisible && !visible) {
+            // 只换下标，不在这里排版：这会儿行还是隐藏的，量不出宽度
+            exampleIndex = EMPTY_EXAMPLES.indices.random()
+            currentExample = EMPTY_EXAMPLES[exampleIndex]
+        }
+        exampleTipVisible = visible
         binding.viewEmptyContainer.visibility = if (visible) View.VISIBLE else View.GONE
         editor.setExampleTipVisible(visible)
+        if (visible) currentExample?.let { pushExampleTip(it) }
     }
 
     /**
