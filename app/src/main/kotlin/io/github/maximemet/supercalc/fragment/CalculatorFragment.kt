@@ -8,12 +8,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewConfiguration
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.Toast
@@ -521,9 +521,9 @@ class CalculatorFragment : Fragment() {
         }
         // 原版这行是 ViewPager：点一下把示例填进编辑器，左右滑翻下一条/上一条
         // （CalculatorFragment$3.onPageSelected 会同步 mCurEmptyTipIdx）。
-        // 这里把触摸全交给手势探测器：轻点走 onSingleTapUp -> performClick，
-        // 滑动走 onFling，不再走 View 自己的点击判定。
-        binding.viewEmpty.setOnTouchListener { _, event -> exampleGesture.onTouchEvent(event) }
+        // 自己判手势：过 touch slop 就算翻页（ViewPager 也是这样，不要求甩得够快），
+        // 没过就是点击。
+        binding.viewEmpty.setOnTouchListener { view, event -> handleExampleTouch(view, event) }
         // 算式要居中在「全部举例」左边那块空白里，所以得知道按钮多宽；按钮宽度
         // 要等布局完成，这里挂一次布局回调，顺带把示例推到编辑器页。
         binding.tvExample.doOnLayout { showRandomExample() }
@@ -534,31 +534,39 @@ class CalculatorFragment : Fragment() {
         updateExampleVisibility(formulaEmpty)
     }
 
-    /** 左右滑动翻示例。原版是 ViewPager，翻到头会绕回另一端。 */
-    private val exampleGesture by lazy {
-        GestureDetector(
-            requireContext(),
-            object : GestureDetector.SimpleOnGestureListener() {
-                override fun onDown(e: MotionEvent) = true
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+    private var touchDragged = false
 
-                override fun onSingleTapUp(e: MotionEvent): Boolean {
-                    binding.viewEmpty.performClick()
-                    return true
+    /** 示例行上的手势：轻点填公式，横向拖动翻页（原版 ViewPager 的手感）。 */
+    private fun handleExampleTouch(view: View, event: MotionEvent): Boolean {
+        val slop = ViewConfiguration.get(requireContext()).scaledTouchSlop
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                touchStartX = event.x
+                touchStartY = event.y
+                touchDragged = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!touchDragged) {
+                    touchDragged = Math.abs(event.x - touchStartX) > slop ||
+                        Math.abs(event.y - touchStartY) > slop
                 }
-
-                override fun onFling(
-                    e1: MotionEvent?,
-                    e2: MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float,
-                ): Boolean {
+            }
+            MotionEvent.ACTION_UP -> {
+                val dx = event.x - touchStartX
+                val dy = event.y - touchStartY
+                if (touchDragged && Math.abs(dx) > Math.abs(dy)) {
                     // 手指往左滑 = 看下一条（和 ViewPager 翻页方向一致）
-                    if (Math.abs(velocityX) < Math.abs(velocityY)) return false
-                    stepExample(if (e2.x < (e1?.x ?: e2.x)) 1 else -1)
-                    return true
+                    stepExample(if (dx < 0) 1 else -1)
+                } else if (!touchDragged) {
+                    view.performClick()
                 }
-            },
-        )
+                touchDragged = false
+            }
+            MotionEvent.ACTION_CANCEL -> touchDragged = false
+        }
+        return true
     }
 
     /** 随机抽一条（原版 randTipId + setCurrentItem）。 */
