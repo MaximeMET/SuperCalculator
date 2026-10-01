@@ -59,7 +59,7 @@ body {
 .colorContainer {
   float: left;
   width: 30px;
-  font-family: Symbola, "Times New Roman", serif;
+  font-family: "DejaVu Math TeX Gyre", "Times New Roman", serif;
 }
 
 .formula {

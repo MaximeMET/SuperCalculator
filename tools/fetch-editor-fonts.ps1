@@ -1,16 +1,22 @@
 <#
 .SYNOPSIS
-    取公式编辑器要用的 TeX Gyre Termes 字体。
+    取公式编辑器要用的两套字体。
 
 .DESCRIPTION
-    编辑器页面里 `tex-font.css` 把 `Times New Roman` 指向 TeX Gyre Termes，
-    没有这几个文件公式的字宽和行高都会变（详见 README 的 M2 一节）。
+    编辑器用两套字体，都从上游发布取，逐个核对 SHA-256：
 
-    字体本身是 GUST 按 GUST Font License（LPPL 家族）发布的，可以随本项目分发；
-    这里从 CTAN 官方镜像取 2.004 版，并对每个文件校验 SHA-256——
-    也就是说这几个文件的内容可以溯源到上游发布，不是从任何 App 包里抠的。
+      1. TeX Gyre Termes（4 个 otf）—— fonts.css 把 `Times New Roman` 指向它。
+         没有它公式的字宽和行高都会变（详见 README 的 M2 一节）。
+         GUST Font License（LPPL 家族），允许原样再分发，全文见
+         licenses/GUST-Font-License.txt。
 
-    许可证全文见 licenses/GUST-Font-License.txt。
+      2. DejaVu Math TeX Gyre（1 个 ttf）—— 数学字体，排在字体栈最前面。
+         上游原本用的是 Symbola，但它的许可不允许再分发（见 NOTICE.md），
+         M6 换成了 DejaVu Math TeX Gyre：DejaVu/Bitstream 许可允许再分发，
+         全文见 licenses/DejaVu-Fonts-License.txt。
+
+    注意：DejaVu 那条下载地址是在没有网络的沙箱里写的，还没实际跑过；
+    真正下载时以 SHA-256 为准，对不上就直接报错，不会悄悄换成一个别的文件。
 
 .EXAMPLE
     pwsh tools/fetch-editor-fonts.ps1
@@ -29,7 +35,14 @@ $expected = [ordered]@{
     "texgyretermes-bold.otf"       = "2FB3E952065FA153C7E4E64E04B98B9D79225739B6025AA3F0F0782D299FF61E"
     "texgyretermes-italic.otf"     = "6DD103A1672E50568CD2F8A706CCD48443D44D7D073A59D2286F4E6F746575D6"
     "texgyretermes-bolditalic.otf" = "1BF6AF99CB0E26C12951317032D79B96AE009551E59CCF02A5B24F325ECFEC87"
+    "DejaVuMathTeXGyre.ttf"        = "40DA67C0B6B03076504FBDA4BF3E7B4F20B35999C98063019A3392FE9B1294FE"
 }
+
+# DejaVu Math TeX Gyre 2.37 的候选下载地址（依次尝试，哪个对得上哈希用哪个）
+$dejavuUrls = @(
+    "https://mirrors.ctan.org/fonts/dejavu/DejaVuMathTeXGyre.ttf"
+    "https://www.tug.org/svn/texlive/trunk/Master/texmf-dist/fonts/truetype/public/dejavu/DejaVuMathTeXGyre.ttf"
+)
 
 New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
 
@@ -45,13 +58,34 @@ foreach ($name in $expected.Keys) {
         }
     }
 
-    Write-Host "  下载 $name ..."
-    Invoke-WebRequest -Uri "$Mirror/$name" -OutFile $out -TimeoutSec 300
-    $have = (Get-FileHash $out -Algorithm SHA256).Hash
-    if ($have -ne $want) {
+    $urls = if ($name -eq "DejaVuMathTeXGyre.ttf") { $dejavuUrls } else { @("$Mirror/$name") }
+    $ok = $false
+    foreach ($url in $urls) {
+        Write-Host "  下载 $name ...`n    $url"
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $out -TimeoutSec 300
+        } catch {
+            Write-Host "    失败：$($_.Exception.Message)"
+            continue
+        }
+        $have = (Get-FileHash $out -Algorithm SHA256).Hash
+        if ($have -eq $want) { $ok = $true; break }
+        Write-Host "    SHA-256 对不上：期望 $want，实际 $have"
         Remove-Item $out -Force
-        throw "$name 的 SHA-256 对不上：期望 $want，实际 $have"
+    }
+    if (-not $ok) {
+        throw @"
+取不到 $name。请手动下载后放到 $fontDir，然后重跑本脚本。
+  TeX Gyre Termes 2.004: https://mirrors.ctan.org/fonts/tex-gyre/opentype/
+  DejaVu Math TeX Gyre 2.37: https://www.gust.org.pl/projects/e-foundry/tex-gyre/ 或 CTAN fonts/dejavu
+  期望 SHA-256: $want
+"@
     }
 }
 
-Write-Host "TeX Gyre Termes 2.004 就位（4 个文件，SHA-256 全部匹配 CTAN 发布）"
+$stale = Get-ChildItem $fontDir -Filter "Symbola*" -File -ErrorAction SilentlyContinue
+if ($stale) {
+    Write-Warning "字体目录里还有 Symbola（$($stale.Count) 个文件）。它的许可不允许再分发，请从仓库里删掉。"
+}
+
+Write-Host "编辑器字体就位：TeX Gyre Termes 2.004 + DejaVu Math TeX Gyre 2.37（SHA-256 全部匹配）"

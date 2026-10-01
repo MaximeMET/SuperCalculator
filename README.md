@@ -250,6 +250,7 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 | 设置/反馈页的「超级计算器 QQ 群：530100431」 | 「开源版本不收集反馈数据 / 有问题请到 GitHub 提 issue」 |
 | 分享底图（带二维码的原版位图） | 自绘：底色 + 曲线 + 项目地址 |
 | 抽屉里的「超级 24 点」 | 整项删除，连那条分组分隔线一起 |
+| 公式编辑器的数学字体 `Symbola` | `DejaVu Math TeX Gyre`（Bitstream/DejaVu 许可，允许再分发） |
 
 启动图标是脚本生成的，改配色或比例只要改一处：
 
@@ -263,10 +264,34 @@ python tools/make_launcher_icon.py
 自适应图标外圈 18dp 可能被启动器裁掉，缩完之后标记两端离中心 34.3 格，
 正好落在圆形蒙版的 36 格半径以内。
 
-**还没收口的**：公式编辑器主字体是 MathQuill 上游带的 `Symbola`，
-而 Symbola 现在的许可（UFAS，见 NOTICE.md）只允许个人非商业使用、不允许再分发——
-开源发布前必须换成 OFL 一类的数学字体（候选：STIX Two Math），
-换完公式的字形会变，编辑器的对齐要重新测一遍。
+#### 编辑器换字体：Symbola → DejaVu Math TeX Gyre
+
+MathQuill 上游把 `Symbola` 放在 `src/font/` 里一起分发，但字体作者现在的 UFAS 许可
+只给个人非商业使用、**不允许再分发**（引文见 NOTICE.md），所以这个仓库不能带它。
+替代品选了 DejaVu Math TeX Gyre 2.37：
+
+- 许可干净：Bitstream Vera + DejaVu（数学扩展部分是公有领域），允许再分发，
+  全文随仓库放在 `licenses/DejaVu-Fonts-License.txt`；
+- 覆盖够用：把编辑器可能用到的 245 个字形导出来比对，Symbola 覆盖 243 个、
+  DejaVu Math 覆盖 238 个，只差 `ϒ` `ϝ` `▱` `◇` `⬜` 这 5 个冷门符号，
+  它们会落到系统字体上（不会出现豆腐块）；
+- 只有一个文件（577 KB），换掉了 Symbola 那一套 10 个文件、约 5.8 MB。
+
+换完实测（模拟器 1280×2800 @480，同一串按键）：
+
+| 指标 | 原版（Symbola） | 现在（DejaVu Math） |
+|---|---|---|
+| 单个 `8` 的字形墨迹 | 37 × 60 px | 43 × 64 px |
+| 单个 `8` 的墨迹点数 | 742 | 1239 |
+| 光标高度（与字体无关） | 84 px | 84 px |
+| `x^2+1/2` 整行墨迹宽 | 356 px | 265 px |
+
+光标高度一致，说明字号和行盒没动；差的是字体本身——DejaVu Math 的数字更重、
+更宽，行内间距也更紧，公式整体比原版短一截，视觉上更接近正体。
+
+因为 MathQuill 的 CSS 是 `tools/build-mathquill.ps1` 从上游生成的，
+字体替换落在 `tools/mathquill-css-patch.js` 里（换掉 `@font-face` + 按词边界替换
+字体栈里的 `Symbola`，`.mq-nonSymbola` 这个类名不能被误伤），构建时会自动套用。
 
 `engine` 是整个项目的核心。它复刻了原版的计算链路：
 
@@ -483,10 +508,11 @@ pwsh tools/build-mathquill.ps1
 
 编辑器还要两套字体，来源都能查：
 
-- `Symbola`：MathQuill 上游 `src/font/` 里那 10 个文件，逐个与 `v0.10.1` 的
-  git blob 哈希一致，不是从原版 App 里抠的。**但字体本身的许可有问题**：
-  UFAS 的许可协议只给个人非商业使用、不许再分发（详见 [NOTICE.md](NOTICE.md)），
-  开源发布前要换成别的数学字体。
+- `DejaVuMathTeXGyre.ttf`：数学字体，排在字体栈最前面。上游原本是 MathQuill 带的
+  `Symbola`，但那个字体的许可不允许再分发（详见 [NOTICE.md](NOTICE.md)），
+  所以换成了这个——Bitstream/DejaVu 许可，数学扩展部分是公有领域，
+  全文见 [licenses/DejaVu-Fonts-License.txt](licenses/DejaVu-Fonts-License.txt)。
+  脚本里记了它的 SHA-256（`40DA67C0…94FE`），换文件必须同步改哈希。
 - `texgyretermes-*.otf`：编辑器的 `fonts.css` 把 `"Times New Roman"` 指向它，
   取自 CTAN 上游 2.004 版，GUST Font License，允许原样再分发。重建命令：
 
@@ -495,7 +521,7 @@ pwsh tools/build-mathquill.ps1
   ```
 
   脚本会逐个核对 SHA-256，对不上就报错（`tools/build-mathquill.ps1` 结尾也会自动调它，
-  因为上游 `src/font/` 里没有这四个文件）。
+  因为上游 `src/font/` 里只有 Symbola，那批文件我们已经不带了）。
 
 `app/src/main/assets/mathjax/` 是从官方 npm 包 `mathjax@3.2.2` 的 `es5/` 目录里
 挑出来的一小套离线运行时（`tex-svg.js`、`output/svg/fonts/tex.js`、
@@ -517,4 +543,4 @@ pwsh tools/fetch-mathjax.ps1
 
 本项目不包含、也不再分发原版的任何代码、图片或品牌素材；
 界面图形全部是本项目自己画（或按轮廓重画）的矢量/生成素材，
-字体只从各自的上游发布获取（MathQuill 上游、CTAN），并在 [NOTICE.md](NOTICE.md) 里逐项说明。
+字体只从各自的上游发布获取（CTAN、DejaVu 上游），并在 [NOTICE.md](NOTICE.md) 里逐项说明。

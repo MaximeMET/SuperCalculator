@@ -11,7 +11,8 @@
       2. npm install 装构建依赖（less / uglify-js / pjs）
       3. 按官方 Makefile 的顺序拼出 build/mathquill.js（含非 ASCII 转义）
       4. uglify + lessc 产出 mathquill.min.js / mathquill.css
-      5. 连同 Symbola 字体一起放进 app/src/main/assets/matheditor/
+      5. 打上字体补丁（数学字体换掉上游的 Symbola，见 NOTICE.md），
+         再连同编辑器要的字体一起放进 app/src/main/assets/matheditor/
 
     许可证是 MPL-2.0（不是 MIT），和本项目的 GPL-3.0 兼容，
     但发布时必须保留 MPL 声明与对应源码的获取方式，见 README。
@@ -74,6 +75,9 @@ try {
     $lessc = Join-Path $src "node_modules/.bin/lessc.cmd"
     if (-not (Test-Path $lessc)) { $lessc = Join-Path $src "node_modules/.bin/lessc" }
     & $lessc "src/css/main.less" | Out-File -Encoding ascii "build/mathquill.css"
+
+    Write-Host "换数学字体 ..."
+    node (Join-Path $repo "tools/mathquill-css-patch.js") "build/mathquill.css"
 }
 finally {
     Pop-Location
@@ -87,10 +91,8 @@ Copy-Item "$src/build/mathquill.css" $target -Force
 # Copy-Item 在同名目录已存在时会把源目录塞进去变成 font/font，先删干净
 $fontTarget = Join-Path $target "font"
 if (Test-Path $fontTarget) { Remove-Item $fontTarget -Recurse -Force }
-Copy-Item "$src/src/font" $fontTarget -Recurse -Force
-
-# 上游 font/ 里只有 Symbola。编辑器还要一套 TeX Gyre Termes（GUST Font License，
-# 从 CTAN 取，见 tools/fetch-editor-fonts.ps1），单独补齐。
+# 上游 src/font 里是 Symbola，许可不允许再分发，所以不复制（见 NOTICE.md）；
+# 编辑器要的字体（TeX Gyre Termes + DejaVu Math TeX Gyre）从各自的上游取。
 Write-Host "补齐公式编辑器字体 ..."
 & (Join-Path $repo "tools/fetch-editor-fonts.ps1")
 

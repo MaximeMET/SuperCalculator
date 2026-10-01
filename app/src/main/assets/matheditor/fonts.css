@@ -3,7 +3,7 @@
  *
  * 参考实现的 Mathbot Editor.html 引了一个 tex-font.css，作用只有一个：
  * **把 "Times New Roman" 这个名字指向 TeX Gyre Termes**。
- * MathQuill 的默认字体栈是 `Symbola, "Times New Roman", serif`，不引这个文件，
+ * MathQuill 的字体栈是 `数学字体, "Times New Roman", serif`，不引这个文件，
  * 公式就落到系统自带的 Times/serif 上——字宽和行高都会偏（实测整块矮约 9%，
  * 位置也就跟着对不上了）。
  *
@@ -11,6 +11,9 @@
  * 与原版用的是同一份上游文件；许可是 GUST Font License（见 licenses/GUST-Font-License.txt），
  * 允许原样再分发。字体名注册成 "Times New Roman" 是参考实现的写法，
  * 这里保持一致，否则 MathQuill 的字体栈会对不上。
+ *
+ * 栈里排头的那套数学字体（原本是 Symbola）在 M6 换成了 DejaVu Math TeX Gyre，
+ * 原因见 NOTICE.md：Symbola 的许可不允许再分发。
  */
 @font-face {
   font-family: "Times New Roman";

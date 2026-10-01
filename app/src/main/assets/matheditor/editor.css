@@ -177,7 +177,7 @@ html {
 
 /* 函数名（sin / log …）用正体，并且收紧一点间距 */
 .mq-math-mode .non-italicized-function {
-  font-family: Symbola, "Times New Roman", serif;
+  font-family: "DejaVu Math TeX Gyre", "Times New Roman", serif;
   line-height: .9;
   font-style: normal;
   padding-right: .2em;
