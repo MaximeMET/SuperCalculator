@@ -207,6 +207,24 @@ html {
 .mq-math-mode .mq-numerator { padding: 0.14em 0.1em 0 0.1em; }
 .mq-math-mode .mq-sup > .mq-sup-inner { /* vertical-align: top 被上游注释掉了 */ }
 
+/*
+ * 括号不随内容拉伸。
+ *
+ * MathQuill 上游会让 mq-paren 按内容高度做 `transform: scale(...)`：括号里放分数
+ * 时会被拉到两倍多高，字形被抻成一条细长的弧——用户实测的「大括号变形」就是它。
+ *
+ * 参考实现用的是一份改过的 MathQuill：整个 Bracket 的 reflow 被删掉了
+ * （原包 assets/edit/…/mathquill.min.js 里全文只剩根号那一处 reflow），
+ * 所以原版的括号始终是字体本身的自然大小。这里用 !important 压掉 MathQuill
+ * 写在元素上的内联 transform，恢复同样的观感；根号前缀用的是 mq-sqrt-prefix，
+ * 另一个类，不受影响。
+ */
+.mq-math-mode .mq-paren,
+.mq-editable-field .mq-paren {
+  -webkit-transform: none !important;
+  transform: none !important;
+}
+
 /* 手机上不需要选中文本，也不要点击高亮 */
 .mq-math-mode, .mq-editable-field {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
