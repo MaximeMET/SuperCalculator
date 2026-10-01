@@ -37,6 +37,22 @@ object LatexText {
             "${m.groupValues[1]}\\cdot10^{${m.groupValues[2]}}"
         }
 
+    /**
+     * 数值结果的 LaTeX：按 [fix] 位四舍五入、去掉尾零，并且不写科学计数法。
+     *
+     * 极限兜底这类「引擎没给结果、我们自己的数值通道算出来」的数走这里，
+     * 用的是和引擎输出同一套 [toFixPoint] + [withoutScientificNotation] 规则，
+     * 所以显示形状一致（`2.7182818286`、`0.0000001`）。
+     * 非有限值没有可显示的形式，返回空串。
+     */
+    fun fromDouble(value: Double, fix: Int = EngineSettings.precision): String {
+        if (!value.isFinite()) return ""
+        val rounded = BigDecimal(value).setScale(fix, RoundingMode.HALF_UP)
+        return withoutScientificNotation(
+            replaceTailZeros(rounded.toPlainString(), trimPoint = true)
+        )
+    }
+
     /** 去掉引擎输出整体包裹的一对引号。 */
     fun replaceQuotes(str: String): String =
         if (str.length >= 2 && str.startsWith("\"") && str.endsWith("\"")) {

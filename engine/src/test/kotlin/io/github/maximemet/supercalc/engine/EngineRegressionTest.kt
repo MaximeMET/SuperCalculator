@@ -100,6 +100,14 @@ class EngineRegressionTest {
         assertEquals("0", session("Limit(1/x,x->infty)").evaluate(Method.Limit))
     }
 
+    @Test
+    fun `Symja 算不出的 1 的无穷次方极限走兜底通道`() {
+        // Symja 2016 对 x→0 的 1^∞ 形状原样返回不求值（实测见 work/logs/limitprobe.txt），
+        // 兜底先做取对数改写拿到精确的 e，数值结果只当交叉验证。用户报的
+        // 「重要极限算不出来」就是这一格。
+        assertEquals("e", session("Limit((1+x)^(1/x),x->0)").evaluate(Method.Limit))
+    }
+
     // ---------- 运算结果 ----------
 
     @Test

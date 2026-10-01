@@ -34,6 +34,15 @@ class LatexTextTest {
     }
 
     @Test
+    fun `数值结果按设置位数格式化`() {
+        // 极限兜底这类我们自己的数值通道走这里，形状要和引擎输出一致
+        assertEquals("2.7182818286", LatexText.fromDouble(2.718281828586351, 10))
+        assertEquals("1", LatexText.fromDouble(0.99999999998, 10))
+        assertEquals("0.0000001", LatexText.fromDouble(1e-7, 10))
+        assertEquals("", LatexText.fromDouble(Double.NaN, 10))
+    }
+
+    @Test
     fun `去掉引擎输出外层的引号`() {
         assertEquals("\\frac{1}{3}", LatexText.replaceQuotes("\"\\frac{1}{3}\""))
         assertEquals("14", LatexText.replaceQuotes("14"))

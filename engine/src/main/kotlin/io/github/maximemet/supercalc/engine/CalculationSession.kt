@@ -88,6 +88,13 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
         val symjaFormula = method.buildFormula(input, unknown)
         val raw = engine.evaluateAsLatex(symjaFormula)
         if (raw.isEmpty()) return null
+        // 极限：Symja 2016 版对一批重要极限（`lim x→0 (1+x)^(1/x)`）原样返回不求值，
+        // 直接回显的话结果页会显示一条没算完的极限式。这里补一条数值兜底通道。
+        if (method == Method.Limit && isUnevaluatedLimit(raw)) {
+            LimitFallback.evaluateUnevaluated(engine, symjaFormula)?.let {
+                return formatOutput(method, it)
+            }
+        }
         return formatOutput(method, raw)
     }
 
@@ -167,6 +174,15 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
         if (result.contains("\\lim_")) return false
         return result.indexOf("\\text{") < 0
     }
+
+    /**
+     * 引擎是不是把极限原样吐回来了。
+     *
+     * 没求值的 `Limit(...)` 经 TexForm 会渲染成 `\lim_{...}`；带上 `Direction`
+     * 那种参数时 Symja 会把它当普通函数，渲染成 `\text{Limit}(...)`。两种都算。
+     */
+    private fun isUnevaluatedLimit(latex: String): Boolean =
+        latex.contains("\\lim_") || latex.contains("\\text{Limit}")
 
     // ---------- 内部工具 ----------
 
