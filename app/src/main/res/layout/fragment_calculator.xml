@@ -188,26 +188,20 @@
             android:orientation="horizontal">
 
             <!--
-              示例正文在左侧空白里居中。
-              原版这一行是预渲染位图，按可用宽度整体缩放，最短的和最长的
-              （求解方程组那条）字号不一样大。这里用同样的做法：
-              常规是 @dimen/example_content_text_size(13sp，墨迹高和原版对得上)，
-              放不下时由 CalculatorFragment.fitExampleText 逐档缩到放得下。
-              ellipsize="start" 只是最后兜底，正常不会触发。
+              示例正文不在这里：它是编辑器 WebView 里的 MathQuill 静态域渲染的
+              （见 assets/matheditor/editor.html 的 #exampleTip）——文字直接排
+              ∫₀¹、5/12 这种没有真正的数学排版，看着就不是原版那个样子。
+              这里只留一块透明点击区，点一下把示例公式填进编辑器，
+              宽度也正好决定算式居中时右边要空出多少。
             -->
-            <TextView
+            <View
                 android:id="@+id/view_empty"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_marginBottom="@dimen/space_medium"
                 android:layout_weight="1"
-                android:ellipsize="start"
-                android:gravity="center"
-                android:maxLines="1"
-                android:paddingEnd="@dimen/space_small"
-                android:singleLine="true"
-                android:textColor="@color/example_content"
-                android:textSize="@dimen/example_content_text_size" />
+                android:clickable="true"
+                android:focusable="true" />
 
             <TextView
                 android:id="@+id/tv_example"

@@ -8,14 +8,12 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
-import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.Button
-import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
@@ -501,17 +499,23 @@ class CalculatorFragment : Fragment() {
     /**
      * 空公式时底下那行示例。
      *
-     * 参考实现这行是一个横向 ViewPager，装的九张预渲染位图；文案和算式都烤在图里。
+     * 参考实现这行是一个横向 ViewPager，装的九张预渲染位图，文案和算式都烤在图里。
      * 位图素材要全部换掉，所以这里按图里的内容自己写：左边白字「标签：算式 ⇒ 答案」，
      * 右边橙字「全部举例」。
+     *
+     * 算式不在这里排版 —— 交给编辑器 WebView 里的 MathQuill 静态域渲染（见
+     * [MathEditor.setExampleTip]）。直接把文字排出来没有真正的数学排版：双下标会挤在
+     * 一起、分数只能用斜杠，和原版位图差着一眼。
      */
     private fun setupExamples() {
         val example = EMPTY_EXAMPLES.random()
         currentExample = example
-        val exampleView = binding.viewEmpty
-        exampleView.text = example.text
-        exampleView.setOnClickListener { editor.setLatex(example.latex) }
-        exampleView.doOnLayout { fitExampleText(exampleView) }
+        binding.viewEmpty.setOnClickListener { editor.setLatex(example.latex) }
+        // 算式要居中在「全部举例」左边那块空白里，所以得知道按钮多宽；按钮宽度
+        // 要等布局完成，这里挂一次布局回调，顺带把示例推到编辑器页。
+        binding.tvExample.doOnLayout {
+            pushExampleTip(example)
+        }
         // 「全部举例」= 切到教程页（参考实现点它走的就是抽屉的 nav_tutorial）
         binding.tvExample.setOnClickListener {
             (activity as? MainActivity)?.openTutorial()
@@ -519,34 +523,29 @@ class CalculatorFragment : Fragment() {
         updateExampleVisibility(formulaEmpty)
     }
 
-    /**
-     * 让示例正文在可用宽度里放得下。
-     *
-     * 原版这一行是预渲染位图，按可用宽度整体缩放：短句字号大，最长的
-     * 「求解方程组：{30x + 15y = 675, …}」那条字号明显小一档。我们这里是文字，
-     * 13sp 时最长那条会被 ellipsize 截成「…组: {30x…」。所以照原版的做法，
-     * 从 13sp 起按 0.5sp 逐档往下量，直到整串都放得下（最低 10sp）。
-     */
-    private fun fitExampleText(tv: TextView) {
-        val available = tv.width - tv.paddingStart - tv.paddingEnd
-        if (available <= 0) return
-        val text = tv.text?.toString().orEmpty()
-        var sizeSp = EXAMPLE_TEXT_MAX_SP
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        while (sizeSp > EXAMPLE_TEXT_MIN_SP && tv.paint.measureText(text) > available) {
-            sizeSp -= EXAMPLE_TEXT_SIZE_STEP_SP
-            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        }
+    /** 把示例推给编辑器页（算式渲染 + 右边留出「全部举例」的宽度）。 */
+    private fun pushExampleTip(example: Example) {
+        // 算式要居中在「全部举例」左边那块空白里，所以把按钮宽度（px → dp）传过去，
+        // 让编辑器页把右边的位置留出来。
+        val insetDp = binding.tvExample.width / resources.displayMetrics.density
+        editor.setExampleTip(example.label, example.tipLatex, insetDp)
     }
 
     /** 「举例展示」开关关掉之后这行整个不显示。 */
     private fun updateExampleVisibility(editorEmpty: Boolean) {
         if (_binding == null) return
-        binding.viewEmptyContainer.visibility =
-            if (editorEmpty && AppSettings.exampleVisible) View.VISIBLE else View.GONE
+        val visible = editorEmpty && AppSettings.exampleVisible
+        binding.viewEmptyContainer.visibility = if (visible) View.VISIBLE else View.GONE
+        editor.setExampleTipVisible(visible)
     }
 
-    data class Example(val text: String, val latex: String)
+    /**
+     * 一条示例。
+     *
+     * [label] 是中文小标题，[tipLatex] 是「算式 ⇒ 结果」——用 MathQuill 静态域渲染，
+     * 和编辑器里的公式是同一套排版。[latex] 是点一下要填进编辑器的公式。
+     */
+    data class Example(val label: String, val tipLatex: String, val latex: String)
 
     private companion object {
         const val TAG = "CalculatorFragment"
@@ -570,24 +569,40 @@ class CalculatorFragment : Fragment() {
         /** 结果串里精确解和数值解之间的分隔符，参考实现里就是 `$$`。 */
         const val DIVIDER = "$$"
 
-        /** 示例正文的字号区间：常规 13sp（对齐原版位图墨迹高），最长那条自动缩到放得下。 */
-        const val EXAMPLE_TEXT_MAX_SP = 13f
-        const val EXAMPLE_TEXT_MIN_SP = 10f
-        const val EXAMPLE_TEXT_SIZE_STEP_SP = 0.5f
-
+        /**
+         * 空公式时那九条示例。
+         *
+         * 九条内容和参考实现那九张位图一一对应（顺序也一样），只是算式改用 LaTeX：
+         * 位图里积分有上下限、分数是堆叠的，用文字直接排只能排出 ∫₀¹ 和 5/12，
+         * 所以算式交给 MathQuill 静态域渲染（字号和整体缩放见 editor.css / fitExampleTip）。
+         *
+         * 写法上要注意两处，都是这套 MathQuill 的脾气（改之前先用
+         * work/tmp/make_example_probe.py 的解析检查过一遍）：
+         *   * `\int` / `\lim` 是 editor.js 里注册的**自定义命令**，槽位形状固定，
+         *     所以积分必须写完整的 `\int_{下限}^{上限}{被积函数}d{x}`；
+         *   * 花括号要用 `\lbrace` / `\rbrace`，`\{` 这套解析器不认。
+         *   * 数学模式里的逗号和空格都会被吞掉（`a,b` 渲染成 `ab`），要写成
+         *     `\text{, }`。
+         */
         val EMPTY_EXAMPLES = listOf(
-            Example("求导：x³ ⇒ 3x²", "x^3"),
-            Example("化简：5/12 − 1/8 = 7/24", "\\frac{5}{12}-\\frac{1}{8}"),
-            Example("定积分数值解：∫₀¹x dx = 0.5", "\\int_{0}^{1}{x}d{x}"),
-            Example("绘制图像：y = x² + 2x ⇒ ∪", "x^2+2x"),
+            Example("求导：", "x^{3}\\Rightarrow 3x^{2}", "x^3"),
+            Example("化简：", "\\frac{5}{12}-\\frac{1}{8}=\\frac{7}{24}", "\\frac{5}{12}-\\frac{1}{8}"),
+            Example("定积分数值解：", "\\int_{0}^{1}{x}d{x}=0.5", "\\int_{0}^{1}{x}d{x}"),
+            Example("绘制图像：", "y=x^{2}+2x\\Rightarrow\\parabola", "x^2+2x"),
             Example(
-                "求解方程组：{30x + 15y = 675, 42x + 20y = 940} ⇒ {x→20, y→5}",
+                "求解方程组：",
+                "\\lbrace 30x+15y=675\\text{, }42x+20y=940\\rbrace" +
+                    "\\Rightarrow\\lbrace x\\to 20\\text{, }y\\to 5\\rbrace",
                 "30x+15y=675\\newline 42x+20y=940",
             ),
-            Example("求解方程：x² + 2x + 1 = 0 ⇒ x → −1", "x^2+2x+1=0"),
-            Example("多项式分解：x⁴ − 1 ⇒ (x − 1)(x + 1)(x² + 1)", "x^4-1"),
-            Example("多项式展开：(1 + x²)(1 + x⁴) ⇒ 1 + x² + x⁴ + x⁶", "(1+x^2)(1+x^4)"),
-            Example("积分：x ⇒ x²/2 + C", "x"),
+            Example("求解方程：", "x^{2}+2x+1=0\\Rightarrow x\\to -1", "x^2+2x+1=0"),
+            Example("多项式分解：", "x^{4}-1\\Rightarrow(x-1)(x+1)(x^{2}+1)", "x^4-1"),
+            Example(
+                "多项式展开：",
+                "(1+x^{2})(1+x^{4})\\Rightarrow 1+x^{2}+x^{4}+x^{6}",
+                "(1+x^2)(1+x^4)",
+            ),
+            Example("积分：", "x\\Rightarrow\\frac{x^{2}}{2}+C", "x"),
         )
     }
 }

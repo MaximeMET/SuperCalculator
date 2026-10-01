@@ -190,6 +190,15 @@
   // 除号：原版把它画成 ÷，latex 里仍是 \slash（和「分式」键区分开）
   defSymbol('slash', '\\slash', '<span class="mq-binary-operator">&divide;</span>', '/');
 
+  /**
+   * 抛物线的示意图（示例行「绘制图像：y = x² + 2x ⇒ ⌣」的右边）。
+   *
+   * 原版那条示例的右边不是并集符号，而是**画出来的一段抛物线**（位图里量到
+   * 41×52 xhdpi px、顶点朝下、描边 2px）。这里用同一套自绘 SVG 当符号画出来，
+   * 见 editor.css 的 .mq-parabola。只给示例行用，不进引擎：它的 symja 是空的。
+   */
+  defSymbol('parabola', '\\parabola', '<span class="mq-parabola"></span>', '');
+
   // 度、分、秒是三个独立符号，latex 借用了 ^\circ / ^\prime / ^\pprime
   defSymbol('degree', '^\\circ', '<span>&deg;</span>', 'degree');
   defSymbol('minute', '^\\prime', '<span>&#39;</span>', 'arcminute');
@@ -720,6 +729,45 @@
   var resultField = MQ.StaticMath(document.getElementById('resultSpan'));
   var numericField = MQ.StaticMath(document.getElementById('numericResultSpan'));
 
+  // 空公式时底下那行示例。算式用静态域渲染，和上面结果行是同一套排版；
+  // 中文小标题是普通文字，所以两者共用一条基线。
+  var exampleTipBox = document.getElementById('exampleTip');
+  var exampleTipLabel = document.getElementById('exampleTipLabel');
+  var exampleTipInner = document.getElementById('exampleTipInner');
+  var exampleTipField = exampleTipBox
+    ? MQ.StaticMath(document.getElementById('exampleTipMath'))
+    : null;
+
+  /** 示例行的字号：和 native 那行 TextView 一样是 13px，放不下再整体缩。 */
+  var EXAMPLE_TIP_MAX_PX = 13;
+  var EXAMPLE_TIP_MIN_PX = 8;
+  var EXAMPLE_TIP_STEP_PX = 0.5;
+  /** 算式最高能顶多高（CSS px）：再高就要碰到键盘了，宁可缩字号。 */
+  var EXAMPLE_TIP_MAX_HEIGHT_PX = 46;
+
+  /**
+   * 放不下就整体缩字号。
+   *
+   * 参考实现这一行是位图，按可用宽度整体缩放 —— 最长那条「求解方程组」在原版里
+   * 明显比别的条目小一档。我们照同样的做法：先按 13px 量，超宽（或者高到要压到
+   * 键盘上）就按 0.5px 往下缩。
+   */
+  function fitExampleTip() {
+    if (!exampleTipBox || exampleTipBox.className.indexOf('on') < 0) return;
+    var avail = exampleTipBox.clientWidth;
+    if (avail <= 0) return;
+    var size = EXAMPLE_TIP_MAX_PX;
+    exampleTipBox.style.fontSize = size + 'px';
+    exampleTipField.reflow();
+    var tooWide = function () { return exampleTipInner.offsetWidth > avail; };
+    var tooTall = function () { return exampleTipInner.offsetHeight > EXAMPLE_TIP_MAX_HEIGHT_PX; };
+    while (size > EXAMPLE_TIP_MIN_PX && (tooWide() || tooTall())) {
+      size -= EXAMPLE_TIP_STEP_PX;
+      exampleTipBox.style.fontSize = size + 'px';
+      exampleTipField.reflow();
+    }
+  }
+
   var resultDiv = document.getElementById('resultDiv');
   var numericResultDiv = document.getElementById('numericResultDiv');
   var statusDiv = document.getElementById('statusDiv');
@@ -1021,6 +1069,43 @@
     },
 
     /**
+     * 空公式时那行示例：label 是中文小标题，latex 是「算式 ⇒ 结果」。
+     *
+     * insetPx 是右边「全部举例」按钮的宽度（CSS px = dp），算式在剩下的空白里
+     * 居中 —— 参考实现那个 ViewPager 也是填满按钮左边的整块空白、位图居中。
+     */
+    setExampleTip: function (label, latex, insetPx) {
+      if (!exampleTipBox || !exampleTipField) return;
+      exampleTipLabel.textContent = label || '';
+      try {
+        exampleTipField.latex(latex || '');
+        // MathQuill 解析不了时**不抛异常**，只是留一个空的根块 —— 这里补一条日志，
+        // 免得以后改示例 LaTeX 写成它不认的写法（比如 `\{`、槽位形状不对的 `\int`）
+        // 时静默地只剩中文标题。
+        var root = exampleTipBox.querySelector('.mq-root-block');
+        if (latex && root && root.className.indexOf('mq-empty') >= 0) {
+          var bridge = window.Android;
+          if (bridge && bridge.log) bridge.log('示例算式解析成空: ' + latex);
+        }
+      } catch (e) {
+        var bridge = window.Android;
+        if (bridge && bridge.log) bridge.log('示例算式渲染失败: ' + latex + ' / ' + e.message);
+        exampleTipField.latex('');
+      }
+      if (typeof insetPx === 'number' && insetPx >= 0) {
+        exampleTipBox.style.right = insetPx + 'px';
+      }
+      fitExampleTip();
+    },
+
+    /** 显示 / 收起示例行（公式是否为空、设置里的「举例展示」）。 */
+    setExampleTipVisible: function (visible) {
+      if (!exampleTipBox) return;
+      exampleTipBox.className = visible ? 'exampleTip on' : 'exampleTip';
+      if (visible) fitExampleTip();
+    },
+
+    /**
      * 重新算一次当前公式。
      *
      * 引擎比编辑器晚就绪时用得上：之前那次 autoResult 只能拿到空串，
@@ -1060,6 +1145,9 @@
       formulaField.reflow();
       resultField.reflow();
       numericField.reflow();
+      if (exampleTipBox && exampleTipBox.className.indexOf('on') >= 0) {
+        fitExampleTip();
+      }
     },
 
     version: '1',

@@ -37,6 +37,19 @@
   -->
   <div id="statusDiv" class="status" style="display:none"></div>
 </div>
+<!--
+  空公式时底下那行示例。
+
+  参考实现这一行是九张预渲染位图；我们原来是把文字直接排出来（∫₀¹、5/12 这种），
+  没有真正的数学排版，双下标挤在一起、分数是斜杠，看上去就不像原版。
+  改成和结果行一样用 MathQuill 静态域渲染：中文小标题 + 算式（含 ⇒ 结果），
+  排版和编辑器里的公式完全一致。显隐和点击都在 native 那一侧控制。
+-->
+<div id="exampleTip" class="exampleTip">
+  <span id="exampleTipInner" class="exampleTipInner">
+    <span id="exampleTipLabel" class="exampleTipLabel"></span><span id="exampleTipMath"></span>
+  </span>
+</div>
 <div class="clear endAlchor"><a id="end"></a></div>
 <script src="jquery.min.js"></script>
 <script src="mathquill/mathquill.min.js"></script>

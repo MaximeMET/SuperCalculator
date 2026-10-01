@@ -246,3 +246,61 @@ html {
 
 /* 换行命令：直接换一行 */
 .mq-newline { display: block; height: 0; }
+
+/*
+ * 空公式时底下那行示例。
+ *
+ * 位置对着 native 那边的示例行：编辑区底下留的 10px（space_normalmethodbutton）
+ * 就是示例行的下边距，所以整行贴着页面底边。
+ *
+ * 盒子比行高大 9px：文字行盒占满上面 25px（35px 行高 − 10px 下边距），底下那 9px
+ * 是留给分数、积分的下沉部分的 —— 它们比一行高，行盒按 25px 摆的话会被 WebView 的
+ * 下边缘裁掉（行盒里的内容是从顶部开始排的，所以基线位置不受这 9px 影响）。
+ * 右边要空出「全部举例」按钮的宽度（native 侧量好之后用 setExampleTip 传进来），
+ * 算式在这块空白里居中 —— 参考实现的位图也是居中的。
+ *
+ * 字号 13px 对应原来那个 TextView 的 13sp（1 CSS px = 1dp）；放不下时由
+ * fitExampleTip() 整体缩字号，等价于参考实现「位图按宽度整体缩放」。
+ * 点击交给盖在 WebView 上面的透明 View，这里不收事件；文字颜色就是原来的
+ * @color/example_content(#FFFFFFFF)。
+ *
+ * overflow 不能裁：分数、积分这些比一行高的算式要往上顶出去一点 —— 上面就是
+ * 空着的公式区，够用（顶太高由 fitExampleTip 缩字号兜住）。
+ */
+.exampleTip {
+  position: fixed;
+  left: 0;
+  right: 48px;
+  bottom: 0;
+  height: 34px;
+  line-height: 25px;
+  display: none;
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+  color: #ffffff;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.exampleTip.on { display: block; }
+
+.exampleTipInner {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/*
+ * 抛物线的示意图（示例行「绘制图像：y = x² + 2x ⇒ ⌣」的结果）。
+ *
+ * 尺寸按原版位图来：那条曲线 41×52 xhdpi px、描边 2px，换算到屏上约 20dp 宽、
+ * 26dp 高、1dp 粗。用 em 写是为了跟着示例行的字号一起缩（fitExampleTip 会改字号）。
+ * vertical-align 把曲线往下压一点，让它的顶点落在文字基线下方 —— 位图里也是这么摆的。
+ */
+.mq-parabola {
+  display: inline-block;
+  width: 1.7em;
+  height: 2.16em;
+  vertical-align: -0.62em;
+  background: url(icons/parabola.svg) no-repeat center / 100% 100%;
+}

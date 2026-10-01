@@ -106,6 +106,21 @@ class MathEditor(
     fun setStatus(text: String) =
         call("SuperCalcEditor.setStatus(${JSONObject.quote(text)})")
 
+    /**
+     * 空公式时底下那行示例。
+     *
+     * 渲染在编辑器页里（MathQuill 静态域），所以这里只递 label + 算式 latex，
+     * [insetDp] 是右边「全部举例」按钮的宽度，算式在它左边的空白里居中。
+     */
+    fun setExampleTip(label: String, latex: String, insetDp: Float) = call(
+        "SuperCalcEditor.setExampleTip(${JSONObject.quote(label)}, " +
+            "${JSONObject.quote(latex)}, $insetDp)",
+    )
+
+    /** 显示 / 收起那行示例。 */
+    fun setExampleTipVisible(visible: Boolean) =
+        call("SuperCalcEditor.setExampleTipVisible($visible)")
+
     /** 布局变化（键盘高度、旋转）之后让 MathQuill 重排一次。 */
     fun reflow() = call("SuperCalcEditor.reflow()")
 

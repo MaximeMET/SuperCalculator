@@ -9,10 +9,10 @@
     <dimen name="example_height">35dp</dimen>
     <dimen name="example_text_size">12sp</dimen>
     <!--
-      示例正文的字号。原版这一行是位图，量下来汉字墨迹高 36~39px（本机 1280×2800），
-      我们 11sp 只有 31px，用户反馈「看不清」；13sp 的墨迹高 37px，和原版对得上。
+      示例正文（标签 + 算式）不在这里定字号：它由编辑器页里的 MathQuill 静态域渲染，
+      字号写在 assets/matheditor/editor.css 的 .exampleTip 上（13px，对应原来的 13sp，
+      墨迹高 37px，和原版位图的 36~39px 对得上）。
     -->
-    <dimen name="example_content_text_size">13sp</dimen>
 
     <!--
       顶区（公式区）的三个间距，取自参考实现 fragment_calculator.xml：

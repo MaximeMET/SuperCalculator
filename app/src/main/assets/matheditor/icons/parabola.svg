@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 56" width="44" height="56">
+  <!--
+    开口向上的抛物线，示例行「绘制图像：y = x² + 2x ⇒ ⌣」用。
+
+    原版那一行是位图，右边画的就是这条曲线（ic_emptytip_3 里量到 41×52 xhdpi px、
+    描边约 2px、顶点在正中偏下）。二次贝塞尔的中点正好落在控制点一半的位置，
+    所以顶点 (22,54)、两端 (2,2)/(42,2) 对应的控制点是 (22,106)：
+      0.25*2 + 0.5*106 + 0.25*2 = 54 ✓
+    颜色跟着页面文字走（编辑器里的公式和示例行都是白字），所以这里写死白色。
+  -->
+  <path d="M 2 2 Q 22 106 42 2"
+        fill="none" stroke="#ffffff" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
