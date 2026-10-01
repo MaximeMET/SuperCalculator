@@ -464,14 +464,27 @@ adb shell am broadcast -n com.youdao.calculator/com.youdao.calculator.probe.Prob
 
 ## 构建
 
-需要 JDK 17。
+需要 JDK 17 和 Android SDK（`compileSdk 35`、`build-tools` 35）。SDK 路径放
+`local.properties` 里的 `sdk.dir=`，这个文件不进仓库。
+
+构建走仓库自带的 Gradle wrapper（8.11.1，首次运行会去 services.gradle.org 下载，
+脚本里带 SHA-256 校验）：
 
 ```bash
-./gradlew :engine:test        # 跑引擎测试
+./gradlew :engine:test                # 引擎（纯 JVM，不需要 Android SDK）
+./gradlew :app:testDebugUnitTest      # app 单元测试
+./gradlew :app:assembleDebug          # 打包 debug APK
+./gradlew :app:installDebug           # 装到已连接的设备/模拟器
 ```
 
 测试里有两个会往 `engine/build/diagnostic/` 写对照表的诊断用例，
 用来人工比对参考 App 的实测输出。
+
+Windows 上把 `./gradlew` 换成 `gradlew.bat` 即可。
+
+素材都能从脚本重建：启动图标 `tools/make_launcher_icon.py`、
+编辑器字体 `tools/fetch-editor-fonts.ps1`、MathQuill `tools/build-mathquill.ps1`、
+MathJax `tools/fetch-mathjax.ps1`。这些只在改素材时用，正常构建不需要跑。
 
 ## 许可
 
