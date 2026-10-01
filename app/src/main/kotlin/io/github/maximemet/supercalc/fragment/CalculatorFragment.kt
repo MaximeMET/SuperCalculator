@@ -33,6 +33,7 @@ import io.github.maximemet.supercalc.settings.AppSettings
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 计算页。
@@ -65,8 +66,12 @@ class CalculatorFragment : Fragment() {
     /** 键盘上那个剪贴板槽里存的 latex：点一下会填回公式。 */
     private var clipboardLatex = ""
 
-    @Volatile
-    private var previewToken = 0
+    /**
+     * 自动结果的版本号：引擎算完回来时对不上就说明公式已经变了，直接丢弃。
+     * 递增既发生在 JS 桥线程（[engineAutoResult]），也发生在主线程（公式清空时），
+     * 所以用原子计数，避免两边同时自增互相覆盖、让旧结果蒙混过关。
+     */
+    private val previewToken = AtomicInteger(0)
 
     /** 公式为空时左下角那行示例。 */
     private var currentExample: Example? = null
@@ -192,6 +197,13 @@ class CalculatorFragment : Fragment() {
                 onFormulaEmpty = { empty ->
                     mainHandler.post {
                         formulaEmpty = empty
+                        if (empty) {
+                            // 公式清空时方法按钮不能等引擎回包再收：引擎一来一回要几百毫秒，
+                            // 而示例行这一帧就出来了，两行会叠在一起。
+                            // 同一帧里先作废在途结果、清掉按钮，再显示示例行。
+                            previewToken.incrementAndGet()
+                            renderMethods(emptyList())
+                        }
                         updateExampleVisibility(empty)
                     }
                 },
@@ -270,7 +282,7 @@ class CalculatorFragment : Fragment() {
      */
     private fun engineAutoResult(symja: String, latex: String): String {
         val current = session ?: return ""
-        val token = ++previewToken
+        val token = previewToken.incrementAndGet()
         val formula = fixImplicitProduct(stripTrailingOperator(symja))
         val task = engineExecutor.submit(
             Callable {
@@ -291,7 +303,7 @@ class CalculatorFragment : Fragment() {
                 val methods = runCatching { current.availableMethods(needCalc) }
                     .getOrDefault(emptyList())
                 mainHandler.post {
-                    if (token != previewToken || _binding == null) return@post
+                    if (token != previewToken.get() || _binding == null) return@post
                     onMethodsChanged?.invoke(methods)
                     // 原版在方法按钮里出现「继续计算」时会顺带弹一句提示
                     if (Method.Calc in methods) {
@@ -427,7 +439,7 @@ class CalculatorFragment : Fragment() {
             )
             return
         }
-        val token = ++previewToken
+        val token = previewToken.incrementAndGet()
         editor.setStatus(getString(R.string.calculating))
         engineExecutor.execute {
             val current = session
@@ -438,7 +450,7 @@ class CalculatorFragment : Fragment() {
             // 参考实现在方法任务的 onPostExecute 里记历史（不带结果）
             saveRecord(formula, latex, method.typeCode)
             mainHandler.post {
-                if (token != previewToken || _binding == null) return@post
+                if (token != previewToken.get() || _binding == null) return@post
                 editor.setStatus("")
                 if (output == null) {
                     Toast.makeText(requireContext(), R.string.no_result, Toast.LENGTH_SHORT).show()
