@@ -31,6 +31,16 @@ class SymjaEngine {
         /** 小于这个量级的数直接当 0 处理，避免出现 `1.0E-17` 这种噪声。 */
         private val DELTA: IExpr by lazy { F.num("1E-10") }
 
+        /**
+         * 编辑器 ∞ 键的 symja 输出（原版 MathQuill 的 symjaTemplate 就是小写 `infty`），
+         * 而 Symja 只认 `Infinity`：不换掉的话 `Limit(1/x,x->infty)` 里的 infty
+         * 会被当成一个普通符号，极限永远算不出来（积分上界同理）。
+         */
+        private val INFINITY_SYMBOL = Regex("""\binfty\b""")
+
+        /** 把编辑器风格的符号换成 Symja 认的写法。 */
+        fun normalizeFormula(text: String): String = INFINITY_SYMBOL.replace(text, "Infinity")
+
         init {
             // 与原版一致的全局开关：
             // 1) 允许 log2、arcsin 这类全小写函数名被识别为内置函数
@@ -45,7 +55,7 @@ class SymjaEngine {
 
     /** 解析失败一律返回 null，不抛异常——这是「输入一半不会崩」的关键。 */
     fun parseOrNull(formula: String): IExpr? = try {
-        evalEngine.parse(formula)
+        evalEngine.parse(normalizeFormula(formula))
     } catch (e: SyntaxError) {
         null
     } catch (e: StackOverflowError) {
@@ -135,7 +145,7 @@ class SymjaEngine {
     fun evaluateRaw(code: String): String {
         val stream = ByteArrayOutputStream()
         return try {
-            SymjaInterpreter(code, stream, evalEngine).eval()
+            SymjaInterpreter(normalizeFormula(code), stream, evalEngine).eval()
             // 原版跑在 Android 上，换行一律是 \n；桌面 JVM 的 PrintStream 会给 \r\n，
             // 不拉齐的话差分测试会在「除零提示」这类多行输出上误报。
             stream.toString(Charsets.UTF_8.name()).replace("\r\n", "\n")

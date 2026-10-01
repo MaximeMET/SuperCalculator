@@ -75,6 +75,31 @@ class EngineRegressionTest {
         assertEquals("", session("sin(x)").autoResult())
     }
 
+    // ---------- 极限 ----------
+
+    @Test
+    fun `含极限时只给计算结果按钮`() {
+        assertEquals(listOf(Method.Limit), session("Limit(sin(x)/x,x->0)").availableMethods())
+    }
+
+    @Test
+    fun `重要极限能算出来`() {
+        // 参考实现这一格挂的是 RawMethod：公式原样送引擎，外面不套 N()。
+        // 套了 N() 的话 Symja 的数值模式会把 x->0 变成 x->0.0，
+        // 极限规则匹配不上，lim sin(x)/x 会算成 NaN（用户报的就是这个）。
+        assertEquals("1", session("Limit(sin(x)/x,x->0)").evaluate(Method.Limit))
+        assertEquals("\\frac{1}{2}", session("Limit((1-cos(x))/x^2,x->0)").evaluate(Method.Limit))
+        assertEquals("4", session("Limit(x^2,x->2)").evaluate(Method.Limit))
+    }
+
+    @Test
+    fun `无穷用编辑器写的 infty 也能算`() {
+        // 键盘上 ∞ 键的 symja 输出是小写 `infty`（原版 MathQuill 就长这样），
+        // 引擎侧把它归一成 Symja 认的 Infinity。
+        assertEquals("e", session("Limit((1+1/x)^x,x->infty)").evaluate(Method.Limit))
+        assertEquals("0", session("Limit(1/x,x->infty)").evaluate(Method.Limit))
+    }
+
     // ---------- 运算结果 ----------
 
     @Test

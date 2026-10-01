@@ -16,6 +16,26 @@ enum class Method(
     val template: String?,
 ) {
     Calc("Calc", "继续计算(耗时较长)", RecordType.CALC, -1274262, null),
+
+    /**
+     * 极限的「计算结果」按钮。
+     *
+     * 参考实现这一格挂的是 `RawMethod`（`SymjaManager.getMethods()` 里
+     * `getMethod(NumericMethod.KEY, RawMethod.class)`），公式**原样**送引擎，
+     * 外面不套 `N(...)`——这是能不能算出极限的关键：
+     * Symja 的数值模式会把 `x->0` 里的 0 变成 0.0，`N(Limit(...))` 的极限规则
+     * 匹配不上，`lim x→0 sin(x)/x` 会直接得到 NaN。
+     * 类型码 19、按钮颜色沿用 RawMethod 的默认色（与定积分同色）。
+     */
+    Limit("limit", "计算结果", RecordType.LIMIT, -6191016, null),
+
+    /**
+     * 参考实现里的 `NumericMethod`（模板 `N(%s)`）。
+     *
+     * 注意：原版其实**从来没有实例化过它**——极限分支用的是 `NumericMethod.KEY`
+     * 配 `RawMethod.class`，缓存里存下来的始终是那个 RawMethod（见 [Limit]）。
+     * 这里保留只为和参考实现逐条对应，新代码不要用它。
+     */
     Numeric("Numeric", "计算结果", RecordType.NO_USE, -1274262, MethodConsts.SYMJA_NUMERIC),
     Integrate("Integrate", "积分", RecordType.INTEGRATE, -9591553, MethodConsts.SYMJA_INTEGRATE),
     Derivative("Diff", "求导", RecordType.DIFF, -16558, MethodConsts.SYMJA_DIFF),
@@ -41,6 +61,9 @@ enum class Method(
      */
     fun buildFormula(formula: String, unknown: String): String = when (this) {
         Numeric -> MethodConsts.numeric(formula, EngineSettings.precision)
+        // RawMethod 语义：原样送。（模板为 null 时下面 else 分支也会走到这里，
+        // 单独写出来是为了钉住「极限不能套 N()」这条规矩。）
+        Limit -> formula
         else -> when (placeholderCount) {
             0 -> formula
             1 -> String.format(template!!, formula)

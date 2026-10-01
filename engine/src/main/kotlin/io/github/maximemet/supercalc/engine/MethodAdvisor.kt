@@ -32,8 +32,8 @@ class MethodAdvisor(private val engine: SymjaEngine) {
     ): List<Method> {
         val methods = mutableListOf<Method>()
 
-        // 1. 极限表达式 -> 只能求数值
-        if (!expr.isFree(F.Limit)) return listOf(Method.Numeric)
+        // 1. 极限表达式 -> 只有「计算结果」一个按钮（原样送引擎，不套 N()）
+        if (!expr.isFree(F.Limit)) return listOf(Method.Limit)
 
         // 2. 含定积分符号 -> 走定积分
         if (!expr.isFree(F.NIntegrate)) return listOf(Method.DInte)
