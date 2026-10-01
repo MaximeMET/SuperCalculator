@@ -199,6 +199,23 @@
    */
   defSymbol('parabola', '\\parabola', '<span class="mq-parabola"></span>', '');
 
+  /**
+   * `\Rightarrow` 的左右间距。
+   *
+   * MathQuill 把它注册成 VanillaSymbol
+   * （`LatexCmds.rArr = LatexCmds.Rightarrow = bind(VanillaSymbol, '\\Rightarrow ', '&rArr;')`），
+   * 不带 .mq-binary-operator，所以「算式 ⇒ 结果」会直接贴在一起；而同一族的
+   * `\to` 是 BinaryOperator，是有 padding 的。LaTeX 里 `\Rightarrow` 本来就是二元
+   * 关系，这里按同样宽度重挂一遍（.mq-binary-operator 给 0.2em），别名一起换。
+   */
+  var rightArrow = defSymbol(
+    'Rightarrow',
+    '\\Rightarrow',
+    '<span class="mq-binary-operator">&rArr;</span>',
+    ''
+  );
+  LatexCmds.rArr = LatexCmds.Rightarrow = rightArrow;
+
   // 度、分、秒是三个独立符号，latex 借用了 ^\circ / ^\prime / ^\pprime
   defSymbol('degree', '^\\circ', '<span>&deg;</span>', 'degree');
   defSymbol('minute', '^\\prime', '<span>&#39;</span>', 'arcminute');
