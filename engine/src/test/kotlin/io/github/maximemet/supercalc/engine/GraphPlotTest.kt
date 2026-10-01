@@ -36,6 +36,16 @@ class GraphPlotTest {
     }
 
     @Test
+    fun `y轴交点取极限值不是直接代入`() {
+        // `(1+x)^(1/x)` 在 x=0 直接代入得到 1，而曲线真正的走向是 e。
+        // 用户报的「与y轴交点求错」（截图上是 (0,1)）就是直接代入造成的。
+        val function = GraphPlot.functions(engine, "y==(1+x)^(1/x)").single()
+        assertEquals(Math.E, function.curveValueAt(0.0) ?: Double.NaN, 1e-8)
+        // 曲线以外的位置仍然是普通取值
+        assertEquals(2.0, function.curveValueAt(1.0) ?: Double.NaN, 1e-9)
+    }
+
+    @Test
     fun `抛物线给出焦点准线和极值点`() {
         val extra = GraphPlot.extraInfo(engine, "y==x^(2)")
         assertEquals(ConicType.PARABOLA, extra.type)

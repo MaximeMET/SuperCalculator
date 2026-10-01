@@ -362,7 +362,9 @@ class GraphActivity : AppCompatActivity() {
             out += GraphPoint(point.x, point.y, "\n${index + 1}的$name", owner = index)
         }
         branches.forEach { branch ->
-            branch.valueAt(0.0)?.takeIf { it.isFinite() }?.let {
+            // 用极限值而不是直接代入：可去间断点（(1+x)^(1/x) 在 x=0）代入会得到
+            // 错误的 1，曲线真正的走向是 e。见 GraphFunction.curveValueAt。
+            branch.curveValueAt(0.0)?.takeIf { it.isFinite() }?.let {
                 out += GraphPoint(0.0, it, "\n${index + 1}与y轴交点", owner = index)
             }
         }
@@ -711,7 +713,8 @@ class GraphActivity : AppCompatActivity() {
         val tolerance = -0.05 * axes.labelUnitY
         functions.forEachIndexed { index, branches ->
             val on = branches.any { branch ->
-                branch.valueAt(point.x)?.let { abs(it - point.y) <= tolerance } ?: false
+                // 判定「点落在哪条曲线上」和取值的口径要一致：x=0 处同样按极限算
+                branch.curveValueAt(point.x)?.let { abs(it - point.y) <= tolerance } ?: false
             }
             if (on) through.append(index + 1).append(",")
         }

@@ -110,6 +110,20 @@ class GraphFunction internal constructor(
     /** 取 x 处的函数值；落在定义域外或算不出数值时返回 null。 */
     fun valueAt(x: Double): Double? =
         engine.numericValueOf("($body) /. ${GraphPlot.VARIABLE} -> $x")
+
+    /**
+     * 曲线在 [x] 处「连续延拓」后的取值：x = 0 时按极限算，其它位置就是普通取值。
+     *
+     * y 轴交点必须用这个值。直接代入对可去间断点会给出错误的数：
+     * `(1+x)^(1/x)` 在 x = 0 直接代入得到 1，而曲线真正的走向是 e≈2.718
+     * （用户报的「交点求错」就是它）。极限不存在时退回直接代入。
+     */
+    fun curveValueAt(x: Double): Double? =
+        if (x == 0.0) {
+            LimitFallback.valueAt(engine, body, GraphPlot.VARIABLE, 0.0) ?: valueAt(0.0)
+        } else {
+            valueAt(x)
+        }
 }
 
 /** 二次曲线的类型。 */
