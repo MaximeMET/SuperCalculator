@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 键盘工具行图标 ic_keyboard_newline（原图 50x30 px @xhdpi，见 work/tools/trace_keyboard_chrome.py） -->
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+     几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="25dp"
-    android:height="15dp"
-    android:viewportWidth="50"
-    android:viewportHeight="30">
+    android:width="26dp"
+    android:height="16dp"
+    android:viewportWidth="52"
+    android:viewportHeight="32">
 
-    <path
-        android:fillColor="#FF53595E"
-        android:pathData="M6.5,24.5L0.5,19L6.5,13.6L12.5,8.2L12.8,12.1L13.1,16L28.6,16L44,16L44,8L44,0L47,0L50,0L50,11L50,22L31.6,22L13.1,22L12.8,25.9L12.5,29.9L6.5,24.5Z" />
+  <path
+      android:fillColor="#FF53595E"
+      android:pathData="M1.95 20.15L14.55 10.35L14.55 29.95Z" />
+  <path
+      android:fillColor="@android:color/transparent"
+      android:strokeColor="#FF53595E"
+      android:strokeWidth="6.4"
+      android:strokeLineCap="butt"
+      android:strokeLineJoin="miter"
+      android:pathData="M45.95 0.75L45.95 17.15Q45.95 20.15 42.95 20.15L14.35 20.15" />
 </vector>

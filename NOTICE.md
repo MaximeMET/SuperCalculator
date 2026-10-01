@@ -20,6 +20,7 @@ supercalc 以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](L
 | jQuery | 2.1.4 | MIT | [licenses/jquery-MIT.txt](licenses/jquery-MIT.txt) | MathQuill 的依赖 |
 | TeX Gyre Termes | 2.004（CTAN 上游） | GUST Font License | [licenses/GUST-Font-License.txt](licenses/GUST-Font-License.txt) | 编辑器里 `"Times New Roman"` 指向它 |
 | STIX Two Math | 2.12（stixfonts / Google Fonts） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 编辑器的主字体 |
+| Noto Sans SC Light | 上游 noto-cjk（生成时下载） | SIL OFL-1.1 | [licenses/OFL-1.1.txt](licenses/OFL-1.1.txt) | 生成键盘图标轮廓；字体本身不随仓库分发 |
 | AndroidX / Material Components | 见 `gradle/libs.versions.toml` | Apache-2.0 | 见上游 | Android 界面 |
 
 > 上表按 `engine/libs/symja-2016-04-15.jar` 里**实际打进去的包**列的，
@@ -68,15 +69,17 @@ pwsh tools/build-mathquill.ps1
 
 ## 素材来源（M6）
 
-界面图形全部是**本项目自己产出**的：键盘符号、工具条图标、书签、抽屉图标是按轮廓重画的矢量，
+界面图形全部是**本项目自己产出**的：键盘那批 drawable（`ic_keyboard_*`、`ic_dart_glyph_*`）
+由 `tools/make_keyboard_icons.py` 生成——字形用 uharfbuzz 排版、fontTools 从
+Noto Sans SC Light（SIL OFL-1.1）取轮廓，工具行和书签的几何图形是脚本里自绘的；
 关于页 logo 和启动图标是项目自己的标记（`tools/make_launcher_icon.py` 生成，
 `bg_about_logo` / `ic_about_logo_mark` / `ic_launcher_foreground` 三处矢量），
 分享底图是画布现画的。仓库里没有原版的 382 张位图，也没有原版那份品牌 logo。
 
-> 需要说明的是：键盘那批图标虽然已经是自绘矢量，形状仍是照原版位图的轮廓描的
-> （描图脚本在 `work/tools/`，不随仓库分发）。它们画的是 ∫ √ log 这类通用数学符号，
-> 但如果要把「脱胎于原素材」这条路走到头，得重新设计一套——那会牺牲键盘的逐像素一致，
-> 目前没做这一步。
+> 键盘图标早期是照原版位图轮廓描的（描图脚本 `work/tools/trace_*` 只在开发时用，
+> 不随仓库分发）。M6 后段已整批换成从开源字体生成的版本：字形、几何、版式都由
+> 生成脚本定义，不再依赖原素材。生成用的字体只在本地缓存（`tools/.cache/`，已忽略），
+> 不随仓库分发。
 
 字体一共三处，都已经收口：
 

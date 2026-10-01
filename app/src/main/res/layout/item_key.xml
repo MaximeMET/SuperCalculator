@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   键盘上的一个格子。和参考实现的 view_keyboard_item.xml 一样是「居中的图标」：
-  图标来自原版位图轮廓重画的矢量（work/tools/trace_keyboard_icons.py），
+  图标是 tools/make_keyboard_icons.py 生成的矢量（字形来自 Noto Sans SC Light），
   取不到图标时退回文字（label 本来也只在少数键上有意义）。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"

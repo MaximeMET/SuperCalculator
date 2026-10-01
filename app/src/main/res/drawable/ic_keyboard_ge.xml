@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 原版键盘图标 ic_keyboard_ge（27x29 px @xhdpi）的矢量重画，见 work/tools/trace_keyboard_icons.py -->
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+     几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="13.5dp"
-    android:height="14.5dp"
-    android:viewportWidth="27"
-    android:viewportHeight="29">
+    android:width="14dp"
+    android:height="15dp"
+    android:viewportWidth="28"
+    android:viewportHeight="30">
 
-    <path
-        android:fillColor="#FF505050"
-        android:pathData="M0.2,26.8C0.6,25.8 4.1,25.5 13.5,25.5C22.9,25.5 26.4,25.8 26.8,26.8C27.1,27.7 24,28 13.5,28C3,28 -0.1,27.7 0.2,26.8ZM0.2,21.5C0.4,20.3 4,18.5 11.4,15.7L22.3,11.7L13.4,8.3C1.1,3.7 0,3.2 0,2C0,0.3 2.1,0.8 14.6,5.4C30.4,11.2 30.4,12 15,17.7C-1,23.7 -0.2,23.5 0.2,21.5Z" />
+  <path
+      android:fillColor="#FF505050"
+      android:pathData="M0.96 27.22L1.55 28.75L27.61 18.26L26.98 16.73ZM22.99 11.42L0.89 20.34L1.55 21.91L27.57 11.42V11.28L1.55 0.75L0.89 2.35L22.99 11.28Z" />
 </vector>

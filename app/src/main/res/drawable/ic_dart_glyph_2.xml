@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 键盘书签按下态的白色字形（取自 ic_keyboard_book2_pressed）（原图 66x66 px @xhdpi，见 work/tools/trace_keyboard_chrome.py） -->
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+     几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="33dp"
     android:height="33dp"
     android:viewportWidth="66"
     android:viewportHeight="66">
 
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M30,41.5L30,30L27.5,30C25.9,30 25,29.4 25,28.5C25,27.6 25.9,27 27.5,27C29.6,27 30,26.5 30,23.9C30,20.7 31.5,17 33.4,15.8C35.4,14.4 40,14.9 40,16.5C40,17.4 39.1,18 37.5,18C34.8,18 33,20.5 33,24.4C33,26.6 33.4,27 36,27C38,27 39,27.5 39,28.5C39,29.5 38,30 36,30L33,30L33,41.5C33,51.1 32.7,53 31.5,53C30.3,53 30,51.1 30,41.5Z" />
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M27.42 30.43H30.26V49H32.48V30.43H37.12V28.51H32.48V24.41C32.48 21.49 33.44 19.88 35.63 19.88C36.4 19.88 37.24 20.07 38.05 20.49L38.58 18.65C37.62 18.27 36.55 18 35.51 18C32.06 18 30.26 20.23 30.26 24.25V28.51L27.42 28.74Z" />
 </vector>

@@ -244,7 +244,8 @@ class KeyboardStrip @JvmOverloads constructor(
      * 图标名 → drawable 资源 id。
      *
      * 原版每个格子都是位图（`view_keyboard_item.xml` 里的 TintImageView），
-     * 我们换成按原图轮廓重画的矢量，尺寸仍是原图的 px/2 dp（xhdpi 的固有尺寸）。
+     * 我们换成矢量 drawable：由 tools/make_keyboard_icons.py 从开源字体生成
+     * （工具行/书签的几何图形脚本里自绘），尺寸沿用原图的 px/2 dp（xhdpi 固有尺寸）。
      */
     private fun iconResId(name: String): Int {
         if (name.isEmpty()) return 0

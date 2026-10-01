@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 键盘工具行图标 ic_keyboard_clear（原图 30x31 px @xhdpi，见 work/tools/trace_keyboard_chrome.py） -->
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+     几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="15dp"
-    android:height="15.5dp"
-    android:viewportWidth="30"
-    android:viewportHeight="31">
+    android:width="16dp"
+    android:height="16dp"
+    android:viewportWidth="32"
+    android:viewportHeight="32">
 
-    <path
-        android:fillColor="#FF53595E"
-        android:pathData="M4.2,29.8C3.4,29 3,24.9 3,17.8C3,8.9 2.7,7 1.5,7C0.7,7 0,6.5 0,6C0,5.5 2,5 4.4,5C8.3,5 8.9,4.7 9.2,2.8C9.5,0.7 10.1,0.5 15,0.5C19.9,0.5 20.5,0.7 20.8,2.8C21.1,4.7 21.7,5 25.6,5C28,5 30,5.5 30,6C30,6.5 29.3,7 28.5,7C27.3,7 27,8.9 27,17.8C27,24.9 26.6,29 25.8,29.8C24.2,31.4 5.8,31.4 4.2,29.8ZM19,3.5C19,2.4 17.9,2 15,2C12.1,2 11,2.4 11,3.5C11,4.6 12.1,5 15,5C17.9,5 19,4.6 19,3.5Z" />
+  <path
+      android:fillColor="#FF53595E"
+      android:pathData="M12.75 1.35L18.75 1.35C19.41 1.35 19.95 1.89 19.95 2.55L19.95 3.55C19.95 4.21 19.41 4.75 18.75 4.75L12.75 4.75C12.09 4.75 11.55 4.21 11.55 3.55L11.55 2.55C11.55 1.89 12.09 1.35 12.75 1.35Z" />
+  <path
+      android:fillColor="#FF53595E"
+      android:pathData="M3.35 5.75L28.15 5.75C29.03 5.75 29.75 6.47 29.75 7.35L29.75 7.75C29.75 8.63 29.03 9.35 28.15 9.35L3.35 9.35C2.47 9.35 1.75 8.63 1.75 7.75L1.75 7.35C1.75 6.47 2.47 5.75 3.35 5.75Z" />
+  <path
+      android:fillColor="#FF53595E"
+      android:pathData="M5.55 10.15L25.95 10.15L24.15 28.55L22.95 31.15L8.55 31.15L7.35 28.55Z" />
 </vector>

@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 原版键盘图标 ic_keyboard_p（22x37 px @xhdpi）的矢量重画，见 work/tools/trace_keyboard_icons.py -->
+<!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Light（SIL OFL-1.1），
+     几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="11dp"
-    android:height="18.5dp"
-    android:viewportWidth="22"
-    android:viewportHeight="37">
+    android:width="12dp"
+    android:height="19dp"
+    android:viewportWidth="24"
+    android:viewportHeight="38">
 
-    <path
-        android:fillColor="#FF505050"
-        android:pathData="M1,19C1,8.3 1.4,2 2,2C2.5,2 3,2.7 3,3.6C3,4.9 3.5,4.8 5.6,3.1C8.5,0.8 13,0.4 16.1,2C22.3,5.4 22.7,19.9 16.6,24.9C14.4,26.8 8.2,26.5 5.9,24.4C4,22.7 4,22.8 4,29.3C4,34.6 3.7,36 2.5,36C1.2,36 1,33.4 1,19ZM15.1,22.1C18.3,19.5 18.6,9.4 15.6,6.1C12.6,2.8 7.4,3.2 5.5,7C0.4,16.8 7.7,28.1 15.1,22.1Z" />
+  <path
+      android:fillColor="#FF505050"
+      android:pathData="M1.15 37.75H3.89V28.74L3.85 24.11C6.39 26.09 8.89 27.18 11.25 27.18C17.15 27.18 22.35 22.18 22.35 13.59C22.35 5.8 18.95 0.75 12.25 0.75C9.18 0.75 6.25 2.54 3.85 4.48H3.75L3.42 1.36H1.15ZM11.07 24.77C9.18 24.77 6.58 23.97 3.89 21.7V7.12C6.82 4.57 9.32 3.16 11.73 3.16C17.3 3.16 19.42 7.55 19.42 13.63C19.42 20.34 15.88 24.77 11.07 24.77Z" />
 </vector>

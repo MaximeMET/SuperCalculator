@@ -158,7 +158,7 @@ object KeyboardModel {
         empty(), empty(), empty(), empty(),
     )
 
-    /** 第 4 页：函数模板。图标是曲线图形，替换素材之前先用公式文字占位。 */
+    /** 第 4 页：函数模板。图标是公式文字，由 tools/make_keyboard_icons.py 生成。 */
     val page4: List<KeyItem> = listOf(
         bank("fLinear", "ic_keyboard_f_linear", "y=kx+b", "\\fLinear{}{}", 2),
         bank("fInverse", "ic_keyboard_f_inverse", "y=k/x", "\\fInverse{}", 1),

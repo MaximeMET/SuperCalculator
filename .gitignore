@@ -8,3 +8,4 @@ local.properties
 captures/
 .playwright-cli/
 __pycache__/
+tools/.cache/
