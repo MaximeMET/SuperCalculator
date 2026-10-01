@@ -73,6 +73,11 @@ pwsh tools/build-mathquill.ps1
 `bg_about_logo` / `ic_about_logo_mark` / `ic_launcher_foreground` 三处矢量），
 分享底图是画布现画的。仓库里没有原版的 382 张位图，也没有原版那份品牌 logo。
 
+> 需要说明的是：键盘那批图标虽然已经是自绘矢量，形状仍是照原版位图的轮廓描的
+> （描图脚本在 `work/tools/`，不随仓库分发）。它们画的是 ∫ √ log 这类通用数学符号，
+> 但如果要把「脱胎于原素材」这条路走到头，得重新设计一套——那会牺牲键盘的逐像素一致，
+> 目前没做这一步。
+
 字体一共三处，都已经收口：
 
 **TeX Gyre Termes** —— 取自 CTAN 上游 2.004 版，GUST Font License（LPPL 家族），
