@@ -659,7 +659,9 @@ class CalculatorFragment : Fragment() {
          * work/tmp/make_example_probe.py 的解析检查过一遍）：
          *   * `\int` / `\lim` 是 editor.js 里注册的**自定义命令**，槽位形状固定，
          *     所以积分必须写完整的 `\int_{下限}^{上限}{被积函数}d{x}`；
-         *   * 花括号要用 `\lbrace` / `\rbrace`，`\{` 这套解析器不认。
+         *   * 单独写 `\{` 解析器不认（要 `\lbrace`）；两行高的那种括号也不能用
+         *     `\left\{`（它是把字符纵向拉伸，拉出来没有腰），要用 editor.js 里
+         *     注册的自绘括号 `\sysbrace{上行\newline 下行}`。
          *   * 数学模式里的逗号和空格都会被吞掉（`a,b` 渲染成 `ab`），要写成
          *     `\text{, }`。
          */
@@ -670,8 +672,8 @@ class CalculatorFragment : Fragment() {
             Example("绘制图像：", "y=x^{2}+2x\\Rightarrow\\parabola", "x^2+2x"),
             Example(
                 "求解方程组：",
-                "\\lbrace 30x+15y=675\\text{, }42x+20y=940\\rbrace" +
-                    "\\Rightarrow\\lbrace x\\to 20\\text{, }y\\to 5\\rbrace",
+                "\\sysbrace{30x+15y=675\\newline 42x+20y=940}" +
+                    "\\Rightarrow\\sysbrace{x\\to 20\\newline y\\to 5}",
                 "30x+15y=675\\newline 42x+20y=940",
             ),
             Example("求解方程：", "x^{2}+2x+1=0\\Rightarrow x\\to -1", "x^2+2x+1=0"),

@@ -200,6 +200,32 @@
   defSymbol('parabola', '\\parabola', '<span class="mq-parabola"></span>', '');
 
   /**
+   * 两行方程组的大括号（示例行「求解方程组」专用）。
+   *
+   * 不能拿 `\left\{` 凑：MathQuill 的定界符是**把字符纵向拉伸**（实测 scale(1.2,
+   * 2.6)），拉出来是一根细长弧，中间那个腰几乎看不见；原版位图里的括号是画出来的，
+   * 腰很明确。这里用和编辑区同一个自绘 SVG（bracket-2-7.svg，见 editor.css 的
+   * .mq-sys-brace），字号一变括号跟着变高，形状不变形。
+   *
+   * 槽位里就是那两行（`\newline` 分隔），括号按内容高度撑满 —— 和原版位图一致。
+   */
+  defCommand(
+    'sysbrace',
+    '\\sysbrace',
+    '<span class="mq-sys-brace"><span class="mq-sys-brace-img"></span>' +
+      '<span class="mq-non-leaf">&0</span></span>',
+    {
+      slots: ['block'],
+      latex: function (b) {
+        return '\\sysbrace{' + b[0].latex() + '}';
+      },
+      symja: function (b) {
+        return b[0].symja();
+      },
+    }
+  );
+
+  /**
    * 箭头族的左右间距。
    *
    * MathQuill 只把五个「单词形」箭头注册成了 BinaryOperator（带
@@ -809,13 +835,39 @@
   var EXAMPLE_TIP_STEP_PX = 0.5;
   /** 算式最高能顶多高（CSS px）：再高就要碰到键盘了，宁可缩字号。 */
   var EXAMPLE_TIP_MAX_HEIGHT_PX = 46;
+  /**
+   * 两行的那条（求解方程组）另算：原版这张位图 73px 高、行盒只有 25dp，
+   * CENTER_INSIDE 把它整张压到 25dp 才画得下（屏上实测 638×75 设备像素，
+   * 连中文标题一起缩小）。这里照着压：超过 30px 就缩字号，13px 一路缩到
+   * 10.5px，整条 215×30 dp —— 位图版是 213×25，宽度几乎重合。
+   */
+  var EXAMPLE_TIP_TWOLINE_MAX_HEIGHT_PX = 30;
+  /** 当前这条示例是不是两行的（\newline 组成）。 */
+  var exampleTipTwoLine = false;
+  /** 示例行当前显示着没有。 */
+  var exampleTipVisible = false;
+
+  /**
+   * 示例行的 class 由两个状态拼出来。
+   *
+   * 以前是 setExampleTipVisible 里直接赋值 className，加了两行这条之后
+   * 两个状态得各管各的，不然显示/隐藏一次就把 twoline 抹掉了。
+   */
+  function applyExampleTipClasses() {
+    if (!exampleTipBox) return;
+    var cls = 'exampleTip';
+    if (exampleTipVisible) cls += ' on';
+    if (exampleTipTwoLine) cls += ' twoline';
+    exampleTipBox.className = cls;
+  }
 
   /**
    * 放不下就整体缩字号。
    *
    * 参考实现这一行是位图，按可用宽度整体缩放 —— 最长那条「求解方程组」在原版里
    * 明显比别的条目小一档。我们照同样的做法：先按 13px 量，超宽（或者高到要压到
-   * 键盘上）就按 0.5px 往下缩。
+   * 键盘上）就按 0.5px 往下缩。两行那条再压低一档上限（见上面
+   * EXAMPLE_TIP_TWOLINE_MAX_HEIGHT_PX），最终落在 10px 左右。
    */
   function fitExampleTip() {
     if (!exampleTipBox || exampleTipBox.className.indexOf('on') < 0) return;
@@ -824,8 +876,17 @@
     var size = EXAMPLE_TIP_MAX_PX;
     exampleTipBox.style.fontSize = size + 'px';
     exampleTipField.reflow();
+    var maxHeight = exampleTipTwoLine
+      ? EXAMPLE_TIP_TWOLINE_MAX_HEIGHT_PX
+      : EXAMPLE_TIP_MAX_HEIGHT_PX;
     var tooWide = function () { return exampleTipInner.offsetWidth > avail; };
-    var tooTall = function () { return exampleTipInner.offsetHeight > EXAMPLE_TIP_MAX_HEIGHT_PX; };
+    var tooTall = function () {
+      if (!exampleTipTwoLine) return exampleTipInner.offsetHeight > maxHeight;
+      // 算式盒子被 CSS 压成 1em 高（免得撑起行盒），两行的真实高度只能问根块 ——
+      // 两行那条就是靠这个数从 13px 缩到 10px 的。
+      var root = exampleTipMath.querySelector('.mq-root-block');
+      return (root ? root.offsetHeight : 0) > maxHeight;
+    };
     while (size > EXAMPLE_TIP_MIN_PX && (tooWide() || tooTall())) {
       size -= EXAMPLE_TIP_STEP_PX;
       exampleTipBox.style.fontSize = size + 'px';
@@ -1172,6 +1233,10 @@
     setExampleTip: function (label, latex, insetPx) {
       if (!exampleTipBox || !exampleTipField) return;
       exampleTipLabel.textContent = label || '';
+      // 两行的例子（\newline）高度预算更小，字号上限也不一样，
+      // 见 EXAMPLE_TIP_TWOLINE_MAX_HEIGHT_PX。
+      exampleTipTwoLine = /\\newline/.test(latex || '');
+      applyExampleTipClasses();
       try {
         exampleTipField.latex(latex || '');
         // MathQuill 解析不了时**不抛异常**，只是留一个空的根块 —— 这里补一条日志，
@@ -1196,7 +1261,8 @@
     /** 显示 / 收起示例行（公式是否为空、设置里的「举例展示」）。 */
     setExampleTipVisible: function (visible) {
       if (!exampleTipBox) return;
-      exampleTipBox.className = visible ? 'exampleTip on' : 'exampleTip';
+      exampleTipVisible = !!visible;
+      applyExampleTipClasses();
       if (visible) fitExampleTip();
     },
 

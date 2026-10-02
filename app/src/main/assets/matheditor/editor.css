@@ -225,6 +225,43 @@ html {
   transform: none !important;
 }
 
+/*
+ * 示例行里的换行不占「写字位」。
+ *
+ * `\newline` 是给编辑区用的：那里要留一块 100×23 的空地（模板里 20 个 nbsp），
+ * 光标才点得进去。示例行是静态排版，那块空白只会把右边的 `}` 推到很远的右边
+ * （实测把两行方程组从 216px 撑到 398px），所以这里清零，只留下换行本身。
+ */
+.exampleTip .newlineArea,
+.exampleTip .newlineAreaSpan {
+  font-size: 0;
+}
+
+/*
+ * 两行方程组的大括号（示例行专用，见 editor.js 的 \sysbrace）。
+ *
+ * 括号不画在槽位里，而是绝对定位在整条内容前面：`top: 0; bottom: 0` 让它跟着
+ * 两行内容的高度走，字号缩小、行数变化都不用改代码。图形用的是编辑区那份
+ * bracket-2-7.svg（按原版位图轮廓重画的），所以不会像拉伸字形那样变成细长弧。
+ *
+ * 宽度和缩进对着原版位图量：位图里括号 15×66（宽高比 0.227）、括号右沿到第一个
+ * 字符 9px。这里用 em 写，跟着示例行的字号一起缩。
+ */
+.mq-sys-brace {
+  position: relative;
+  display: inline-block;
+  padding-left: 0.78em;
+}
+
+.mq-sys-brace-img {
+  position: absolute;
+  left: 0.06em;
+  top: 0.03em;
+  bottom: 0.03em;
+  width: 0.5em;
+  background: url(bracket-2-7.svg) no-repeat center / 100% 100%;
+}
+
 /* 手机上不需要选中文本，也不要点击高亮 */
 .mq-math-mode, .mq-editable-field {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
