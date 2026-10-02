@@ -7,6 +7,10 @@
 
 > 本项目与网易有道无任何关联，也不包含任何有道的代码或素材。
 
+> **命名说明**：仓库名用完整的 `SuperCalculator`；Android 包名
+> （`io.github.maximemet.supercalc`）、主题名、WebView 页面标题、JS 全局量这类
+> **内部标识符一律沿用 `supercalc`**，是有意保留的，不是漏改。
+
 ## 界面
 
 | 计算 | 运算结果 | 函数图像 | 关于 |
