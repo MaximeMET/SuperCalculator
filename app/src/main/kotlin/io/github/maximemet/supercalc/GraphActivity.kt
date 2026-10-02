@@ -895,7 +895,7 @@ class GraphActivity : AppCompatActivity() {
         /** 底部宣传图的长宽比，取自参考实现那张 750×1039 的位图。 */
         private const val BANNER_RATIO = 1039f / 750f
 
-        private const val SHARE_BANNER_URL = "github.com/MaximeMET/supercalc"
+        private const val SHARE_BANNER_URL = "github.com/MaximeMET/SuperCalculator"
     }
 }
 

@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "supercalc"
+rootProject.name = "SuperCalculator"
 
 include(":engine")
 include(":app")

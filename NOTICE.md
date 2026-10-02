@@ -2,7 +2,7 @@
 
 ## 本项目
 
-supercalc 以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](LICENSE)。
+SuperCalculator 以 **GNU General Public License v3.0** 发布，全文见 [LICENSE](LICENSE)。
 
 选 GPL-3.0 不是偏好问题：引擎链接了 Symja（GPL-3.0），整个项目就只能跟着走 GPL-3.0。
 

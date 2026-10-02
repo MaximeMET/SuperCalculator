@@ -1,4 +1,4 @@
-# supercalc
+# SuperCalculator
 
 一个「超级计算器」的重写实现。
 
@@ -259,7 +259,7 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 |---|---|
 | 关于页那个网易品牌 logo（早先按轮廓描的矢量） | 项目自己的标记：冷色圆角方块 + 白色根号 + 琥珀色等号（`bg_about_logo` / `ic_about_logo_mark`） |
 | 原版那个橙色方块启动图标 | 同款标记的启动图标：5 档 PNG（API 21-25）+ 自适应图标（API 26+） |
-| 「官方网站：math.youdao.com」 | 「项目主页：github.com/MaximeMET/supercalc」 |
+| 「官方网站：math.youdao.com」 | 「项目主页：github.com/MaximeMET/SuperCalculator」 |
 | 「Copyright © 2017, NetEase,Inc.」 | 「Copyright © 2026, MaximeMET · GPL-3.0」 |
 | 设置/反馈页的「超级计算器 QQ 群：530100431」 | 「开源版本不收集反馈数据 / 有问题请到 GitHub 提 issue」 |
 | 分享底图（带二维码的原版位图） | 自绘：底色 + 曲线 + 项目地址 |
