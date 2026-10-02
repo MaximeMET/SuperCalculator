@@ -226,6 +226,16 @@
   );
 
   /**
+   * 两行方程组中间那个 ⇒（示例行专用）。
+   *
+   * 它左右两边都是两行高的 `\sysbrace`，按基线排的话箭头会落在**第二行**的
+   * 基线上，看着整体往下掉；原版位图里箭头是压在两行中线上（量下来箭头中心
+   * 和括号中心齐平）。所以单独注册一个符号，用 CSS 的 vertical-align 往上抬，
+   * 见 editor.css 的 .mq-sys-arrow。
+   */
+  defSymbol('sysarrow', '\\sysarrow', '<span class="mq-sys-arrow">&rArr;</span>', '');
+
+  /**
    * 箭头族的左右间距。
    *
    * MathQuill 只把五个「单词形」箭头注册成了 BinaryOperator（带

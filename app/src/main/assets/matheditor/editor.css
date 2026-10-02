@@ -262,6 +262,32 @@ html {
   background: url(bracket-2-7.svg) no-repeat center / 100% 100%;
 }
 
+/*
+ * 两行方程组中间那个 ⇒（见 editor.js 的 \sysarrow）。
+ *
+ * 两边都是两行高的括号块，按基线排会掉到第二行上；这里抬 0.58em 回到两行中线，
+ * 和原版位图一致（位图里箭头中心 35、括号中心 33.5，基本齐平）。em 跟着示例行
+ * 字号走，字号缩了不用改。
+ */
+.mq-sys-arrow {
+  display: inline-block;
+  padding: 0 0.2em;
+  vertical-align: 0.58em;
+}
+
+/*
+ * 示例行里的算式左对齐。
+ *
+ * 外面那层 .exampleTip 是 text-align: center —— 用它把「标题 + 算式」整组摆中间。
+ * 但这两行的方程组每一行也是一个块（\sysbrace 的槽位），居中对齐会把短的那行
+ * （`y→5` 比 `x→20` 窄）往右推半个宽度差，于是两行的 ⇒ 和 → 对不齐
+ * （实测差 3px）。原版位图里两行是左对齐的，这里给算式单独设回来；外面整组的
+ * 居中不受影响（算式本身还是 inline-block，由父级居中）。
+ */
+.exampleTip .mq-math-mode {
+  text-align: left;
+}
+
 /* 手机上不需要选中文本，也不要点击高亮 */
 .mq-math-mode, .mq-editable-field {
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);

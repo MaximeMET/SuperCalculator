@@ -673,7 +673,7 @@ class CalculatorFragment : Fragment() {
             Example(
                 "求解方程组：",
                 "\\sysbrace{30x+15y=675\\newline 42x+20y=940}" +
-                    "\\Rightarrow\\sysbrace{x\\to 20\\newline y\\to 5}",
+                    "\\sysarrow\\sysbrace{x\\to 20\\newline y\\to 5}",
                 "30x+15y=675\\newline 42x+20y=940",
             ),
             Example("求解方程：", "x^{2}+2x+1=0\\Rightarrow x\\to -1", "x^2+2x+1=0"),
