@@ -117,7 +117,13 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
   targetSdk 35 默认 true，中文行盒会高 5px，所有页面整体串位。
   主题里给 `textViewStyle` / `checkedTextViewStyle` / `buttonStyle` 各配了一份关掉它。
 - **导航栏**。原版是老 targetSdk，导航栏是系统画的不透明黑条；
-  新 targetSdk 强制边到边，那一条要自己补（`@color/nav_bar`）。
+  新 targetSdk 强制边到边，那一条要自己补。
+  补的时候有两个坑：一是布局里那条 `nav_bar_scrim` 视图在系统导航栏不透明时
+  根本看不见（系统栏是独立窗口，压在应用窗口之上），真正决定颜色的是主题的
+  `android:navigationBarColor`；二是不写这一项时 AppCompat 默认拿
+  `colorPrimaryDark` 当底色，系统再叠一层对比度 scrim，实机上量到 `#42474B`，
+  三个导航键和底色几乎同色。显式写 `@color/nav_bar`（纯黑）后与原版逐像素一致，
+  三键和手势两种模式都验过。
 - **字体大小**。原版用 `WebSettings.setTextSize(LARGER/NORMAL/SMALLER)`，
   对应 textZoom 125/100/75；原版自己在新 WebView 上已经不生效了，我们按源码意图实现。
 - **系统输入法**。公式编辑器是个 WebView，MathQuill 的光标其实是隐藏 textarea，
