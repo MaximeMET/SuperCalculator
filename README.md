@@ -73,7 +73,8 @@ Android 14 起连安装都会被系统拒绝）。目标是**功能与输出对�
 ## 下载与安装
 
 到 [Releases](https://github.com/MaximeMET/SuperCalculator/releases) 下载最新的
-`app-release.apk`，直接安装即可（需要允许安装来自未知来源的应用）。
+`SuperCalculator-<版本>.apk`（当前是 `SuperCalculator-0.1.0.apk`），
+直接安装即可（需要允许安装来自未知来源的应用）。
 
 - 支持 Android 5.0（API 21）到 Android 15（API 35），targetSdk 35；
 - 通用包，不含 native 库，arm64 / arm / x86_64 都能装；
