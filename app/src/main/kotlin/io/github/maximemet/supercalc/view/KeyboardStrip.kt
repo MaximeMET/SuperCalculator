@@ -158,12 +158,30 @@ class KeyboardStrip @JvmOverloads constructor(
         val grid = buildGrid(page.keys, page.columns, keyListener)
         val labelRows = page.labelRows ?: return grid
 
+        val dividerColor = ContextCompat.getColor(context, R.color.key_grid_divider)
+        val dividerHeight = resources.getDimensionPixelSize(R.dimen.space_mini)
         val wrapper = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(ContextCompat.getColor(context, R.color.gray_divider))
+            setBackgroundColor(dividerColor)
         }
         val labels = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        labelRows.forEach { (text, weight) ->
+        labelRows.forEachIndexed { index, row ->
+            val text = row.first
+            val weight = row.second
+            // 标签之间的横线。原版是「1px 白 + 2px listDivider」，合计 1dp——
+            // 和右边网格的行间距一样宽，所以左右的分隔线能一路对齐。
+            if (index > 0) {
+                labels.addView(
+                    View(context).apply { setBackgroundColor(dividerColor) },
+                    LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dividerHeight,
+                    ),
+                )
+            }
+            // 一个标签占 weight 行：高度除了 weight 个格子，还要把它自己跨过的那几条
+            // 行间线算进去。这样整列的总高和网格严格相等，列底不会剩一条灰边
+            //（跨多行的标签内部不画线，和原版一致）。
             labels.addView(
                 TextView(context).apply {
                     this.text = text
@@ -174,7 +192,7 @@ class KeyboardStrip @JvmOverloads constructor(
                 },
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    rowHeight * weight,
+                    rowHeight * weight + dividerHeight * (weight - 1),
                 ),
             )
         }
@@ -184,10 +202,10 @@ class KeyboardStrip @JvmOverloads constructor(
         )
         wrapper.addView(
             View(context).apply {
-                setBackgroundColor(ContextCompat.getColor(context, R.color.gray_divider))
+                setBackgroundColor(dividerColor)
             },
             LinearLayout.LayoutParams(
-                resources.getDimensionPixelSize(R.dimen.space_mini),
+                dividerHeight,
                 LinearLayout.LayoutParams.MATCH_PARENT,
             ),
         )

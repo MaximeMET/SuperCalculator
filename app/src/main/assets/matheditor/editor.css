@@ -188,6 +188,20 @@ html {
 .mq-empty.mq-sqrt .mq-sqrt-span { display: inline-block; }
 .mq-empty.mq-sqrt:after { visibility: hidden; content: ''; }
 
+/*
+ * 根号前缀的下移量。
+ *
+ * MathQuill 上游给的是 `top: .1em`，那个值是配 Symbola 调的；换成 STIX Two Math 之后
+ * √ 的字形更高，0.1em 会让字形顶部从横线上方探出去（实机 480dpi 下约 10px），
+ * 看起来就是「横线和根号错位」。0.25em 是实机量出来的：字形顶与横线正好齐平，
+ * 和原版一致（两边都是 0px 偏移）。
+ *
+ * 用 em 而不是 px，字体大小跟着设置页的字号一起缩放。
+ */
+.mq-math-mode .mq-sqrt-prefix {
+  top: 0.25em;
+}
+
 /* 函数名（sin / log …）用正体，并且收紧一点间距 */
 .mq-math-mode .non-italicized-function {
   font-family: "STIX Two Math", "Times New Roman", serif;

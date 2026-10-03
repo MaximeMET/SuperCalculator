@@ -93,19 +93,31 @@ class MainActivity : AppCompatActivity() {
     private fun setupInsets() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            /*
+             * 底部另取一份「忽略可见性」的值。
+             *
+             * 个别 ROM（尤其是给应用开了「全屏显示」、或者手势栏被隐藏时）会把
+             * systemBars 的 bottom 报成 0，而导航栏其实还在。键盘高度按
+             * (窗口高 - bottom) / 2 算，bottom 少算多少，键盘就高多少——
+             * 用户实机上比原版高了 20dp 左右，就是这么来的。
+             * 取 ignoreVisibility 的那份等于始终按导航栏占的高度预留，
+             * 和原版 `Display.getSize()` 的口径一致；两者相同的时候没有任何影响。
+             */
+            val stableBars = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.systemBars())
+            val bottomInset = maxOf(bars.bottom, stableBars.bottom)
             view.setPadding(bars.left, 0, bars.right, 0)
             binding.statusBarScrim.layoutParams =
                 binding.statusBarScrim.layoutParams.apply { height = bars.top }
             binding.navBarScrim.layoutParams =
-                binding.navBarScrim.layoutParams.apply { height = bars.bottom }
+                binding.navBarScrim.layoutParams.apply { height = bottomInset }
             binding.toolbar.layoutParams =
                 (binding.toolbar.layoutParams as android.view.ViewGroup.MarginLayoutParams).apply {
                     topMargin = bars.top
                 }
             // 抽屉的标题栏也要让开状态栏，白色背景仍然铺到最上面
             binding.drawerView.drawerContainer.setPadding(0, bars.top, 0, 0)
-            lastBottomInset = bars.bottom
-            calculator.applyInsets(bars.bottom, view.height)
+            lastBottomInset = bottomInset
+            calculator.applyInsets(bottomInset, view.height)
             insets
         }
     }

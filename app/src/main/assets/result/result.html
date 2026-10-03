@@ -22,18 +22,36 @@
         }
         #root { width: 100%; overflow: hidden; }
         /* 公式字号按实机截图反推：墨迹高 ≈ 33 CSS px，TeX 数学大约 0.75em */
-        #formula { margin-top: 0.365rem; font-size: 0.81rem; color: #53595e; }
+        /*
+         * 三块正文都要能横向滑动：原版对应容器的样式里就是 overflow-x: auto，
+         * 长公式（比如解方程解出来的两根）放不下时可以左右拖，而不是被裁掉。
+         * 纵向仍然交给 WebView 自己滚。
+         */
+        #formula { margin-top: 0.365rem; font-size: 0.81rem; color: #53595e; overflow-x: auto; }
         #method {
             margin-top: 0.585rem;
             color: #a4a8ac;
             font-size: 0.37rem;
             line-height: 1.4;
+            overflow-x: auto;
         }
-        #result { margin-top: 0.4rem; font-size: 0.59rem; color: #a4a8ac; }
-        #tip { margin-top: 0.42rem; height: 0.48rem; }
+        #result { margin-top: 0.4rem; font-size: 0.59rem; color: #a4a8ac; overflow-x: auto; }
+        /*
+         * 提示圆点的高度交给圆点自己撑开，不要写死。
+         *
+         * 原来 #tip 写死 height: 0.48rem，圆点又是 inline-block：行盒的基线会把
+         * 圆点整体往下推 24px，超出的部分被 #root 的 overflow: hidden 裁掉，
+         * 屏幕上只剩顶部一道橙色弧线（用户截图里那个「黄色的东西」）。
+         * 圆点改成 block 自己撑高度，容器不再写死高度，展开的提示文案也不会被裁。
+         */
+        /*
+         * 与结果正文的间距按原版实测：正文墨迹底到圆点顶 100px（本机 480dpi）；
+         * 左边那 3px 沿用原版 `.tip` 的 margin-left。
+         */
+        #tip { margin-top: 0.6rem; margin-left: 3px; }
         /* 原版这里是一张橙色问号位图（tipimg/q_mark.png），我们用自己的画法 */
         .tip-mark {
-            display: inline-block;
+            display: block;
             width: 0.48rem;
             height: 0.48rem;
             border-radius: 50%;
@@ -44,21 +62,20 @@
         .tip-mark::before {
             content: "";
             position: absolute;
-            left: 0.225rem;
-            top: 0.125rem;
-            width: 0.035rem;
-            height: 0.235rem;
+            left: 0.21rem;
+            top: 0.15rem;
+            width: 0.06rem;
+            height: 0.26rem;
             background: #fff;
-            transform: skewX(-12deg);
-            border-radius: 0.02rem;
+            border-radius: 0.03rem;
         }
         .tip-mark::after {
             content: "";
             position: absolute;
-            left: 0.225rem;
+            left: 0.21rem;
             top: 0.075rem;
-            width: 0.055rem;
-            height: 0.055rem;
+            width: 0.075rem;
+            height: 0.075rem;
             border-radius: 50%;
             background: #fff;
         }
