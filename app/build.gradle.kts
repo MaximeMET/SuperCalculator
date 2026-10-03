@@ -1,7 +1,24 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     kotlin("android")
 }
+
+/*
+  发布签名：密钥和口令都放在仓库外的 `keystore.properties` 里（已 gitignore）。
+  文件不存在时整个签名配置不生效，`assembleRelease` 照旧出 unsigned 包——
+  别人 clone 下来不需要密钥也能构建。
+*/
+val releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
+val releaseKeystoreProperties = Properties().apply {
+    if (releaseKeystorePropertiesFile.exists()) {
+        releaseKeystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+val releaseKeystoreFile = releaseKeystoreProperties.getProperty("storeFile")
+    ?.let { rootProject.file(it) }
+val hasReleaseSigning = releaseKeystoreFile?.exists() == true
 
 android {
     namespace = "io.github.maximemet.supercalc"
@@ -15,10 +32,29 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseKeystoreProperties.getProperty("storePassword")
+                keyAlias = releaseKeystoreProperties.getProperty("keyAlias")
+                keyPassword = releaseKeystoreProperties.getProperty("keyPassword")
+                // v1 留给 API 21-23（minSdk 21 必须带），v2/v3 给新系统
+                enableV1Signing = true
+                enableV2Signing = true
+                // v3 现在用不上，但开了以后才有换密钥（rotation）的余地
+                enableV3Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // 还没到发布阶段，先不折腾混淆
+            // 刻意不混淆：引擎靠反射加载符号，而且首版发布以可复现为先
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
