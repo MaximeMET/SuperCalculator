@@ -104,7 +104,14 @@ class MainActivity : AppCompatActivity() {
              * 和原版 `Display.getSize()` 的口径一致；两者相同的时候没有任何影响。
              */
             val stableBars = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.systemBars())
-            val bottomInset = maxOf(bars.bottom, stableBars.bottom)
+            /*
+             * 再兜一层：有的 ROM 在手势栏隐藏时把 systemBars 整组报成 0，
+             * 但 navigationBars 那一份仍然带着导航栏的高度。三份取最大，
+             * 谁报到就按谁预留；都报 0（真的没有导航栏）时才不预留。
+             */
+            val navBars = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars())
+            val bottomInset = maxOf(bars.bottom, stableBars.bottom, navBars.bottom)
+            if (BuildConfig.DEBUG) logInsets(view, bars.top, bars.bottom, stableBars.bottom)
             view.setPadding(bars.left, 0, bars.right, 0)
             binding.statusBarScrim.layoutParams =
                 binding.statusBarScrim.layoutParams.apply { height = bars.top }
@@ -120,6 +127,32 @@ class MainActivity : AppCompatActivity() {
             calculator.applyInsets(bottomInset, view.height)
             insets
         }
+    }
+
+    /**
+     * 调试用：把「键盘高度是怎么算出来的」那几项原始数据打到 logcat。
+     *
+     * 键盘高度 = (窗口高 - 底部 inset) / 2，而原版是 `Display.getSize().y / 2`。
+     * 两个口径在某些 ROM 上不等价，真机上对不齐时只有这几个数能说明问题：
+     * `root` 是我们的窗口高，`display` 是老 API 给的那份，`bottom/stable` 是
+     * 导航栏的可见 / 忽略可见性 inset，`mode` 是 0=三键、1=手势。
+     * 只在 debug 包里打，release 包连日志字符串都不会留。
+     */
+    private fun logInsets(view: android.view.View, top: Int, bottom: Int, stableBottom: Int) {
+        val point = android.graphics.Point()
+        @Suppress("DEPRECATION")
+        val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
+        @Suppress("DEPRECATION")
+        wm.defaultDisplay.getSize(point)
+        val mode = runCatching {
+            android.provider.Settings.Secure.getInt(contentResolver, "navigation_mode", -1)
+        }.getOrDefault(-1)
+        android.util.Log.i(
+            "SuperCalcInsets",
+            "root=${view.width}x${view.height} display=${point.x}x${point.y} " +
+                "top=$top bottom=$bottom stable=$stableBottom mode=$mode " +
+                "density=${resources.displayMetrics.density}",
+        )
     }
 
     // ---------- 抽屉 ----------
