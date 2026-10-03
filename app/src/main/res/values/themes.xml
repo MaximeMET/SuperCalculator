@@ -12,6 +12,14 @@
         <item name="android:buttonStyle">@style/AppButton</item>
         <!-- AppCompat 会把 colorPrimaryDark 用到状态栏上，原版就是这么来的 -->
         <item name="colorPrimaryDark">@color/status_bar</item>
+        <!--
+          导航栏。原版不设 navigationBarColor，老系统给的就是纯黑（拆包看
+          themes.xml 里确实没有这一项）。AppCompat 的默认值会把
+          colorPrimaryDark 当导航栏底色，edge-to-edge 下系统再叠一层对比度
+          scrim，实机上量到 #42474B——比原版亮一截，三个导航键几乎看不见。
+          显式写黑，和原版对齐；下面那条 scrim 视图再兜住手势栏透明的情况。
+        -->
+        <item name="android:navigationBarColor">@color/nav_bar</item>
         <item name="colorAccent">@color/capsule_button_pressed</item>
         <!-- 设置页那两个开关：选中是主色，未选中是浅橙（原版 BaseAppTheme） -->
         <item name="colorControlActivated">@color/color_primary</item>
