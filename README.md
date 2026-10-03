@@ -104,6 +104,10 @@ SHA-256: 5B:53:7C:56:DC:23:A6:EF:CE:07:CD:7D:50:D2:DC:05:16:E1:A8:F7:C7:68:9A:CE
 Windows 上把 `./gradlew` 换成 `gradlew.bat`。首次运行会去 services.gradle.org
 下载 Gradle 8.11.1（wrapper 里带 SHA-256 校验）。
 
+仓库里挂了一个指向私有工作区的 submodule（`work/`，放的是参考包、比对证据这类
+不公开的东西）。它不参与构建，普通 `git clone` 即可；只有加了 `--recurse-submodules`
+才会因为没权限而报一次错，忽略就行。
+
 `:app:assembleRelease` 需要仓库根目录的 `keystore.properties` 才会出签名包，
 没有这个文件时构建 unsigned 包——不配密钥也能编译，细节见
 [开发笔记](docs/DEVELOPMENT.md#发布签名)。

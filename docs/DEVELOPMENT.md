@@ -4,9 +4,10 @@
 以及引擎补丁的来龙去脉。
 
 - 这个 App 是干什么的、怎么用、怎么构建 → [README](../README.md)
-- 这里提到的路径都在仓库里。对比图、插桩探针、反编译产物只留在开发机上，
-  **不随仓库分发**；凡涉及原版素材或原版代码的部分，仓库里一个字节都没有，
-  详见 [README「与参考实现的关系」](../README.md#与参考实现的关系)。
+- 对比图、插桩探针、反编译产物这类**不公开**的东西放在一个私有仓库里，公开仓库通过
+  submodule 挂在 `work/`（外部 clone 拿不到，也不参与构建），见[私有工作区](#私有工作区submodule)
+- 凡涉及原版素材或原版代码的部分，公开仓库里一个字节都没有，
+  详见 [README「与参考实现的关系」](../README.md#与参考实现的关系)
 
 ---
 
@@ -584,6 +585,31 @@ keyPassword=…
 
 > ⚠️ **发布密钥丢了，就没法给已经发布的 App 升级**（Android 只认同一个签名，
 > 换签名必须卸载重装）。keystore 和口令一定要单独备份。
+
+### 私有工作区（submodule）
+
+公开仓库里挂了一个指向**私有仓库**的 submodule，路径 `work/`：
+
+```ini
+[submodule "work"]
+	path = work
+	url = https://github.com/MaximeMET/SuperCalculator-private.git
+```
+
+里面放的是"不方便公开、又不该丢"的东西：
+
+- `keys/` —— 发布签名密钥与口令（**丢了就没法给已发布版本升级**，所以云端必须有一份）
+- `apk/` —— 原版参考包、打过补丁的参考包、插桩探针包
+- `analysis/` —— jadx 反编译产物、Symja 类指纹
+- `corpus/`、`probe/` —— 差分语料、期望值，以及插桩探针的源码和构建脚本
+- `captures/`、`logs/` —— 原版实机基线截图与逐像素比对证据
+- `tools/`、`tmp/` —— 自研的分析脚本
+
+能公开上游重新下载的东西（Gradle 发行包、jadx、apktool、Symja 源码、AVD、Gradle 缓存、
+下载的字体）不往里放，所以本地那份 `work/` 会有好几个 GB，仓库里只有一百多 MB。
+
+外部 clone 拿不到这个 submodule：不加 `--recurse-submodules` 就是一个空的 `work/` 目录，
+加了会报一次权限错误。两种情况都**不影响构建**，`app` 和 `engine` 都不依赖它。
 
 素材都能从脚本重建：键盘图标 `tools/make_keyboard_icons.py`、
 结果页与工具条图标 `tools/make_result_icons.py`、启动图标
