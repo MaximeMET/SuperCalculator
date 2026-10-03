@@ -38,7 +38,7 @@ SuperCalculator 以 **GNU General Public License v3.0** 发布，全文见 [LICE
 对应源码：
 
 ```powershell
-pwsh tools/build-symja.ps1 -WorkDir work/symja
+pwsh tools/build-symja.ps1
 ```
 
 脚本会拉取上游 `version_2016-04-15` 的完整源码，套用 `tools/symja-patches/` 和脚本内的补丁，
@@ -79,8 +79,8 @@ Noto Sans SC Regular（SIL OFL-1.1）取轮廓，工具行和书签的几何图�
 `bg_about_logo` / `ic_about_logo_mark` / `ic_launcher_foreground` 三处矢量），
 分享底图是画布现画的。仓库里没有原版的 382 张位图，也没有原版那份品牌 logo。
 
-> 键盘图标和结果页图标早期都照原版位图轮廓描过一版（描图脚本 `work/tools/trace_*`
-> 只在开发时用，不随仓库分发）。M6 后段已全部换掉：键盘改成从开源字体生成，
+> 键盘图标和结果页图标早期都照原版位图轮廓描过一版（描图脚本只在开发机上，不随仓库分发）。
+> M6 后段已全部换掉：键盘改成从开源字体生成，
 > 结果页与工具条改成按含义重新设计，形状都由生成脚本定义，不再依赖原素材。
 > 生成用的字体只在本地缓存（`tools/.cache/`，已忽略），不随仓库分发。
 
