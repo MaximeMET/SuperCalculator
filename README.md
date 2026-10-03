@@ -73,7 +73,7 @@ Android 14 起连安装都会被系统拒绝）。目标是**功能与输出对�
 ## 下载与安装
 
 到 [Releases](https://github.com/MaximeMET/SuperCalculator/releases) 下载最新的
-`SuperCalculator-<版本>.apk`（当前是 `SuperCalculator-0.1.0.apk`），
+`SuperCalculator-<版本>.apk`（文件名带版本号，例如 `SuperCalculator-0.1.1.apk`），
 直接安装即可（需要允许安装来自未知来源的应用）。
 
 - 支持 Android 5.0（API 21）到 Android 15（API 35），targetSdk 35；
@@ -207,3 +207,4 @@ pwsh tools/build-mathquill.ps1    # 拉上游 v0.10.1 源码 + 补丁，重建 m
 
 里程碑记录、逐像素比对的经过、踩过的坑、引擎补丁的来龙去脉，都在
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+面向使用者的版本变更记在 [CHANGELOG.md](CHANGELOG.md)。
