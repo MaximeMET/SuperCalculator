@@ -125,6 +125,7 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
         Method.SolveIneq, Method.SolveIneq2 ->
             InequalitySteps.buildJson(engine, formula, lastFormula, method, latex)
         Method.Derivative -> DerivativeSteps.buildJson(engine, formula, latex)
+        Method.Limit -> LimitSteps.buildJson(engine, formula, latex)
         else -> null
     }
 
@@ -220,7 +221,8 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
      * 那种参数时 Symja 会把它当普通函数，渲染成 `\text{Limit}(...)`。两种都算。
      */
     private fun isUnevaluatedLimit(latex: String): Boolean =
-        latex.contains("\\lim_") || latex.contains("\\text{Limit}")
+        latex.contains("\\lim_") || latex.contains("\\text{Limit}") ||
+            latex.contains("indeterminate", ignoreCase = true)
 
     // ---------- 内部工具 ----------
 
