@@ -132,6 +132,7 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
             MethodConsts.SYMJA_INTEGRATE.format(formula, EngineSettings.unknown),
             latex,
         )
+        Method.Expand, Method.Decompose -> PolynomialSteps.buildJson(engine, formula, latex, method)
         else -> null
     }
 
