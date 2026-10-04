@@ -188,6 +188,21 @@
             renderActions: { assistiveMml: [] },
             skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
         },
+        /*
+         * Symja 会输出 `\arcsinh` / `\arccosh` 这类反双曲记号，MathJax v3
+         * 默认没有定义它们，会把整段按"未知命令"标红（实测 ∫√(1+x²)dx 的结果
+         * 就是一片红）。在渲染层定义成 \operatorname 版本，引擎输出保持原样。
+         */
+        tex: {
+            macros: {
+                arcsinh: "\\operatorname{arcsinh}",
+                arccosh: "\\operatorname{arccosh}",
+                arctanh: "\\operatorname{arctanh}",
+                arccoth: "\\operatorname{arccoth}",
+                arcsech: "\\operatorname{arcsech}",
+                arccsch: "\\operatorname{arccsch}"
+            }
+        },
         // file:// 页面用不了 localStorage，关掉字体缓存免得控制台报错
         svg: { fontCache: 'none', scale: 1 },
         startup: { typeset: false }
