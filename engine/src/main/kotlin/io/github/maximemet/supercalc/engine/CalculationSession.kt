@@ -116,13 +116,15 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
      *
      * 参考实现是把这个串发给服务器、由服务器算好回传；服务下线后改成本地算：
      * 内核里的解方程 trace 发点（`Solve / Roots / QuarticSolver`）已经能给出
-     * 移项、因式分解、求根公式、配方这些中间结果，[SolveSteps] 负责整理。
+     * 移项、因式分解、求根公式、配方这些中间结果，[SolveSteps] 负责整理；
+     * 求导则按教材口径逐层拆解（[DerivativeSteps]）。
      * 拿不到步骤（不是多项式方程）时返回 null，结果页不显示过程区。
      */
     fun processSteps(method: Method): String? = when (method) {
         Method.Solve, Method.Solve2 -> SolveSteps.buildJson(engine, formula, lastFormula, method)
         Method.SolveIneq, Method.SolveIneq2 ->
             InequalitySteps.buildJson(engine, formula, lastFormula, method, latex)
+        Method.Derivative -> DerivativeSteps.buildJson(engine, formula, latex)
         else -> null
     }
 

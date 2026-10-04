@@ -66,6 +66,41 @@ class SolveStepsTest {
     }
 
     @Test
+    fun twoByTwoSystemShowsBackSubstitution() {
+        val steps = SolveSteps.build(engine, "x-y==1", "x+y==3", Method.Solve2)
+        val keys = steps.map { it.key }
+        assertTrue("replaceVariable" in keys, "缺少变量替换：$keys")
+        val text = steps.joinToString("\n") { it.lines.joinToString("\n") }
+        assertTrue(text.contains("y = 1"), "解得 y=1 没露面：$text")
+        assertTrue(text.contains("x = 2"), "回代得到 x=2 没露面：$text")
+    }
+
+    @Test
+    fun scaledSystemShowsMultipliers() {
+        val steps = SolveSteps.build(engine, "4*x-y==2", "2*x+3*y==8", Method.Solve2)
+        val keys = steps.map { it.key }
+        assertTrue("gaussianElimination" in keys, "缺少加减消元：$keys")
+        assertTrue("replaceVariable" in keys, "缺少变量替换：$keys")
+        val text = steps.joinToString("\n") { it.lines.joinToString("\n") }
+        assertTrue(text.contains("y = 2"), "解得 y=2 没露面：$text")
+        assertTrue(text.contains("x = 1"), "回代得到 x=1 没露面：$text")
+    }
+
+    @Test
+    fun threeByThreeSystemShowsSubEquations() {
+        val steps = SolveSteps.build(
+            engine,
+            "z-y==1",
+            "x+y+z==6\\nx-y==0",
+            Method.Solve2,
+        )
+        val keys = steps.map { it.key }
+        assertTrue("subEquation" in keys, "缺少求解子方程：$keys")
+        val text = steps.joinToString("\n") { it.lines.joinToString("\n") }
+        assertTrue(text.contains("z = 8/3") || text.contains("z = \\frac{8}{3}"), "z 的解没露面：$text")
+    }
+
+    @Test
     fun sessionExposesProcessJsonForSolve() {
         val session = CalculationSession(SymjaEngine())
         session.setFormula("x^2-5*x+6==0", "x^{2}-5x+6=0")
@@ -92,6 +127,9 @@ class SolveStepsTest {
             Method.Solve to ("x^3-6*x^2+11*x-6==0" to ""),
             Method.Solve to ("x^2-1==0" to ""),
             Method.Solve2 to ("x-y==1" to "x+y==3"),
+            Method.Solve2 to ("4*x-y==2" to "2*x+3*y==8"),
+            Method.Solve2 to ("z-y==1" to "x+y+z==6\\nx-y==0"),
+            Method.Solve2 to ("x*y==6" to "x+y==5"),
         )
         val sb = StringBuilder()
         for ((method, pair) in cases) {

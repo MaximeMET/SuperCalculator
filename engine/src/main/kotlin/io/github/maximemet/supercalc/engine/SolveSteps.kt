@@ -309,16 +309,23 @@ object SolveSteps {
             steps += ProcessStep("groupSameItem", "移项，合并同类项", normalizedLines)
         }
 
-        // 2. 消元：记账本里每个子方程的输入表达式就是消元后剩下的项
+        // 2. 消元：二元一次给「加减消元 + 变量替换」；其它系统退回记账本里的消元结果
+        val names = orderedUnknowns(unknowns)
         val eliminated = entries.filter { it.code == DEGREE }.map { it.input }
-        val ordered = sortByUnknownOrder(engine, orderedUnknowns(unknowns), eliminated)
-        if (ordered.isNotEmpty()) {
-            val lines = ordered.mapNotNull { expr ->
-                engine.toExactLatex(expr)?.let { "$it = 0" }
+        val ordered = sortByUnknownOrder(engine, names, eliminated)
+        val linearSteps = equations?.let { twoByTwoLinearSteps(engine, it, names) }
+        if (linearSteps != null) {
+            steps += linearSteps
+        } else {
+            if (ordered.isNotEmpty()) {
+                val lines = ordered.mapNotNull { expr ->
+                    engine.toExactLatex(expr)?.let { "$it = 0" }
+                }
+                if (lines.isNotEmpty()) {
+                    steps += ProcessStep("gaussianElimination", "消元", lines)
+                }
             }
-            if (lines.isNotEmpty()) {
-                steps += ProcessStep("gaussianElimination", "消元", lines)
-            }
+            subEquationStep(engine, names, ordered)?.let { steps += it }
         }
 
         // 3. 计算结果
@@ -327,6 +334,254 @@ object SolveSteps {
             steps += ProcessStep("equalityResult", "方程结果", resultLines)
         }
         return steps
+    }
+
+    // ---------- 方程组的加减消元 / 代入 ----------
+
+    /** 一元线性式 `a·u + b·v + c = 0` 的系数。 */
+    private class LinearForm(val a: IExpr, val b: IExpr, val c: IExpr)
+
+    /** 一条「消去某个未知数」的组合方案。 */
+    private class EliminationPlan(
+        val score: Int,
+        val eliminated: String,
+        val keep: String,
+        val keepValue: IExpr,
+        val combinationTex: String,
+        val notation: String,
+    )
+
+    /**
+     * 二元一次方程组的「加减消元 + 回代」。
+     *
+     * 原版的「变量替换 / 求解子方程」两步是服务端 trace 整理出来的，我们这条
+     * trace 链上没有那几个发点，所以这里按线性方程组的结构**确定性生成**：
+     * 先选一个消元方向凑一条尽量干净的组合（优先 ①±②），再把求出的未知数
+     * 回代进其中一式；两个值代回原方程组都成立才展示，否则返回 null 走通用步骤。
+     */
+    private fun twoByTwoLinearSteps(
+        engine: SymjaEngine,
+        equations: IAST,
+        names: List<String>,
+    ): List<ProcessStep>? {
+        if (equations.size != 3 || names.size != 2) return null
+        val u = names[0]
+        val v = names[1]
+        val first = linearForm(engine, equations.get(1), u, v) ?: return null
+        val second = linearForm(engine, equations.get(2), u, v) ?: return null
+
+        val plans = listOf(
+            eliminationPlan(engine, first, second, u, v, eliminateFirst = true),
+            eliminationPlan(engine, first, second, u, v, eliminateFirst = false),
+        ).filterNotNull()
+        if (plans.isEmpty()) return null
+        val plan = plans.minBy { it.score }
+
+        // 回代：挑系数不为零、确实含被消去未知数的那一式
+        val eliminatedCoefInFirst = if (plan.eliminated == u) first.a else first.b
+        val useFirst = !eliminatedCoefInFirst.isZero
+        val intoEquation = if (useFirst) equations.get(1) else equations.get(2)
+
+        val keepValueTex = engine.toExactLatex(plan.keepValue) ?: return null
+        val (intoLhs, intoRhs) = sidesOf(intoEquation) ?: return null
+        // 注意：`IExpr.replaceAll` 在「没命中符号」时会返回 NIL 指针（例如常数
+        // 那一侧的 3），所以代入统一走引擎的 ReplaceAll 通道。
+        val subLhs = substitute(engine, intoLhs, plan.keep, plan.keepValue) ?: return null
+        val subRhs = substitute(engine, intoRhs, plan.keep, plan.keepValue) ?: return null
+        val subMoved = F.eval(F.Subtract(subLhs, subRhs))
+        val elimSym = engine.symbol(plan.eliminated)
+        val coefficient = engine.evaluateOrNull(
+            engine.parseOrNull("Coefficient(($subMoved), ${plan.eliminated})")
+        ) ?: return null
+        if (!coefficient.isNumber || coefficient.isZero) return null
+        val constant = F.eval(F.Subtract(subMoved, F.Times(coefficient, elimSym)))
+        if (!constant.isNumber) return null
+        val elimValue = F.eval(F.Divide(F.Negate(constant), coefficient))
+        if (!elimValue.isNumber) return null
+
+        // 回代验证：两个值代进原方程组每一式都必须成立
+        val uValue = if (plan.eliminated == u) elimValue else plan.keepValue
+        val vValue = if (plan.eliminated == v) elimValue else plan.keepValue
+        for (i in 1 until equations.size) {
+            if (!isSolution(engine, equations.get(i), u, uValue, v, vValue)) return null
+        }
+
+        val subLhsTex = engine.toExactLatex(subLhs) ?: return null
+        val subRhsTex = engine.toExactLatex(subRhs) ?: return null
+        val elimValueTex = engine.toExactLatex(elimValue) ?: return null
+        return listOf(
+            ProcessStep(
+                "gaussianElimination",
+                "加减消元",
+                listOf(
+                    "T:${plan.notation}，消去 ${plan.eliminated}",
+                    plan.combinationTex,
+                    "${plan.keep} = $keepValueTex",
+                ),
+            ),
+            ProcessStep(
+                "replaceVariable",
+                "变量替换",
+                listOf(
+                    "T:把 ${plan.keep} = $keepValueTex 代入${if (useFirst) "①" else "②"}",
+                    "$subLhsTex = $subRhsTex",
+                    "${plan.eliminated} = $elimValueTex",
+                ),
+            ),
+        )
+    }
+
+    /** 把方程整理成 `a·u + b·v + c = 0`；非线性 / 带参数返回 null。 */
+    private fun linearForm(
+        engine: SymjaEngine,
+        equation: IExpr,
+        u: String,
+        v: String,
+    ): LinearForm? {
+        val (lhs, rhs) = sidesOf(equation) ?: return null
+        val moved = F.eval(F.Subtract(lhs, rhs))
+        val uSym = engine.symbol(u)
+        val vSym = engine.symbol(v)
+        val a = engine.evaluateOrNull(engine.parseOrNull("Coefficient(($moved), $u)")) ?: return null
+        val b = engine.evaluateOrNull(engine.parseOrNull("Coefficient(($moved), $v)")) ?: return null
+        if (!a.isNumber || !b.isNumber || (a.isZero && b.isZero)) return null
+        val c = F.eval(
+            F.Subtract(F.Subtract(moved, F.Times(a, uSym)), F.Times(b, vSym))
+        )
+        if (!c.isFree(uSym) || !c.isFree(vSym)) return null
+        return LinearForm(a, b, c)
+    }
+
+    /** 消去 u（或 v）的一条组合：①×m1 - ②×m2。 */
+    private fun eliminationPlan(
+        engine: SymjaEngine,
+        first: LinearForm,
+        second: LinearForm,
+        u: String,
+        v: String,
+        eliminateFirst: Boolean,
+    ): EliminationPlan? {
+        val coef1 = if (eliminateFirst) first.a else first.b
+        val coef2 = if (eliminateFirst) second.a else second.b
+        if (!coef1.isNumber || !coef2.isNumber || coef1.isZero || coef2.isZero) return null
+        val keepCoef1 = if (eliminateFirst) first.b else first.a
+        val keepCoef2 = if (eliminateFirst) second.b else second.a
+        if (!keepCoef1.isNumber || !keepCoef2.isNumber) return null
+
+        val (m1, m2) = reduceMultipliers(coef2, coef1)
+        val kept = F.eval(F.Subtract(F.Times(m1, keepCoef1), F.Times(m2, keepCoef2)))
+        if (!kept.isNumber || kept.isZero) return null
+        val constant = F.eval(F.Subtract(F.Times(m1, first.c), F.Times(m2, second.c)))
+        if (!constant.isNumber) return null
+        val keepValue = F.eval(F.Divide(F.Negate(constant), kept))
+        if (!keepValue.isNumber) return null
+
+        val keepUnknown = if (eliminateFirst) v else u
+        val keepSym = engine.symbol(keepUnknown)
+        val leftTex = engine.toExactLatex(F.Times(kept, keepSym)) ?: return null
+        val rightTex = engine.toExactLatex(F.eval(F.Negate(constant))) ?: return null
+        val clean = (m1.isOne || m1.isMinusOne) && (m2.isOne || m2.isMinusOne)
+        return EliminationPlan(
+            score = if (clean) 0 else 1,
+            eliminated = if (eliminateFirst) u else v,
+            keep = keepUnknown,
+            keepValue = keepValue,
+            combinationTex = "$leftTex = $rightTex",
+            notation = combinationText(m1, m2),
+        )
+    }
+
+    /** `①-②` / `①×4 - ②×2` 这类文字记法（纯文本行，不走 LaTeX）。 */
+    private fun combinationText(m1: IExpr, m2: IExpr): String {
+        val first = when {
+            m1.isOne -> "①"
+            m1.isMinusOne -> "-①"
+            m1.isNegative -> "-①×${plainNumber(F.eval(F.Abs(m1)))}"
+            else -> "①×${plainNumber(m1)}"
+        }
+        val absSecond = F.eval(F.Abs(m2))
+        val second = if (absSecond.isOne) "②" else "②×${plainNumber(absSecond)}"
+        return first + (if (m2.isNegative) " + " else " - ") + second
+    }
+
+    private fun plainNumber(expr: IExpr): String = expr.toString().trim()
+
+    /** 两个整数乘数约掉公因子，组合更干净（4、2 -> 2、1）。 */
+    private fun reduceMultipliers(m1: IExpr, m2: IExpr): Pair<IExpr, IExpr> {
+        val a = m1.toString().toLongOrNull() ?: return m1 to m2
+        val b = m2.toString().toLongOrNull() ?: return m1 to m2
+        val g = gcdLong(kotlin.math.abs(a), kotlin.math.abs(b))
+        if (g <= 1L) return m1 to m2
+        return F.integer(a / g) to F.integer(b / g)
+    }
+
+    private fun gcdLong(a: Long, b: Long): Long {
+        var x = a
+        var y = b
+        while (y != 0L) {
+            val t = x % y
+            x = y
+            y = t
+        }
+        return if (x == 0L) 1L else x
+    }
+
+    /** 把值代回原方程，验证它确实是解。 */
+    private fun isSolution(
+        engine: SymjaEngine,
+        equation: IExpr,
+        u: String,
+        uValue: IExpr,
+        v: String,
+        vValue: IExpr,
+    ): Boolean {
+        val (lhs, rhs) = sidesOf(equation) ?: return false
+        val code = "(($lhs) - ($rhs)) /. $u -> ($uValue) /. $v -> ($vValue)"
+        val value = engine.evaluateOrNull(engine.parseOrNull(code)) ?: return false
+        if (value.isZero) return true
+        val numeric = engine.numericValueOf(value.toString()) ?: return false
+        return kotlin.math.abs(numeric) < 1e-9
+    }
+
+    /** 把 `name = value` 代入表达式；不命中（常数侧）时原样返回。 */
+    private fun substitute(
+        engine: SymjaEngine,
+        expr: IExpr,
+        name: String,
+        value: IExpr,
+    ): IExpr? = engine.evaluateOrNull(engine.parseOrNull("($expr) /. $name -> ($value)"))
+
+    /**
+     * 消元后剩下的单变量子方程（记账本里的 DEGREE 输入），逐个解出来。
+     *
+     * 三次元的线性方程组走这条：消元结果本来就是 `3x-5 = 0` 这种一次式。
+     */
+    private fun subEquationStep(
+        engine: SymjaEngine,
+        names: List<String>,
+        equations: List<IExpr>,
+    ): ProcessStep? {
+        if (equations.isEmpty()) return null
+        val lines = mutableListOf<String>()
+        for (expr in equations) {
+            val unknown = names.firstOrNull { !expr.isFree(engine.symbol(it)) } ?: continue
+            val moved = F.eval(expr)
+            val sym = engine.symbol(unknown)
+            val a = engine.evaluateOrNull(engine.parseOrNull("Coefficient(($moved), $unknown)"))
+                ?: continue
+            if (!a.isNumber || a.isZero) continue
+            val b = F.eval(F.Subtract(moved, F.Times(a, sym)))
+            if (!b.isNumber) continue
+            val value = F.eval(F.Divide(F.Negate(b), a))
+            val check = engine.evaluateOrNull(moved.replaceAll(F.Rule(sym, value))) ?: continue
+            if (!check.isZero) continue
+            val movedTex = engine.toExactLatex(moved) ?: continue
+            val valueTex = engine.toExactLatex(value) ?: continue
+            lines += "$movedTex = 0"
+            lines += "$unknown = $valueTex"
+        }
+        if (lines.isEmpty()) return null
+        return ProcessStep("subEquation", "求解子方程", lines)
     }
 
     private fun orderedUnknowns(unknowns: String): List<String> =
