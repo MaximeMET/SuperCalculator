@@ -245,7 +245,13 @@ def node_layout(sha, node, size):
         den_dy = (bar_y + gap) - db[1]
         cmds = transform_group(num_cmds, 1, num_dx, num_dy)
         cmds += transform_group(den_cmds, 1, den_dx, den_dy)
-        cmds += [("M", [0.0, bar_y]), ("L", [w, bar_y])]
+        # 分数线画成一条**有厚度的矩形**，不能写成 M/L 的单线：
+        # 矢量图标最终是按 fillColor 填充的，零面积的线会被光栅化成「什么都没有」
+        # （反比例函数、椭圆、双曲线那几个键的分数线就是这么丢的）。
+        # 粗细细和 Noto 字形的横画接近，缩放后在图标里大约 1dp。
+        bar_h = size * 0.05
+        cmds += [("M", [0.0, bar_y - bar_h / 2]), ("L", [w, bar_y - bar_h / 2]),
+                 ("L", [w, bar_y + bar_h / 2]), ("L", [0.0, bar_y + bar_h / 2]), ("Z", [])]
         return cmds, w, None
     if kind == "grid":
         rows = node[1]

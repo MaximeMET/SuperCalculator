@@ -950,9 +950,18 @@
   // 点方块按钮 = 把数值结果放进键盘上的剪贴板槽（原版的 copyNumericResult）
   if (opIcon) {
     opIcon.addEventListener('click', function () {
+      // 原版的 copyResult 是这么写的：
+      //   displayAllBtn('none') + copyNumericResult(trimLatexEqImply(symja),
+      //                                            trimLatexEqImply(latex))
+      // 两个 trim 一个都不能省：数值结果带着前导 `=`，symja 里 `=` 又写作 `==`，
+      // 不 trim 的话键盘槽会显示 `==5`、点回公式里会多一个 `=`。
+      opIcon.style.display = 'none';
       var bridge = window.Android;
       if (bridge && bridge.copyNumericResult) {
-        bridge.copyNumericResult(symjaOf(numericField), numericField.latex());
+        bridge.copyNumericResult(
+          trimLatexEqImply(symjaOf(numericField)),
+          trimLatexEqImply(numericField.latex())
+        );
       }
     });
   }

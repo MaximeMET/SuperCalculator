@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  工具行（清空 / 剪贴板槽 / 回车 / 左右 / 删除）的按下态。
+
+  原版这里用的是 ?attr/selectableItemBackground，也就是系统的水波纹：按下去
+  会从触点扩散一圈灰色，还带一段退场淡出。格子键用的却是瞬时的 selector_key，
+  两排键的手感不一致，用户反馈「删除键那个灰底动画太长、拖沓」。这里改成和
+  格子键同一套瞬时高亮，按下去立刻变色、抬手立刻恢复。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true" android:drawable="@color/key_pressed" />
+    <item android:drawable="@color/keyboard_upper_bg" />
+</selector>

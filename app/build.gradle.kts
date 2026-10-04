@@ -28,9 +28,10 @@ android {
         applicationId = "io.github.maximemet.supercalc"
         minSdk = 21
         targetSdk = 35
-        // 3 / 0.1.2-dev：给真机手动测试用的本地包，没有对外发布
-        versionCode = 3
-        versionName = "0.1.2-dev"
+        // 本地真机测试包，没有对外发布。每出一版测试包就把 versionCode 加一，
+        // 省得手机上装不上（同名同号只能覆盖安装，用户分不出新旧）。
+        versionCode = 4
+        versionName = "0.1.2-dev2"
     }
 
     signingConfigs {

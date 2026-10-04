@@ -110,8 +110,31 @@ class MainActivity : AppCompatActivity() {
              * 谁报到就按谁预留；都报 0（真的没有导航栏）时才不预留。
              */
             val navBars = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars())
-            val bottomInset = maxOf(bars.bottom, stableBars.bottom, navBars.bottom)
-            if (BuildConfig.DEBUG) logInsets(view, bars.top, bars.bottom, stableBars.bottom)
+            /*
+             * 最后一层，也是原版的真实口径：
+             *
+             * 原版是老 targetSdk，键盘高取 `Display.getSize().y / 2`——那个 y 是
+             * 「窗口高 = 整屏 − 系统给老应用预留的导航栏」，所以它的键盘永远比
+             * 整屏的一半矮一段导航栏，且这段高度与手势栏当前是否可见无关。
+             * 我们是 edge-to-edge，`getSize()` 返回整屏，inset 又可能只报到
+             * 手势条那一小条（实机实测 8dp），于是键盘就顶到整屏 50%。
+             *
+             * 系统导航栏的「预留高度」就是 android 资源 `navigation_bar_height`。
+             * 只在系统确实还有导航栏（isVisible）时把它算进来：机器真的没导航栏
+             * （全屏沉浸、电视盒子）时不预留，和原版一致。
+             */
+            val systemNavBar = if (insets.isVisible(WindowInsetsCompat.Type.navigationBars())) {
+                resources.getIdentifier("navigation_bar_height", "dimen", "android")
+                    .takeIf { it > 0 }
+                    ?.let { resources.getDimensionPixelSize(it) }
+                    ?: 0
+            } else {
+                0
+            }
+            val bottomInset = maxOf(bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar)
+            if (BuildConfig.DEBUG) {
+                logInsets(view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar)
+            }
             view.setPadding(bars.left, 0, bars.right, 0)
             binding.statusBarScrim.layoutParams =
                 binding.statusBarScrim.layoutParams.apply { height = bars.top }
@@ -138,7 +161,14 @@ class MainActivity : AppCompatActivity() {
      * 导航栏的可见 / 忽略可见性 inset，`mode` 是 0=三键、1=手势。
      * 只在 debug 包里打，release 包连日志字符串都不会留。
      */
-    private fun logInsets(view: android.view.View, top: Int, bottom: Int, stableBottom: Int) {
+    private fun logInsets(
+        view: android.view.View,
+        top: Int,
+        bottom: Int,
+        stableBottom: Int,
+        navBarBottom: Int,
+        systemNavBar: Int,
+    ) {
         val point = android.graphics.Point()
         @Suppress("DEPRECATION")
         val wm = getSystemService(WINDOW_SERVICE) as android.view.WindowManager
@@ -150,7 +180,8 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.i(
             "SuperCalcInsets",
             "root=${view.width}x${view.height} display=${point.x}x${point.y} " +
-                "top=$top bottom=$bottom stable=$stableBottom mode=$mode " +
+                "top=$top bottom=$bottom stable=$stableBottom nav=$navBarBottom " +
+                "systemNav=$systemNavBar mode=$mode " +
                 "density=${resources.displayMetrics.density}",
         )
     }
