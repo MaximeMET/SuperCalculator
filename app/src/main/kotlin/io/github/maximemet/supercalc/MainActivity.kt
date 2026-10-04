@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity() {
         wireCalculator(calculator)
         setupInsets()
         showPage(ITEM_CALCULATOR, animate = false)
+        // 诊断模式下 insets 回调可能比 Fragment 的视图更早，这里补一次
+        applyInsetDiagnostics()
     }
 
     // ---------- 系统栏 ----------
@@ -120,10 +122,12 @@ class MainActivity : AppCompatActivity() {
              * 手势条那一小条（实机实测 8dp），于是键盘就顶到整屏 50%。
              *
              * 系统导航栏的「预留高度」就是 android 资源 `navigation_bar_height`。
-             * 只在系统确实还有导航栏（isVisible）时把它算进来：机器真的没导航栏
-             * （全屏沉浸、电视盒子）时不预留，和原版一致。
+             * 判据用「系统报告了导航栏 inset > 0」，**不用 `isVisible`**：
+             * 华为/荣耀在「全屏显示 + 手势导航」下会把导航栏判成不可见，
+             * 但 inset 仍在（实机只有 8dp），拿它当条件等于什么都不做。
+             * 机器真的没有导航栏（电视盒子等）时 inset 是 0，这里自然跳过。
              */
-            val systemNavBar = if (insets.isVisible(WindowInsetsCompat.Type.navigationBars())) {
+            val systemNavBar = if (navBars.bottom > 0 || bars.bottom > 0) {
                 resources.getIdentifier("navigation_bar_height", "dimen", "android")
                     .takeIf { it > 0 }
                     ?.let { resources.getDimensionPixelSize(it) }
@@ -132,6 +136,12 @@ class MainActivity : AppCompatActivity() {
                 0
             }
             val bottomInset = maxOf(bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar)
+            if (BuildConfig.INSET_DIAGNOSTICS) {
+                pendingInsetDiagnostics = buildInsetDiagnostics(
+                    view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar,
+                )
+                applyInsetDiagnostics()
+            }
             if (BuildConfig.DEBUG) {
                 logInsets(view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar)
             }
@@ -150,6 +160,34 @@ class MainActivity : AppCompatActivity() {
             calculator.applyInsets(bottomInset, view.height)
             insets
         }
+    }
+
+    /**
+     * 诊断模式用：把键盘高度那几个原始数据拼成一行短文本（见 CalculatorFragment）。
+     * 顺序和 logcat 那条日志一致，方便对着看。
+     */
+    private var pendingInsetDiagnostics: String? = null
+
+    private fun buildInsetDiagnostics(
+        view: android.view.View,
+        top: Int,
+        bottom: Int,
+        stableBottom: Int,
+        navBarBottom: Int,
+        systemNavBar: Int,
+    ): String {
+        val navVisible = ViewCompat.getRootWindowInsets(view)
+            ?.isVisible(WindowInsetsCompat.Type.navigationBars()) == true
+        val mode = runCatching {
+            android.provider.Settings.Secure.getInt(contentResolver, "navigation_mode", -1)
+        }.getOrDefault(-1)
+        return "v${BuildConfig.VERSION_NAME} H${view.height} t$top b$bottom s$stableBottom " +
+            "n$navBarBottom sys$systemNavBar vis${if (navVisible) 1 else 0} m$mode"
+    }
+
+    private fun applyInsetDiagnostics() {
+        if (!::calculator.isInitialized) return
+        calculator.insetDiagnostics = pendingInsetDiagnostics
     }
 
     /**

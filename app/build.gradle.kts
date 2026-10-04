@@ -30,8 +30,8 @@ android {
         targetSdk = 35
         // 本地真机测试包，没有对外发布。每出一版测试包就把 versionCode 加一，
         // 省得手机上装不上（同名同号只能覆盖安装，用户分不出新旧）。
-        versionCode = 4
-        versionName = "0.1.2-dev2"
+        versionCode = 5
+        versionName = "0.1.2-dev3"
     }
 
     signingConfigs {
@@ -81,6 +81,22 @@ android {
         viewBinding = true
         // 关于页要显示版本号（参考实现也是读 BuildConfig.VERSION_NAME）
         buildConfig = true
+    }
+
+    /*
+      诊断开关：打开后，主界面底下那行示例会换成键盘高度计算要用的原始数据
+      （窗口高、三份 inset、系统导航栏资源、导航栏是否可见、导航模式），
+      真机上对不齐时截一张图就能定位，不用连电脑抓 logcat。
+
+      只给本地测试包用；对外发版前改回 false。
+    */
+    buildTypes {
+        getByName("debug") {
+            buildConfigField("boolean", "INSET_DIAGNOSTICS", "true")
+        }
+        getByName("release") {
+            buildConfigField("boolean", "INSET_DIAGNOSTICS", "true")
+        }
     }
 }
 
