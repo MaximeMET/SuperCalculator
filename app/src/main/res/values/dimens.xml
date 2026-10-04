@@ -38,6 +38,13 @@
     <dimen name="space_mini">1dp</dimen>
     <!-- 键盘栏目之间那条加粗分隔线的高度（用户要求跨栏目有明显的横线） -->
     <dimen name="keyboard_page_divider_height">1.5dp</dimen>
+    <!--
+      导航栏预留的兜底高度。有的 ROM（华为/荣耀，开了「全屏显示」）对
+      edge-to-edge 应用把导航栏 inset 全报 0，连 android 资源
+      navigation_bar_height 都查不到，但给老应用仍然按 48dp 预留——
+      原版键盘比整屏一半矮的那一截就是这么来的。见 MainActivity.setupInsets。
+    -->
+    <dimen name="nav_bar_height_fallback">48dp</dimen>
     <dimen name="space_tiny">2dp</dimen>
     <dimen name="space_small">3dp</dimen>
     <dimen name="space_null">0dp</dimen>

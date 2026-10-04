@@ -113,32 +113,44 @@ class MainActivity : AppCompatActivity() {
              */
             val navBars = insets.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.navigationBars())
             /*
-             * 最后一层，也是原版的真实口径：
+             * 原版的真实口径：
              *
              * 原版是老 targetSdk，键盘高取 `Display.getSize().y / 2`——那个 y 是
              * 「窗口高 = 整屏 − 系统给老应用预留的导航栏」，所以它的键盘永远比
              * 整屏的一半矮一段导航栏，且这段高度与手势栏当前是否可见无关。
-             * 我们是 edge-to-edge，`getSize()` 返回整屏，inset 又可能只报到
-             * 手势条那一小条（实机实测 8dp），于是键盘就顶到整屏 50%。
+             * 我们是 edge-to-edge，`getSize()` 返回整屏，只能自己把这段减掉。
              *
-             * 系统导航栏的「预留高度」就是 android 资源 `navigation_bar_height`。
-             * 判据用「系统报告了导航栏 inset > 0」，**不用 `isVisible`**：
-             * 华为/荣耀在「全屏显示 + 手势导航」下会把导航栏判成不可见，
-             * 但 inset 仍在（实机只有 8dp），拿它当条件等于什么都不做。
-             * 机器真的没有导航栏（电视盒子等）时 inset 是 0，这里自然跳过。
+             * 三份 inset 取最大是主力；系统资源 `android:navigation_bar_height`
+             * 是第二手（有的 ROM 就认它）；下面还有一道 48dp 兜底。
              */
-            val systemNavBar = if (navBars.bottom > 0 || bars.bottom > 0) {
-                resources.getIdentifier("navigation_bar_height", "dimen", "android")
-                    .takeIf { it > 0 }
-                    ?.let { resources.getDimensionPixelSize(it) }
-                    ?: 0
+            /*
+             * 底部预留分三种情况，别混着取最大值（试过，会把模拟器手势模式弄歪）：
+             *
+             *  1. ROM 正常报 inset —— 就用它。AOSP 模拟器手势模式报 24dp，
+             *     原版在同一台机器上算出来的也是 24dp，两边逐像素一致；
+             *  2. ROM 一个像素都不报、但系统仍说有导航栏 —— 华为/荣耀开了
+             *     「全屏显示」之后 b/s/n/sys 全是 0，可它给老应用照样留了 48dp，
+             *     原版键盘比整屏一半矮的那一截就是这个。用 android 资源 /
+             *     48dp 兜底；
+             *  3. 真的没有导航栏（vis=0）—— 不预留。
+             */
+            val reportedBottom = maxOf(bars.bottom, stableBars.bottom, navBars.bottom)
+            val navBarVisible = insets.isVisible(WindowInsetsCompat.Type.navigationBars())
+            // 这一份只为诊断/日志取，是否真正采用见下面的 fallback
+            val systemNavBar = systemNavBarHeight()
+            val fallback = if (reportedBottom == 0 && navBarVisible) {
+                maxOf(
+                    systemNavBar,
+                    resources.getDimensionPixelSize(R.dimen.nav_bar_height_fallback),
+                )
             } else {
                 0
             }
-            val bottomInset = maxOf(bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar)
+            val bottomInset = maxOf(reportedBottom, fallback)
             if (BuildConfig.INSET_DIAGNOSTICS) {
                 pendingInsetDiagnostics = buildInsetDiagnostics(
-                    view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom, systemNavBar,
+                    view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom,
+                    systemNavBar, fallback,
                 )
                 applyInsetDiagnostics()
             }
@@ -168,6 +180,23 @@ class MainActivity : AppCompatActivity() {
      */
     private var pendingInsetDiagnostics: String? = null
 
+    /**
+     * 系统导航栏的「名义高度」：`android:navigation_bar_height`。
+     *
+     * 有的 ROM 把这条资源摘了（实机返回 0），所以两份 Resources 都试一遍，
+     * 取得到就用、取不到就返回 0，外层还有 [R.dimen.nav_bar_height_fallback] 兜底。
+     */
+    private fun systemNavBarHeight(): Int {
+        val system = android.content.res.Resources.getSystem()
+        val candidates = listOf(
+            resources.getIdentifier("navigation_bar_height", "dimen", "android") to resources,
+            system.getIdentifier("navigation_bar_height", "dimen", "android") to system,
+        )
+        return candidates.maxOf { (id, res) ->
+            runCatching { if (id > 0) res.getDimensionPixelSize(id) else 0 }.getOrDefault(0)
+        }
+    }
+
     private fun buildInsetDiagnostics(
         view: android.view.View,
         top: Int,
@@ -175,6 +204,7 @@ class MainActivity : AppCompatActivity() {
         stableBottom: Int,
         navBarBottom: Int,
         systemNavBar: Int,
+        fallback: Int,
     ): String {
         val navVisible = ViewCompat.getRootWindowInsets(view)
             ?.isVisible(WindowInsetsCompat.Type.navigationBars()) == true
@@ -182,7 +212,7 @@ class MainActivity : AppCompatActivity() {
             android.provider.Settings.Secure.getInt(contentResolver, "navigation_mode", -1)
         }.getOrDefault(-1)
         return "v${BuildConfig.VERSION_NAME} H${view.height} t$top b$bottom s$stableBottom " +
-            "n$navBarBottom sys$systemNavBar vis${if (navVisible) 1 else 0} m$mode"
+            "n$navBarBottom sys$systemNavBar fb$fallback vis${if (navVisible) 1 else 0} m$mode"
     }
 
     private fun applyInsetDiagnostics() {
