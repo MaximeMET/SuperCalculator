@@ -213,18 +213,18 @@ object LimitSteps {
         input: LimitInput,
         ast: IAST,
     ): Pair<IExpr, String>? {
+        // 规则包：sin/tan/arcsin/arctan/sh/th/arsh(u) ~ u、ln(1+u) ~ u 这类直接替换
+        // （内层 u 仍要确实趋于 0，否则不动）
+        for (rule in LimitRulePack.rules) {
+            val hit = LimitRulePack.apply(engine, ast, rule) ?: continue
+            val (bound, replacement, text) = hit
+            if (tendsToZero(engine, input, bound)) {
+                return replacement to note(input, text)
+            }
+        }
+
         if (ast.size == 2) {
             val arg = ast.arg1()
-            val name = when {
-                ast.isAST(F.Sin) -> "sin"
-                ast.isAST(F.Tan) -> "tan"
-                ast.isAST(F.ArcSin) -> "arcsin"
-                ast.isAST(F.ArcTan) -> "arctan"
-                else -> null
-            }
-            if (name != null && tendsToZero(engine, input, arg)) {
-                return arg to note(input, "$name($arg) ~ $arg")
-            }
             if (ast.isAST(F.Log)) {
                 onePlus(arg)?.let { rest ->
                     if (tendsToZero(engine, input, rest)) {

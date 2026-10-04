@@ -561,6 +561,50 @@ frame 数量随方程变化，尾部下标对不上。
   否则后面 `F.eval` 算出来的精确值会变成 `5.0`、`2.5`，步骤里就出现 `x^{2.0}`。
   现在 `evaluateOrNull` 在 finally 里还原，`toExactLatex` 再加一道保险。
 
+### 知识规则包：基本积分表、等价无穷小表
+
+「把题库放 GitHub、求解时联网拉」这条思路不成立：解题不是查表，是 CAS 在算
+（Symja + 上面几份过程引擎），把"题目"当数据存下来帮不了引擎。真正能数据化的
+只有**表驱动的知识**，于是把两张表从代码里抽出来，做成随包分发的 JSON 规则包：
+
+- `engine/src/main/resources/rules/integrals.json` —— 基本积分表 10 条
+  （sin/cos/tan/sec/csc、双曲 sh/ch、ln、arctan、√(1+x²)）；
+- `engine/src/main/resources/rules/equivalents.json` —— 等价无穷小表 8 条
+  （sin/tan/arcsin/arctan/sh/th/arsh(u) ~ u、ln(1+u) ~ u）；
+- 配套代码：`MiniJson`（纯 JVM 的小解析器，不引依赖）、`RulePatterns`（整串匹配 +
+  模板代入）、`IntegralRulePack` / `LimitRulePack`（加载与套用），各有单元测试。
+  接线上 `IntegrateSteps.basicNote` 和 `LimitSteps.replacementFor` 都先查规则包；
+  等价无穷小里 `1-cos u`、`e^u-1` 带加减号、结构匹配太脆，仍留在代码里。
+
+一条规则长这样：
+
+```json
+{"id": "sec", "match": "Sec(u_)", "result": "Log(Sec(u_)+Tan(u_))",
+ "note": "基本积分公式：∫sec x dx = ln|sec x + tan x|"}
+```
+
+几条约定，写死在这套机制里：
+
+- `u_` 是通配符，**整串匹配**：不用引擎自带的 `ReplaceAll`，它会连子表达式一起换，
+  `Sin(u_) -> -Cos(u_)` 套到 `Sin(x)*Cos(x)` 上会把里面的 `Sin` 也换掉——"认错题"。
+  2016 版的 `u_` 解析出来是 `Pattern`（`IPattern`）不是 `IAST`，匹配时得认类型；
+- 积分规则绑定的表达式必须就是积分变量本身、或与它无关的常量：直接套公式的题才走
+  规则包，复合形状（`f(kx+b)` 这类）留给换元 / 分部，免得基本表抢先把过程变浅；
+- 规则里的公式**不是信就完了**：拿到 `result` 后照样做数值求导回验，验不过跳过整条，
+  仓库里写错一条公式不会污染所有人的结果页；
+- 加载失败（资源缺失、JSON 坏了）返回空表：宁可不标注，也不崩。
+
+**明确不做「求解时请求 GitHub」**：计算器必须离线可用；GitHub raw 在国内慢且有限流、
+没有 SLA；题目表达式还有隐私属性。规则包是内置快照、随 App 打包。以后要不要加"规则
+更新通道"另说，眼下先把"加规则不用改 Kotlin、只动 JSON + 补一条测试"这条链路跑通。
+
+目前还没数据化的是展开 / 分解里的公式法（平方差、完全平方、立方和差），仍在
+`PolynomialSteps` 代码里；照同样的模式搬即可，等有需要再说。
+
+顺带修掉一个渲染 bug：反双曲记号（`\arcsinh` 等）MathJax 没有定义，会按未知命令把
+整段标红，`∫√(1+x²)dx` 的结果就是一片红。`LatexText.mathJaxSafe` 把它们换成
+`\operatorname{arcsinh}`，三条 TeX 输出通道都过这一层。
+
 ### 不等式求解是自己写的
 
 参考实现用的是分支自带的 `SolveInequality` / `SolveSystemInequality`，上游 Symja 里

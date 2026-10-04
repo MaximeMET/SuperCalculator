@@ -19,6 +19,18 @@ object LatexText {
      */
     fun editorSafe(latex: String): String = latex.replace("\\slash", "/")
 
+    /**
+     * 反双曲函数的记号 MathJax 认不出来。
+     *
+     * 引擎输出 `\arcsinh`（还有 arccosh / arctanh / arccoth / arcsech / arccsch），
+     * MathJax 没有这几个命令，会按"未知命令"把整段标红——实测 `∫√(1+x²)dx`
+     * 的结果就是一片红。改成 `\operatorname{arcsinh}` 即可正常排版。
+     */
+    private val INVERSE_HYPERBOLIC = Regex("\\\\(arc(?:sinh|cosh|tanh|coth|sech|csch))")
+
+    fun mathJaxSafe(text: String): String =
+        INVERSE_HYPERBOLIC.replace(text) { m -> "\\operatorname{${m.groupValues[1]}}" }
+
     private val FLOATING_POINT = Regex("[0-9]+\\.[0-9]+")
     private val SCIENTIFIC_NOTATION = Regex("([0-9]+\\.?[0-9]+)E(-?[0-9]+)")
     private val ONE_ARG_FUNCTIONS = Regex("(log|ln|sin|cos|tan|arctan|arcsin|arccos)")

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "comment": "基本积分表（直接套公式）。match 里的 u_ 是通配符，整串匹配；result 是原函数模板，加载后仍要数值求导回验。加规则不用改 Kotlin。",
+  "rules": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "-Cos(u_)",
+      "note": "基本积分公式：∫sin x dx = -cos x"
+    },
+    {
+      "id": "cos",
+      "match": "Cos(u_)",
+      "result": "Sin(u_)",
+      "note": "基本积分公式：∫cos x dx = sin x"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "-Log(Cos(u_))",
+      "note": "基本积分公式：∫tan x dx = -ln|cos x|"
+    },
+    {
+      "id": "sec",
+      "match": "Sec(u_)",
+      "result": "Log(Sec(u_)+Tan(u_))",
+      "note": "基本积分公式：∫sec x dx = ln|sec x + tan x|"
+    },
+    {
+      "id": "csc",
+      "match": "Csc(u_)",
+      "result": "-Log(Csc(u_)+Cot(u_))",
+      "note": "基本积分公式：∫csc x dx = -ln|csc x + cot x|"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "Cosh(u_)",
+      "note": "基本积分公式：∫sh x dx = ch x"
+    },
+    {
+      "id": "cosh",
+      "match": "Cosh(u_)",
+      "result": "Sinh(u_)",
+      "note": "基本积分公式：∫ch x dx = sh x"
+    },
+    {
+      "id": "log",
+      "match": "Log(u_)",
+      "result": "u_*Log(u_)-u_",
+      "note": "基本积分公式：∫ln x dx = x·ln x - x"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_*ArcTan(u_)-Log(1+u_^2)/2",
+      "note": "基本积分公式：∫arctan x dx = x·arctan x - ½ln(1+x²)"
+    },
+    {
+      "id": "sqrt1px2",
+      "match": "Sqrt(1+u_^2)",
+      "result": "(u_*Sqrt(1+u_^2)+Log(u_+Sqrt(1+u_^2)))/2",
+      "note": "基本积分公式：∫√(1+x²)dx = ½[x√(1+x²)+ln(x+√(1+x²))]"
+    }
+  ]
+}

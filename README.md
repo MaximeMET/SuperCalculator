@@ -121,6 +121,7 @@ Windows 上把 `./gradlew` 换成 `gradlew.bat`。首次运行会去 services.gr
 
 ```
 engine/   纯 JVM 数学引擎，不依赖 Android，可独立测试
+  └ resources/rules/   知识规则包（基本积分表、等价无穷小表）：加公式只动 JSON，不用改 Kotlin
 app/      Android 应用（Kotlin + 原生 View）
 tools/    素材生成与组件重建脚本（改素材时才用）
 docs/     截图与开发笔记
@@ -167,6 +168,8 @@ docs/     截图与开发笔记
   [NOTICE.md](NOTICE.md)），换成了 IEEE 主导、SIL OFL-1.1 发布的 STIX Two Math，
   编辑器里用得到的 245 个码位覆盖率与原版打平（243 / 243）。
 - **反馈入口换成了 GitHub**：设置页那句 QQ 群号换成了提 issue 的提示。
+- **不联网拉题库**：解题靠 CAS 算法，不是查表；能数据化的表驱动知识（基本积分表、
+  等价无穷小表）内置成 JSON 规则包随包分发，计算全程离线，不请求 GitHub。
 
 ## 许可
 

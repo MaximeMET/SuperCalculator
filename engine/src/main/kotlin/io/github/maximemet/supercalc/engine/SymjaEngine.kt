@@ -132,7 +132,7 @@ class SymjaEngine {
         withExactMode { texUtilities.toTeX(expr, writer) }
         val latex = writer.toString()
         val fixed = LatexText.toFixPoint(latex, EngineSettings.precision)
-        return LatexText.withoutScientificNotation(fixed)
+        return LatexText.mathJaxSafe(LatexText.withoutScientificNotation(fixed))
     }
 
     /**
@@ -146,7 +146,7 @@ class SymjaEngine {
         if (rawExpr == null) return null
         val writer = StringWriter()
         withExactMode { texUtilities.toTeX(rawExpr, writer) }
-        return LatexText.withoutScientificNotation(writer.toString())
+        return LatexText.mathJaxSafe(LatexText.withoutScientificNotation(writer.toString()))
     }
 
     /**
@@ -173,7 +173,7 @@ class SymjaEngine {
         val cleaned = LatexText.withoutScientificNotation(
             LatexText.toFixPoint(LatexText.replaceQuotes(raw), EngineSettings.precision)
         )
-        return cleaned.replace("infty", "\\infty")
+        return LatexText.mathJaxSafe(cleaned.replace("infty", "\\infty"))
     }
 
     /** 直接在同一个引擎里求值一段 Symja 代码并取回文本输出。 */

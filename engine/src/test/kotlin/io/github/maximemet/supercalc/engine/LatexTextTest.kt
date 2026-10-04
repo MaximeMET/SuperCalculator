@@ -61,4 +61,15 @@ class LatexTextTest {
         // 只替换紧挨函数名的那一对花括号（参考实现的算法就是只处理第一层）
         assertEquals("\\log(2){x}", LatexText.replaceFunctionBracket("\\log{2}{x}"))
     }
+
+    @Test
+    fun `反双曲记号换成 MathJax 认识的写法`() {
+        assertEquals("\\operatorname{arcsinh}{x}", LatexText.mathJaxSafe("\\arcsinh{x}"))
+        assertEquals(
+            "\\frac{\\operatorname{arccosh}{x}}{2}",
+            LatexText.mathJaxSafe("\\frac{\\arccosh{x}}{2}"),
+        )
+        // 普通函数不动
+        assertEquals("\\sin{x}+\\cos{x}", LatexText.mathJaxSafe("\\sin{x}+\\cos{x}"))
+    }
 }

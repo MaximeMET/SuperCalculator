@@ -211,6 +211,9 @@ object IntegrateSteps {
 
     /** 基本积分表里能一眼认出的形状。 */
     private fun basicNote(engine: SymjaEngine, variable: String, core: IExpr): String? {
+        // 先查数据规则包（仓库里加一条就多认一类直接套公式的题）
+        rulePackNote(engine, variable, core)?.let { return it }
+
         val x = engine.symbol(variable)
         val ast = core as? IAST
         if (core.equals(x)) return "幂函数公式：∫x dx = x²/2"
@@ -247,6 +250,21 @@ object IntegrateSteps {
                 ast.isAST(F.ArcTan) -> "基本积分公式：∫arctan x dx = x·arctan x - ½ln(1+x²)"
                 else -> null
             }
+        }
+        return null
+    }
+
+    /**
+     * 规则包里能整串匹配上的第一条：模板原函数先过数值求导回验，验不过跳过。
+     *
+     * 这样仓库里写错的公式不会显示出来；返回的是规则的说明文案，
+     * 实际结果行仍旧用引擎算出来的原函数（和顶部结果同源）。
+     */
+    private fun rulePackNote(engine: SymjaEngine, variable: String, core: IExpr): String? {
+        for (rule in IntegralRulePack.rules) {
+            val claimed = IntegralRulePack.apply(engine, core, rule, variable) ?: continue
+            if (!verifies(engine, core, claimed, variable)) continue
+            return rule.note
         }
         return null
     }

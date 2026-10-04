@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "comment": "等价无穷小替换表（u→0 时 f(u) ~ g(u)）。match 整串匹配，result 是替换后的表达式模板，note 是写进步骤的文案（{u} 会被换成实际绑定的表达式）。复合形状 1-cos u、e^u-1 带加减号，结构性匹配太脆，留在 LimitSteps 代码里。",
+  "rules": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "u_",
+      "note": "sin({u}) ~ {u}"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "u_",
+      "note": "tan({u}) ~ {u}"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "u_",
+      "note": "arcsin({u}) ~ {u}"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_",
+      "note": "arctan({u}) ~ {u}"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "u_",
+      "note": "sh({u}) ~ {u}"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "u_",
+      "note": "th({u}) ~ {u}"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "u_",
+      "note": "arsh({u}) ~ {u}"
+    },
+    {
+      "id": "ln1pu",
+      "match": "Log(1+u_)",
+      "result": "u_",
+      "note": "ln(1+{u}) ~ {u}"
+    }
+  ]
+}
