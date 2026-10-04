@@ -126,6 +126,12 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
             InequalitySteps.buildJson(engine, formula, lastFormula, method, latex)
         Method.Derivative -> DerivativeSteps.buildJson(engine, formula, latex)
         Method.Limit -> LimitSteps.buildJson(engine, formula, latex)
+        // 积分的过程入口拿到的还是被积函数本身，要按 Method 的模板补上 Integrate(f, x)
+        Method.Integrate -> IntegrateSteps.buildJson(
+            engine,
+            MethodConsts.SYMJA_INTEGRATE.format(formula, EngineSettings.unknown),
+            latex,
+        )
         else -> null
     }
 

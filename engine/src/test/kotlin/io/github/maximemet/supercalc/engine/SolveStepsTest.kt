@@ -113,8 +113,8 @@ class SolveStepsTest {
         val session = CalculationSession(SymjaEngine())
         session.setFormula("x^2", "x^{2}")
         assertTrue(
-            session.processSteps(Method.Integrate) == null,
-            "积分不该有解题步骤（当前只做解方程）",
+            session.processSteps(Method.Expand) == null,
+            "多项式展开还没做解题步骤，不该有过程",
         )
     }
 
