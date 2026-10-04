@@ -626,6 +626,17 @@ adb logcat -s calc:* | grep 'getAutoResult returned res'
 
 ### 语料库与一致率（1140 条）
 
+**题目清单在公开仓库**（`tools/corpus/in.txt`，欢迎直接加题），
+**期望值在私有子模块**（`work/corpus/ref_*.tsv`，从原版实测出来的衍生物）。
+一键回归：
+
+```powershell
+pwsh tools/corpus/run-diff.ps1     # 拷清单 -> 引擎批跑 -> 与基准对比
+```
+
+新加的题在基准里还没有期望值，`compare.py` 会先跳过（只比对双方都有的表达式）；
+要进基准得用 `work/probe/` 的插桩探针在原版上再跑一遍。
+
 | 项目 | 一致 |
 |---|---|
 | 自动预览 | 1140 / 1140 |
