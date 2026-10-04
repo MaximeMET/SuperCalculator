@@ -208,7 +208,7 @@ class CalculatorFragment : Fragment() {
                             // 而示例行这一帧就出来了，两行会叠在一起。
                             // 同一帧里先作废在途结果、清掉按钮，再显示示例行。
                             previewToken.incrementAndGet()
-                            renderMethods(emptyList())
+                            renderMethods(emptyList(), false)
                         }
                         updateExampleVisibility(empty)
                     }
@@ -310,9 +310,11 @@ class CalculatorFragment : Fragment() {
                 }
                 val methods = runCatching { current.availableMethods(needCalc) }
                     .getOrDefault(emptyList())
+                // 纯算式的「过程」按钮：常驻，不走方法按钮那套超时判断
+                val showProcess = runCatching { current.hasArithmeticProcess() }.getOrDefault(false)
                 mainHandler.post {
                     if (token != previewToken.get() || _binding == null) return@post
-                    onMethodsChanged?.invoke(methods)
+                    onMethodsChanged?.invoke(methods, showProcess)
                     // 原版在方法按钮里出现「继续计算」时会顺带弹一句提示
                     if (Method.Calc in methods) {
                         Toast.makeText(
@@ -334,8 +336,12 @@ class CalculatorFragment : Fragment() {
         return runCatching { task.get(ENGINE_TIMEOUT_MS, TimeUnit.MILLISECONDS) }.getOrDefault("")
     }
 
-    /** 方法按钮列表变化时通知工具条外的东西（其实是 MainActivity 在用）。 */
-    var onMethodsChanged: ((List<Method>) -> Unit)? = null
+    /**
+     * 方法按钮列表变化时通知工具条外的东西（其实是 MainActivity 在用）。
+     *
+     * 第二个参数是纯算式的「过程」按钮要不要一起显示。
+     */
+    var onMethodsChanged: ((List<Method>, Boolean) -> Unit)? = null
 
     private fun saveRecord(
         formula: String,
@@ -407,28 +413,48 @@ class CalculatorFragment : Fragment() {
 
     // ---------- 方法按钮 ----------
 
-    fun renderMethods(methods: List<Method>) {
+    /**
+     * 重画编辑区底部那排按钮。
+     *
+     * [showProcess] 为 true 时在方法按钮后面补一个「过程」——纯算式的解题步骤入口。
+     * 原版没有这一格（它的过程只挂在解方程一类的按钮上），样式沿用同一套胶囊。
+     */
+    fun renderMethods(methods: List<Method>, showProcess: Boolean = false) {
         if (_binding == null) return
         val container = binding.calculatorOps
         container.removeAllViews()
-        val width = ViewGroup.LayoutParams.MATCH_PARENT
         for (method in methods) {
-            val button = Button(requireContext(), null, 0)
-            button.setText(method.label)
-            // 原版：胶囊 drawable 上套 LightingColorFilter(-1, method.color) 给边框上色，
-            // 文字直接用同一个颜色。每个方法的颜色是规格的一部分，不能统一成黑色。
-            val capsule = ContextCompat.getDrawable(requireContext(), R.drawable.bg_method_button)!!.mutate()
-            capsule.colorFilter = LightingColorFilter(-1, method.color)
-            button.background = capsule
-            button.setTextColor(method.color)
-            button.textSize = 13f
-            button.gravity = Gravity.CENTER
-            button.minHeight = resources.getDimensionPixelSize(R.dimen.capsule_button_height)
-            button.setPadding(0, button.paddingTop, 0, button.paddingBottom)
-            button.layoutParams = ViewGroup.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-            button.setOnClickListener { runMethod(method) }
-            container.addView(button)
+            addCapsuleButton(container, method.label, method.color, method.color) { runMethod(method) }
         }
+        if (showProcess) {
+            addCapsuleButton(container, "过程", PROCESS_COLOR, PROCESS_COLOR) { runProcess() }
+        }
+    }
+
+    /** 原版：胶囊 drawable 上套 LightingColorFilter(-1, color) 给边框上色，文字同色。 */
+    private fun addCapsuleButton(
+        container: android.view.ViewGroup,
+        label: String,
+        borderColor: Int,
+        textColor: Int,
+        onClick: () -> Unit,
+    ) {
+        val button = Button(requireContext(), null, 0)
+        button.setText(label)
+        val capsule = ContextCompat.getDrawable(requireContext(), R.drawable.bg_method_button)!!.mutate()
+        capsule.colorFilter = LightingColorFilter(-1, borderColor)
+        button.background = capsule
+        button.setTextColor(textColor)
+        button.textSize = 13f
+        button.gravity = Gravity.CENTER
+        button.minHeight = resources.getDimensionPixelSize(R.dimen.capsule_button_height)
+        button.setPadding(0, button.paddingTop, 0, button.paddingBottom)
+        button.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
+        button.setOnClickListener { onClick() }
+        container.addView(button)
     }
 
     fun runMethod(method: Method) {
@@ -477,13 +503,58 @@ class CalculatorFragment : Fragment() {
     }
 
     /** 打开运算结果页（参考实现的 CalculatorResultActivity，请求码 1024）。 */
-    private fun startResultPage(method: Method, latex: String, result: String, process: String?) {
+    private fun startResultPage(method: Method, latex: String, result: String, process: String?) =
+        startResultPage(
+            method.label,
+            method.key,
+            ResultActivity.allowsReuse(method),
+            latex,
+            result,
+            process,
+        )
+
+    /**
+     * 纯算式的「过程」按钮。
+     *
+     * 这一格不属于任何一个 [Method]（原版没有这个入口），所以结果页参数自己拼：
+     * 标签写「计算」，方法键留空（不挂提示），结果可以直接继续运算。
+     * 步骤由 [CalculationSession.arithmeticProcess] 生成。
+     */
+    private fun runProcess() {
+        val current = session ?: return
+        if (current.formula.isEmpty()) return
+        val token = previewToken.incrementAndGet()
+        editor.setStatus(getString(R.string.calculating))
+        engineExecutor.execute {
+            val latex = current.latex
+            val output = runCatching { current.evaluateCurrentAsLatex() }.getOrNull()
+            val process = runCatching { current.arithmeticProcess() }.getOrNull()
+            mainHandler.post {
+                if (token != previewToken.get() || _binding == null) return@post
+                editor.setStatus("")
+                if (output.isNullOrEmpty()) {
+                    Toast.makeText(requireContext(), R.string.no_result, Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                startResultPage("计算", "", true, latex, output, process)
+            }
+        }
+    }
+
+    private fun startResultPage(
+        label: String,
+        methodKey: String,
+        allowReuse: Boolean,
+        latex: String,
+        result: String,
+        process: String?,
+    ) {
         val intent = Intent(requireContext(), ResultActivity::class.java)
             .putExtra(ResultActivity.EXTRA_LATEX, latex)
-            .putExtra(ResultActivity.EXTRA_METHOD, method.label)
-            .putExtra(ResultActivity.EXTRA_METHOD_KEY, method.key)
+            .putExtra(ResultActivity.EXTRA_METHOD, label)
+            .putExtra(ResultActivity.EXTRA_METHOD_KEY, methodKey)
             .putExtra(ResultActivity.EXTRA_RESULT, result)
-            .putExtra(ResultActivity.EXTRA_NEW_ENABLED, ResultActivity.allowsReuse(method))
+            .putExtra(ResultActivity.EXTRA_NEW_ENABLED, allowReuse)
         if (process != null) {
             intent.putExtra(ResultActivity.EXTRA_PROCESS, process)
         }
@@ -637,6 +708,13 @@ class CalculatorFragment : Fragment() {
 
     private companion object {
         const val TAG = "CalculatorFragment"
+
+        /**
+         * 纯算式「过程」按钮的颜色。
+         *
+         * 复用「计算结果 / 定积分」那支蓝（灰色在深色编辑区上看着像禁用态）。
+         */
+        const val PROCESS_COLOR = -6191016
 
         /**
          * 等引擎的时间上限。参考实现的 JS 接口是同步等的，超时 5000ms 就放弃，

@@ -11,6 +11,14 @@ import java.math.RoundingMode
  */
 object LatexText {
 
+    /**
+     * 编辑器输出的 LaTeX 里有些命令 MathJax 不认。
+     *
+     * 目前只有一处：键盘上的 `÷` 键，MathQuill 给的 LaTeX 是 `\slash`，
+     * MathJax 会把它当未知命令标红（`1\slash2`）。换成普通的 `/` 即可。
+     */
+    fun editorSafe(latex: String): String = latex.replace("\\slash", "/")
+
     private val FLOATING_POINT = Regex("[0-9]+\\.[0-9]+")
     private val SCIENTIFIC_NOTATION = Regex("([0-9]+\\.?[0-9]+)E(-?[0-9]+)")
     private val ONE_ARG_FUNCTIONS = Regex("(log|ln|sin|cos|tan|arctan|arcsin|arccos)")

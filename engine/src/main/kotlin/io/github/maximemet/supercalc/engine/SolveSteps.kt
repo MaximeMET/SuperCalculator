@@ -19,9 +19,6 @@ import org.matheclipse.core.interfaces.IExpr
  */
 object SolveSteps {
 
-    /** 一条步骤。[key] 与原版标签表对应，[lines] 是逐行排版的 LaTeX。 */
-    data class Step(val key: String, val label: String, val lines: List<String>)
-
     // 与 StepJournal 里的步骤码一一对应
     private const val DEGREE = 1
     private const val FACTORIZATION = 2
@@ -43,7 +40,7 @@ object SolveSteps {
         formula: String,
         lastFormula: String,
         method: Method,
-    ): List<Step> = try {
+    ): List<ProcessStep> = try {
         when (method) {
             Method.Solve -> buildForEquation(engine, formula)
             Method.Solve2 -> buildForSystem(engine, formula, lastFormula)
@@ -61,79 +58,71 @@ object SolveSteps {
         formula: String,
         lastFormula: String,
         method: Method,
-    ): String? {
-        val steps = build(engine, formula, lastFormula, method)
-        if (steps.isEmpty()) return null
-        val sb = StringBuilder()
-        sb.append("{\"steps\":[")
-        steps.forEachIndexed { index, step ->
-            if (index > 0) sb.append(',')
-            sb.append("{\"order\":\"").append(index + 1).append("\",")
-            sb.append("\"key\":").append(quote(step.key)).append(',')
-            sb.append("\"label\":").append(quote(step.label)).append(',')
-            sb.append("\"lines\":[")
-            step.lines.forEachIndexed { lineIndex, line ->
-                if (lineIndex > 0) sb.append(',')
-                sb.append(quote(line))
-            }
-            sb.append("]}")
-        }
-        sb.append("]}")
-        return sb.toString()
-    }
+    ): String? = ProcessSteps.toJson(build(engine, formula, lastFormula, method))
 
     // ---------- 单变量方程 ----------
 
-    private fun buildForEquation(engine: SymjaEngine, formula: String): List<Step> {
+    private fun buildForEquation(engine: SymjaEngine, formula: String): List<ProcessStep> {
         val parsedEquation = engine.parseOrNull(formula) ?: return emptyList()
         val symja = MethodConsts.SYMJA_SOLVE.format(formula, EngineSettings.unknown)
         val parsed = engine.parseOrNull(symja) ?: return emptyList()
         val entries = collectJournal(engine, parsed)
         if (entries.isEmpty()) return emptyList()
 
-        val steps = mutableListOf<Step>()
+        val steps = mutableListOf<ProcessStep>()
 
         // 1. 移项，合并同类项：把方程整理成「左边 = 0」
         val normalized = normalizedEquationLatex(engine, parsedEquation) ?: return emptyList()
-        steps += Step("groupSameItem", "移项，合并同类项", listOf(normalized))
+        steps += ProcessStep("groupSameItem", "移项，合并同类项", listOf(normalized))
 
         val degree = entries.firstOrNull { it.code == DEGREE }
             ?.result?.let { intValueOf(it) } ?: 0
-
-        // 2. 因式分解：二次看 "Polynomial's factor!"，三次以上看展开后的因式表
-        val factors = (entries.firstOrNull { it.code == FACTORIZATION }
-            ?: entries.firstOrNull { it.code == EXPAND_FACTORS })?.result as? IAST
-        val factorLines = factorizationLines(engine, factors)
-        if (factorLines != null) {
-            steps += Step("factors", "因式分解", factorLines)
-        }
-
-        // 3. 求根公式：二次给 a/b/c 代入式，三次以上给各项系数
         val quadratic = entries.firstOrNull { it.code == QUADRATIC_COEFFICIENTS }
             ?.result as? IAST
         val coefficients = entries.firstOrNull { it.code == COEFFICIENTS }
             ?.result as? IAST
-        if (quadratic != null && quadratic.size == 4) {
-            steps += Step("rootsFormula", "求根公式", rootsFormulaLines(engine, quadratic))
-        } else if (coefficients != null && coefficients.size >= 3) {
-            steps += Step("rootsFormula", "求根公式", coefficientLines(engine, coefficients))
+
+        // 2. 一元一次：系数化 1；一元二次：判别式
+        if (degree == 2 && quadratic != null && quadratic.size == 4) {
+            discriminantLines(engine, quadratic)?.let {
+                steps += ProcessStep("discriminant", "判别式", it)
+            }
+        } else if (degree == 1) {
+            linearSolveLines(engine, parsedEquation)?.let {
+                steps += ProcessStep("linearSolve", "系数化 1", it)
+            }
         }
 
-        // 4. 配方法
+        // 3. 因式分解：二次看 "Polynomial's factor!"，三次以上看展开后的因式表
+        val factors = (entries.firstOrNull { it.code == FACTORIZATION }
+            ?: entries.firstOrNull { it.code == EXPAND_FACTORS })?.result as? IAST
+        val factorLines = factorizationLines(engine, factors)
+        if (factorLines != null) {
+            steps += ProcessStep("factors", "因式分解", factorLines)
+        }
+
+        // 4. 求根公式：二次给 a/b/c 代入式，三次以上给各项系数
+        if (quadratic != null && quadratic.size == 4) {
+            steps += ProcessStep("rootsFormula", "求根公式", rootsFormulaLines(engine, quadratic))
+        } else if (coefficients != null && coefficients.size >= 3) {
+            steps += ProcessStep("rootsFormula", "求根公式", coefficientLines(engine, coefficients))
+        }
+
+        // 5. 配方法
         val squareEntry = entries.firstOrNull { it.code == COMPLETE_SQUARE }?.result
         val squareLines = completeSquareLines(engine, squareEntry, quadratic)
         if (squareLines != null) {
-            steps += Step("compeleteSquare", "配方法", squareLines)
+            steps += ProcessStep("compeleteSquare", "配方法", squareLines)
         }
 
-        // 5. 计算结果：重新求一遍解，按规则渲染（不再走参考实现的服务器通道）
+        // 6. 计算结果：重新求一遍解，按规则渲染（不再走参考实现的服务器通道）
         val solved = engine.evaluateOrNull(parsed)
         val resultLines = resultLines(engine, solved)
         if (resultLines.isNotEmpty()) {
             steps += if (degree >= 2) {
-                Step("equalityResult", "方程结果", resultLines)
+                ProcessStep("equalityResult", "方程结果", resultLines)
             } else {
-                Step("result", "计算结果", resultLines)
+                ProcessStep("result", "计算结果", resultLines)
             }
         }
         return steps
@@ -168,6 +157,58 @@ object SolveSteps {
             branches.add("$itemTex = 0")
         }
         return listOf("$latex = 0", branches.joinToString(",\\quad "))
+    }
+
+    /**
+     * 一元一次：移项后两边同除以未知数的系数。
+     *
+     * `2x-4=0` -> `2x = 4` -> `x = 4/2 = 2`。
+     * 系数里有参数（`a*x+1==0`）时返回 null，不硬拆。
+     */
+    private fun linearSolveLines(engine: SymjaEngine, equation: IExpr): List<String>? {
+        val (lhs, rhs) = sidesOf(equation) ?: return null
+        val x = engine.symbol(EngineSettings.unknown)
+        val moved = F.eval(F.Subtract(lhs, rhs))
+        val a = engine.evaluateOrNull(
+            engine.parseOrNull("Coefficient(($moved), ${EngineSettings.unknown})")
+        ) ?: return null
+        if (!a.isNumber || a.isZero) return null
+        val b = F.eval(F.Subtract(moved, F.Times(a, x)))
+        if (!b.isNumber) return null
+        val negB = F.eval(F.Negate(b))
+        val aTex = engine.toExactLatex(a) ?: return null
+        val negBTex = engine.toExactLatex(negB) ?: return null
+        val xTex = engine.toExactLatex(F.eval(F.Divide(negB, a))) ?: return null
+        return if (a.isOne) {
+            listOf("x = $negBTex")
+        } else {
+            listOf(
+                "$aTex x = $negBTex",
+                "x = \\frac{$negBTex}{$aTex} = $xTex",
+            )
+        }
+    }
+
+    /** 一元二次：判别式 Δ=b²-4ac 及其符号含义。 */
+    private fun discriminantLines(engine: SymjaEngine, quadratic: IAST): List<String>? {
+        val a = quadratic.get(1)
+        val b = quadratic.get(2)
+        val c = quadratic.get(3)
+        val discriminant = F.eval(F.Subtract(F.Power(b, F.C2), F.Times(F.C4, a, c)))
+        val aTex = engine.toExactLatex(a) ?: return null
+        val bTex = engine.toExactLatex(b) ?: return null
+        val cTex = engine.toExactLatex(c) ?: return null
+        val discTex = engine.toExactLatex(discriminant) ?: return null
+        val value = engine.numericValueOf(discriminant.toString()) ?: return null
+        val tail = when {
+            value > 1e-12 -> "T:Δ > 0，方程有两个不相等的实数根"
+            value < -1e-12 -> "T:Δ < 0，方程没有实数根"
+            else -> "T:Δ = 0，方程有两个相等的实数根"
+        }
+        return listOf(
+            "\\Delta = b^{2}-4ac = ($bTex)^{2}-4\\times($aTex)\\times($cTex) = $discTex",
+            tail,
+        )
     }
 
     /** 二次方程：把 a、b、c 代进求根公式。 */
@@ -246,7 +287,7 @@ object SolveSteps {
 
     // ---------- 方程组 ----------
 
-    private fun buildForSystem(engine: SymjaEngine, formula: String, lastFormula: String): List<Step> {
+    private fun buildForSystem(engine: SymjaEngine, formula: String, lastFormula: String): List<ProcessStep> {
         val all = Method.allFormula(lastFormula, formula)
         val unknowns = Method.unknowns(all)
         val symja = MethodConsts.SYMJA_SOLVE2.format(all, unknowns)
@@ -254,7 +295,7 @@ object SolveSteps {
         val entries = collectJournal(engine, parsed)
         if (entries.isEmpty()) return emptyList()
 
-        val steps = mutableListOf<Step>()
+        val steps = mutableListOf<ProcessStep>()
 
         // 1. 移项，合并同类项：每个方程整理成「左边 = 0」
         val equations = (parsed as? IAST)?.get(1) as? IAST
@@ -265,7 +306,7 @@ object SolveSteps {
             }
         }
         if (normalizedLines.isNotEmpty()) {
-            steps += Step("groupSameItem", "移项，合并同类项", normalizedLines)
+            steps += ProcessStep("groupSameItem", "移项，合并同类项", normalizedLines)
         }
 
         // 2. 消元：记账本里每个子方程的输入表达式就是消元后剩下的项
@@ -276,14 +317,14 @@ object SolveSteps {
                 engine.toExactLatex(expr)?.let { "$it = 0" }
             }
             if (lines.isNotEmpty()) {
-                steps += Step("gaussianElimination", "消元", lines)
+                steps += ProcessStep("gaussianElimination", "消元", lines)
             }
         }
 
         // 3. 计算结果
         val resultLines = resultLines(engine, engine.evaluateOrNull(parsed))
         if (resultLines.isNotEmpty()) {
-            steps += Step("equalityResult", "方程结果", resultLines)
+            steps += ProcessStep("equalityResult", "方程结果", resultLines)
         }
         return steps
     }
@@ -359,23 +400,4 @@ object SolveSteps {
         }
     }
 
-    /** JSON 字符串转义（引擎模块不依赖 Android 的 org.json）。 */
-    private fun quote(text: String): String {
-        val sb = StringBuilder("\"")
-        for (ch in text) {
-            when (ch) {
-                '"' -> sb.append("\\\"")
-                '\\' -> sb.append("\\\\")
-                '\n' -> sb.append("\\n")
-                '\r' -> sb.append("\\r")
-                '\t' -> sb.append("\\t")
-                else -> if (ch.code < 0x20) {
-                    sb.append("\\u").append(String.format("%04x", ch.code))
-                } else {
-                    sb.append(ch)
-                }
-            }
-        }
-        return sb.append('"').toString()
-    }
 }

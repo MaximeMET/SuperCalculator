@@ -65,7 +65,17 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
         // 解不等式上游没有现成实现，走自己写的求解器；
         // 拿不准的输入会返回 null，再退回原来的路径。
         if (method == Method.SolveIneq) {
-            InequalitySolver.solve(engine, formula, EngineSettings.unknown)?.let { branches ->
+            val unknown = InequalitySolver.unknownOf(formula)
+            InequalitySolver.solve(engine, formula, unknown)?.let { branches ->
+                return formatOutput(method, InequalitySolver.render(engine, branches))
+            }
+        }
+
+        // 不等式组同样是本地求解器：逐个解，再取交集
+        if (method == Method.SolveIneq2) {
+            val inputs = InequalitySolver.systemInputs(lastFormula, formula)
+            val unknown = InequalitySolver.unknownOf(inputs.joinToString(","))
+            InequalitySolver.solveSystem(engine, inputs, unknown)?.let { branches ->
                 return formatOutput(method, InequalitySolver.render(engine, branches))
             }
         }
@@ -111,8 +121,21 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
      */
     fun processSteps(method: Method): String? = when (method) {
         Method.Solve, Method.Solve2 -> SolveSteps.buildJson(engine, formula, lastFormula, method)
+        Method.SolveIneq, Method.SolveIneq2 ->
+            InequalitySteps.buildJson(engine, formula, lastFormula, method, latex)
         else -> null
     }
+
+    /**
+     * 纯算式的「过程」按钮：这份步骤走的是 [ArithmeticSteps]，入口在编辑区那条按钮行，
+     * 不属于任何一个 [Method]。
+     */
+    fun arithmeticProcess(): String? =
+        ProcessSteps.toJson(ArithmeticSteps.build(engine, formula, latex) ?: emptyList())
+
+    /** 当前公式值不值得给「过程」按钮（纯算式、且能出步骤）。 */
+    fun hasArithmeticProcess(): Boolean =
+        ArithmeticSteps.build(engine, formula, latex) != null
 
     /**
      * 输入停顿时的自动结果预览。

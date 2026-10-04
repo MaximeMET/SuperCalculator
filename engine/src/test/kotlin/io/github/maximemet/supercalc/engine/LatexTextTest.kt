@@ -6,6 +6,13 @@ import kotlin.test.assertEquals
 class LatexTextTest {
 
     @Test
+    fun `编辑器 latex 里 MathJax 不认的命令被换掉`() {
+        // 键盘上的 ÷ 键，MathQuill 给的是 \slash
+        assertEquals("1/2+1/3", LatexText.editorSafe("1\\slash2+1\\slash3"))
+        assertEquals("\\frac{1}{2}", LatexText.editorSafe("\\frac{1}{2}"))
+    }
+
+    @Test
     fun `小数按设置位数四舍五入`() {
         assertEquals("0.3333333333", LatexText.toFixPoint("0.3333333333333333", 10))
         assertEquals("0.1428571429", LatexText.toFixPoint("0.14285714285714285", 10))

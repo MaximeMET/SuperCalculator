@@ -338,7 +338,9 @@ class MainActivity : AppCompatActivity() {
             binding.btnUndo.isEnabled = canUndo
             binding.btnRedo.isEnabled = canRedo
         }
-        fragment.onMethodsChanged = { methods: List<Method> -> fragment.renderMethods(methods) }
+        fragment.onMethodsChanged = { methods: List<Method>, showProcess: Boolean ->
+            fragment.renderMethods(methods, showProcess)
+        }
         binding.btnUndo.isEnabled = false
         binding.btnRedo.isEnabled = false
     }

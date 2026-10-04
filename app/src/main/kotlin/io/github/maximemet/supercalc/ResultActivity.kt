@@ -14,6 +14,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import io.github.maximemet.supercalc.databinding.ActivityResultBinding
+import io.github.maximemet.supercalc.engine.LatexText
 import io.github.maximemet.supercalc.engine.Method
 import io.github.maximemet.supercalc.settings.AppSettings
 import org.json.JSONObject
@@ -141,7 +142,8 @@ class ResultActivity : AppCompatActivity() {
 
     /** 把公式/方法名/结果/提示塞给页面里的 `window.__Result.setResult`。 */
     private fun pushResult() {
-        val latex = intent.getStringExtra(EXTRA_LATEX).orEmpty()
+        // 编辑器给的 LaTeX 里 `\slash`（键盘那个 ÷ 键）MathJax 不认，先换掉
+        val latex = LatexText.editorSafe(intent.getStringExtra(EXTRA_LATEX).orEmpty())
         val label = intent.getStringExtra(EXTRA_METHOD).orEmpty() +
             getString(R.string.result_label_suffix)
         val result = intent.getStringExtra(EXTRA_RESULT).orEmpty()

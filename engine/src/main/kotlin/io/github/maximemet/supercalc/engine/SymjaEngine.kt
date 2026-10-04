@@ -67,6 +67,10 @@ class SymjaEngine {
     /** 求值，[numeric] 为 true 时走高精度数值模式。 */
     fun evaluateOrNull(formula: IExpr?, numeric: Boolean = false): IExpr? {
         if (formula == null) return null
+        // 数值模式用完要还原：它是引擎上的全局开关，`numericValueOf` 这类调用
+        // 一旦把模式留着，后面 `F.eval(...)` 算出来的精确值会变成 `1.0`、`2.5`
+        // 这种小数，解题步骤里就会出现 `x^{2.0}`。
+        val previous = evalEngine.isNumericMode()
         return try {
             evalEngine.setNumericMode(numeric)
             if (numeric) evalEngine.setNumericPrecision(EngineSettings.precision)
@@ -75,6 +79,8 @@ class SymjaEngine {
             null
         } catch (e: Exception) {
             null
+        } finally {
+            evalEngine.setNumericMode(previous)
         }
     }
 
@@ -123,7 +129,7 @@ class SymjaEngine {
             expr = F.num(0.0)
         }
         val writer = StringWriter()
-        texUtilities.toTeX(expr, writer)
+        withExactMode { texUtilities.toTeX(expr, writer) }
         val latex = writer.toString()
         val fixed = LatexText.toFixPoint(latex, EngineSettings.precision)
         return LatexText.withoutScientificNotation(fixed)
@@ -139,8 +145,23 @@ class SymjaEngine {
     fun toExactLatex(rawExpr: IExpr?): String? {
         if (rawExpr == null) return null
         val writer = StringWriter()
-        texUtilities.toTeX(rawExpr, writer)
+        withExactMode { texUtilities.toTeX(rawExpr, writer) }
         return LatexText.withoutScientificNotation(writer.toString())
+    }
+
+    /**
+     * TeX 通道内部会 `evalSetAttributes`（等于再求一次值），用的还是引擎当前的数值模式。
+     * 前一步如果是 `N(...)` / 取数值（比如不等式取点判号），数值模式是开着的，
+     * 排版出来的 `1` 就变成 `1.0`、`x^2-1` 变成 `-1.0+x^2`。排版前先关掉，排完还原。
+     */
+    private inline fun withExactMode(block: () -> Unit) {
+        val numeric = evalEngine.isNumericMode()
+        if (numeric) evalEngine.setNumericMode(false)
+        try {
+            block()
+        } finally {
+            if (numeric) evalEngine.setNumericMode(true)
+        }
     }
 
     /**

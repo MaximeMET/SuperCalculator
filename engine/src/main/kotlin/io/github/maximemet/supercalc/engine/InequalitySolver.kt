@@ -39,8 +39,125 @@ object InequalitySolver {
         }
     }
 
+    /** 一个不等式的内部准备结果（分子分母、方向、临界点）。 */
+    private class Prepared(
+        val rel: Rel,
+        /** 化成 `f(x) REL 0` 之后的 f（已通分）。 */
+        val f: String,
+        val numerator: String,
+        val denominator: String,
+        val zeros: List<IExpr>,
+        val poles: List<IExpr>,
+        val critical: List<Pair<Double, IExpr>>,
+    )
+
+    /** 穿线法取的一个点。 */
+    class Probe(val point: Double, val value: Double, val holds: Boolean)
+
+    /** 分段结果：成立的连续区间 + 每个临界点上是否成立（决定端点开闭）。 */
+    private class Segments(val runs: List<Pair<Int, Int>>, val nodeOk: BooleanArray)
+
+    /** 单个不等式的分析结果（解题步骤要用）。 */
+    class Analysis internal constructor(
+        val input: String,
+        val normalized: String,
+        val numerator: String,
+        val denominator: String,
+        val zeros: List<IExpr>,
+        val poles: List<IExpr>,
+        val critical: List<IExpr>,
+        val probes: List<Probe>,
+        val branches: List<InequalityBranch>,
+    )
+
     /** 求解，解不出来返回 null。 */
     fun solve(engine: SymjaEngine, formula: String, unknown: String): List<InequalityBranch>? {
+        val prepared = prepare(engine, formula, unknown) ?: return null
+        val segments = runsFor(engine, listOf(prepared), prepared.critical, unknown) ?: return null
+        return branchesOf(prepared.critical, segments, unknown)
+    }
+
+    /**
+     * 不等式组：逐个化成 `f_i(x) REL 0`，在**所有**临界点的并集上分段，
+     * 每个区间要求全部不等式同时成立。临界点上同样要求全部成立
+     * （任何一个不等式在该点无定义就整点不算）。
+     */
+    fun solveSystem(
+        engine: SymjaEngine,
+        inequalities: List<String>,
+        unknown: String,
+    ): List<InequalityBranch>? {
+        if (inequalities.size < 2) return null
+        val prepared = inequalities.map { prepare(engine, it, unknown) ?: return null }
+        val critical = mergeCritical(prepared.map { it.critical })
+        if (critical.isEmpty()) return null
+        val segments = runsFor(engine, prepared, critical, unknown) ?: return null
+        return branchesOf(critical, segments, unknown)
+    }
+
+    /** 单个不等式的分析（给解题步骤用）。 */
+    fun analyze(engine: SymjaEngine, formula: String, unknown: String): Analysis? {
+        val prepared = prepare(engine, formula, unknown) ?: return null
+        val critical = prepared.critical
+        if (critical.isEmpty()) return null
+        val n = critical.size
+        val cellOk = BooleanArray(n + 1)
+        val probes = mutableListOf<Probe>()
+        for (i in 0..n) {
+            val probe = samplePoint(critical, i, n)
+            val value = engine.signAt(prepared.f, unknown, probe) ?: return null
+            val holds = prepared.rel.holds(value)
+            cellOk[i] = holds
+            probes += Probe(probe, value, holds)
+        }
+        val nodeOk = BooleanArray(n) { i ->
+            engine.signAt(prepared.f, unknown, critical[i].first)
+                ?.let { prepared.rel.holds(it) } ?: false
+        }
+        val runs = buildRuns(cellOk, nodeOk, n) ?: return null
+        val segments = Segments(runs, nodeOk)
+        return Analysis(
+            input = formula,
+            normalized = prepared.f,
+            numerator = prepared.numerator,
+            denominator = prepared.denominator,
+            zeros = prepared.zeros,
+            poles = prepared.poles,
+            critical = critical.map { it.second },
+            probes = probes,
+            branches = branchesOf(critical, segments, unknown),
+        )
+    }
+
+    /**
+     * 把「上一行 + 当前行」拆成一条条不等式。
+     *
+     * 编辑器的换行符是字面量 `\n`（两个字符），行首可能带一个 `*` 占位标记，
+     * 与 `Method.allFormula` 的处理保持一致。
+     */
+    fun systemInputs(lastFormula: String, formula: String): List<String> {
+        val lines = NEWLINE_SEPARATOR.split(lastFormula)
+            .map { it.trim().trimStart('*').trimEnd('*').trim() }
+            .filter { it.isNotEmpty() }
+        return lines + listOf(formula)
+    }
+
+    private val NEWLINE_SEPARATOR = Regex("""\\n""")
+
+    /**
+     * 输入里出现的未知数（按 x、y、z 的顺序取第一个）。
+     *
+     * 用词边界匹配：`exp(x)>1` 里要认出 `x`，而 `exp` 里的 e/x/p 不算。
+     */
+    fun unknownOf(text: String): String =
+        listOf("x", "y", "z").firstOrNull { SYMBOL_PATTERN(it).containsMatchIn(text) }
+            ?: EngineSettings.unknown
+
+    private fun SYMBOL_PATTERN(name: String) = Regex("(?<![A-Za-z])$name(?![A-Za-z])")
+
+    // ---------- 准备与判定 ----------
+
+    private fun prepare(engine: SymjaEngine, formula: String, unknown: String): Prepared? {
         val expr = engine.parseOrNull(formula) ?: return null
         if (!expr.isAST()) return null
         val ast = expr as IAST
@@ -56,7 +173,7 @@ object InequalitySolver {
 
         // 绝对值先平方化：|u| REL c  <=>  u² REL c²（c ≥ 0），
         // 这样就能落回下面那套多项式判号。上游的 Solve 不会解 Abs。
-        rewriteAbs(engine, ast)?.let { return solve(engine, it, unknown) }
+        rewriteAbs(engine, ast)?.let { return prepare(engine, it, unknown) }
 
         val f = "(${ast.arg1()}-(${ast.arg2()}))"
 
@@ -77,23 +194,50 @@ object InequalitySolver {
         critical.sortBy { it.first }
         if (critical.isEmpty()) return null
 
+        return Prepared(rel, f, numerator, denominator, zeros, poles, critical)
+    }
+
+    /** 在给定临界点上分段，返回成立的连续区间（cell 下标）。 */
+    private fun runsFor(
+        engine: SymjaEngine,
+        preparedList: List<Prepared>,
+        critical: List<Pair<Double, IExpr>>,
+        unknown: String,
+    ): Segments? {
         val n = critical.size
         // 区间 i 夹在临界点 i-1 与 i 之间（0 表示负无穷端，n 表示正无穷端）
         val cellOk = BooleanArray(n + 1)
         for (i in 0..n) {
             val probe = samplePoint(critical, i, n)
-            cellOk[i] = engine.signAt(f, unknown, probe)?.let { rel.holds(it) } ?: return null
+            for (prepared in preparedList) {
+                val value = engine.signAt(prepared.f, unknown, probe) ?: return null
+                if (!prepared.rel.holds(value)) {
+                    cellOk[i] = false
+                    break
+                }
+                cellOk[i] = true
+            }
         }
-
-        // 临界点上等号是否成立（分母零点处 f 无定义，永远不成立）
+        // 临界点上必须所有不等式都成立（分母零点处无定义，永远不成立）
         val nodeOk = BooleanArray(n) { i ->
-            engine.signAt(f, unknown, critical[i].first)?.let { rel.holds(it) } ?: false
+            preparedList.all { prepared ->
+                engine.signAt(prepared.f, unknown, critical[i].first)
+                    ?.let { prepared.rel.holds(it) } ?: false
+            }
         }
+        val runs = buildRuns(cellOk, nodeOk, n) ?: return null
+        return Segments(runs, nodeOk)
+    }
 
-        val runs = buildRuns(cellOk, nodeOk, n)
-        if (runs == null) return null // 全集这类的形状没法表达，交回原路径
-
-        return runs.map { (from, to) ->
+    /** 把区间并成若干段，翻译成条件。 */
+    private fun branchesOf(
+        critical: List<Pair<Double, IExpr>>,
+        segments: Segments,
+        unknown: String,
+    ): List<InequalityBranch> {
+        val n = critical.size
+        val nodeOk = segments.nodeOk
+        return segments.runs.map { (from, to) ->
             val conditions = mutableListOf<String>()
             if (from > 0) {
                 conditions += bound(unknown, critical[from - 1].second, nodeOk[from - 1], lower = true)
@@ -103,6 +247,19 @@ object InequalitySolver {
             }
             conditions
         }
+    }
+
+    /** 全部不等式的临界点并集，按数值排序去重。 */
+    private fun mergeCritical(all: List<List<Pair<Double, IExpr>>>): List<Pair<Double, IExpr>> {
+        val merged = mutableListOf<Pair<Double, IExpr>>()
+        for (list in all) {
+            for (item in list) {
+                if (merged.none { kotlin.math.abs(it.first - item.first) < 1e-12 }) {
+                    merged.add(item)
+                }
+            }
+        }
+        return merged.sortedBy { it.first }
     }
 
     /** 把解渲染成 LaTeX（借 Symja 的列表排版）。 */
@@ -188,6 +345,7 @@ object InequalitySolver {
         return runs
     }
 
+    /** 端点开闭由该点上不等式是否成立决定（成立才能取等号）。 */
     private fun bound(unknown: String, root: IExpr, closed: Boolean, lower: Boolean): String = when {
         lower && closed -> "$unknown >= $root"
         lower -> "$unknown > $root"
