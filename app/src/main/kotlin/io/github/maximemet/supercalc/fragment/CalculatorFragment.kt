@@ -107,7 +107,9 @@ class CalculatorFragment : Fragment() {
         if (insetDiagnostics != null) refreshExampleTip()
         startEngine()
         // insets 可能比 Fragment 的视图先到，这里补一次
-        if (pendingWindowHeight > 0) applyInsets(pendingBottomInset, pendingWindowHeight)
+        if (pendingWindowHeight > 0) {
+            applyInsets(pendingBottomInset, pendingWindowHeight, pendingHeightReserve)
+        }
     }
 
     override fun onDestroy() {
@@ -119,20 +121,29 @@ class CalculatorFragment : Fragment() {
 
     // ---------- 给外面用的几个口子 ----------
 
-    /** 主界面拿到 insets 后转给键盘：底部要避开导航栏，高度按窗口高度的一半。 */
-    fun applyInsets(bottomInset: Int, windowHeight: Int) {
+    /**
+     * 主界面拿到 insets 后转给键盘。
+     *
+     * [bottomInset] 是**真实的**系统栏高度：键盘靠它让开导航栏，底部那条 scrim
+     * 也按它画。[heightReserve] 只用来算键盘高度（原版 `getSize().y / 2` 里那个
+     * 「扣掉导航栏的窗口高」）。多数机器两者相同；华为/荣耀开了「全屏显示」后
+     * inset 全报 0、却仍给老应用留 48dp，这时高度要扣、底下不能多画黑边。
+     */
+    fun applyInsets(bottomInset: Int, windowHeight: Int, heightReserve: Int = bottomInset) {
         pendingBottomInset = bottomInset
         pendingWindowHeight = windowHeight
+        pendingHeightReserve = heightReserve
         if (_binding == null) return
         binding.mathKeyboard.layoutParams =
             (binding.mathKeyboard.layoutParams as ViewGroup.MarginLayoutParams).apply {
                 bottomMargin = bottomInset
             }
-        applyKeyboardHeight(windowHeight - bottomInset)
+        applyKeyboardHeight(windowHeight - heightReserve)
     }
 
     private var pendingBottomInset = 0
     private var pendingWindowHeight = 0
+    private var pendingHeightReserve = 0
 
     /** 设置页改了字体大小 / 举例展示之后通知过来。 */
     fun onSettingsChanged() {

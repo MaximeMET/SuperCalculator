@@ -138,19 +138,29 @@ class MainActivity : AppCompatActivity() {
             val navBarVisible = insets.isVisible(WindowInsetsCompat.Type.navigationBars())
             // 这一份只为诊断/日志取，是否真正采用见下面的 fallback
             val systemNavBar = systemNavBarHeight()
-            val fallback = if (reportedBottom == 0 && navBarVisible) {
+            /*
+             * 注意：这个值**只用来算键盘高度**，不再拿去当底部边距。
+             *
+             * 原版是 `getSize().y / 2` + 键盘贴着窗口底，也就是说导航栏那段高度
+             * 只体现在「键盘矮一截」上，屏幕底下并不会多出一条黑边。华为/荣耀
+             * 把 inset 全报 0 时，如果拿 48dp 既扣高度又留边距，键盘底下就会凭空
+             * 多出一团黑（用户实机反馈）。所以高度和边距分开：
+             *   * 高度：窗口高 − heightReserve
+             *   * 边距 / 底部 scrim：真实的 reportedBottom
+             */
+            val heightReserve = if (reportedBottom == 0 && navBarVisible) {
                 maxOf(
                     systemNavBar,
                     resources.getDimensionPixelSize(R.dimen.nav_bar_height_fallback),
                 )
             } else {
-                0
+                reportedBottom
             }
-            val bottomInset = maxOf(reportedBottom, fallback)
+            val bottomInset = reportedBottom
             if (BuildConfig.INSET_DIAGNOSTICS) {
                 pendingInsetDiagnostics = buildInsetDiagnostics(
                     view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom,
-                    systemNavBar, fallback,
+                    systemNavBar, heightReserve,
                 )
                 applyInsetDiagnostics()
             }
@@ -169,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             // 抽屉的标题栏也要让开状态栏，白色背景仍然铺到最上面
             binding.drawerView.drawerContainer.setPadding(0, bars.top, 0, 0)
             lastBottomInset = bottomInset
-            calculator.applyInsets(bottomInset, view.height)
+            calculator.applyInsets(bottomInset, view.height, heightReserve)
             insets
         }
     }
