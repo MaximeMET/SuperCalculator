@@ -72,11 +72,20 @@ class MathEditor(
         onReady?.invoke()
     }
 
-    /** 执行一条按键动作。 */
-    fun writeCommand(command: KeyCommand) {
+    /**
+     * 执行一条按键动作。
+     *
+     * [symbol] 是按键标识（`KeyItem.symbol`，和原版 `assets/keyboard` 里的一致）。
+     * 编辑器拿它做原版同款的前置过滤——三角函数里敲数字自动补度数、
+     * ° 去重、退格收拾多余的 °，见 editor.js 的 filterCommand。
+     */
+    fun writeCommand(command: KeyCommand, symbol: String) {
         val typed = if (isTypedText(command)) "true" else "false"
         val code = JSONObject.quote(command.code)
-        call("SuperCalcEditor.writeCommand($code, ${command.cursorBack}, $typed)")
+        call(
+            "SuperCalcEditor.writeCommand($code, ${command.cursorBack}, $typed, " +
+                "${JSONObject.quote(symbol)})",
+        )
     }
 
     fun keystroke(name: String, times: Int = 1) {

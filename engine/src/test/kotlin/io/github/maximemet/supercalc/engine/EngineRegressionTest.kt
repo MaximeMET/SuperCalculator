@@ -75,6 +75,20 @@ class EngineRegressionTest {
         assertEquals("", session("sin(x)").autoResult())
     }
 
+    // ---------- 三角函数的自动度数 ----------
+
+    /**
+     * 编辑器在 sin/cos/tan 里敲数字时会自动补 `\degree`（原版行为），
+     * 送进引擎的是 `sin(5degree)`。基准：原版算出来是 sin(π/36) = 0.0871557427。
+     */
+    @Test
+    fun `编辑器补的度数符号按角度算`() {
+        assertEquals(
+            "= \\sin{\\frac{\\pi}{36}}$$= 0.0871557427",
+            session("sin(5degree)").autoResult(),
+        )
+    }
+
     // ---------- 极限 ----------
 
     @Test

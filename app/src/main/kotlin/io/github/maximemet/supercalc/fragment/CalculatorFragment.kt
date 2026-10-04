@@ -104,7 +104,6 @@ class CalculatorFragment : Fragment() {
         setupEditor()
         setupKeyboard()
         setupExamples()
-        if (insetDiagnostics != null) refreshExampleTip()
         startEngine()
         // insets 可能比 Fragment 的视图先到，这里补一次
         if (pendingWindowHeight > 0) applyInsets(pendingBottomInset, pendingWindowHeight)
@@ -221,7 +220,9 @@ class CalculatorFragment : Fragment() {
         editorAvailable(false)
 
         binding.keyClear.setOnClickListener { editor.clear() }
-        binding.keyNewline.setOnClickListener { editor.writeCommand(KeyboardModel.newlineCommand) }
+        binding.keyNewline.setOnClickListener {
+            editor.writeCommand(KeyboardModel.newlineCommand, "newline")
+        }
         binding.keyLeft.setOnClickListener { editor.keystroke(KEY_LEFT) }
         binding.keyRight.setOnClickListener { editor.keystroke(KEY_RIGHT) }
         binding.keyBackspace.setOnClickListener { editor.keystroke(KEY_BACKSPACE) }
@@ -373,7 +374,7 @@ class CalculatorFragment : Fragment() {
 
     private fun setupKeyboard() {
         binding.keyboardScroll.setPages(KeyboardModel.pages) { key ->
-            key.command?.let { editor.writeCommand(it) }
+            key.command?.let { editor.writeCommand(it, key.symbol) }
         }
         binding.keyboardScroll.onPageChanged = { position -> updateDarts(position) }
 
@@ -588,38 +589,10 @@ class CalculatorFragment : Fragment() {
 
     /** 把示例推给编辑器页（算式渲染 + 右边留出「全部举例」的宽度）。 */
     private fun pushExampleTip(example: Example) {
-        if (insetDiagnostics != null) {
-            refreshExampleTip()
-            return
-        }
         // 算式要居中在「全部举例」左边那块空白里，所以把按钮宽度（px → dp）传过去，
         // 让编辑器页把右边的位置留出来。
         val insetDp = binding.tvExample.width / resources.displayMetrics.density
         editor.setExampleTip(example.label, example.tipLatex, insetDp)
-    }
-
-    /**
-     * 诊断模式（只给本地测试包）：非空时，底下那行示例换成键盘高度计算要用的原始数据。
-     *
-     * 真机上门键盘高度对不齐时，让对方截一张主界面图就能看到
-     * 窗口高 / 三份 inset / 系统导航栏资源 / 导航栏可见性 / 导航模式，
-     * 不用连电脑抓 logcat。见 app/build.gradle.kts 的 INSET_DIAGNOSTICS。
-     */
-    var insetDiagnostics: String? = null
-        set(value) {
-            field = value
-            if (_binding != null && ::editor.isInitialized) refreshExampleTip()
-        }
-
-    /** 诊断模式下显示原始数据，否则回到当前那条示例。 */
-    private fun refreshExampleTip() {
-        val diagnostics = insetDiagnostics
-        val insetDp = binding.tvExample.width / resources.displayMetrics.density
-        if (diagnostics != null) {
-            editor.setExampleTip(diagnostics, "", insetDp)
-        } else {
-            currentExample?.let { editor.setExampleTip(it.label, it.tipLatex, insetDp) }
-        }
     }
 
     /**

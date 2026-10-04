@@ -63,3 +63,12 @@ $golden = Join-Path $tools "golden-keys-orig.json"
 $report = Join-Path $work "report.txt"
 python (Join-Path $tools "diff_keys.py") $golden (Join-Path $work "keys-ours.json") $report
 Write-Host "报告：$report"
+
+# 三角函数自动补度数：走的是 writeCommand 那条路（原版 filterCommand 的移植），
+# 裸 MathQuill 里没有这段逻辑，所以只和自己比。期望值见 degree_cases.py。
+$degreeHtml = Join-Path $work "degree-ours.html"
+$degreeJson = Join-Path $work "degree-ours.json"
+python (Join-Path $tools "degree_probe.py") $editorHtml $degreeHtml | Out-Null
+npx @cli open "http://127.0.0.1:$Port/degree-ours.html" --browser msedge | Out-Null
+npx @cli eval "() => JSON.stringify(window.__seqs)" --raw | Out-File -Encoding utf8 $degreeJson
+python (Join-Path $tools "check_degree.py") $degreeJson

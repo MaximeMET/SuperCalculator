@@ -86,8 +86,6 @@ class MainActivity : AppCompatActivity() {
         wireCalculator(calculator)
         setupInsets()
         showPage(ITEM_CALCULATOR, animate = false)
-        // 诊断模式下 insets 回调可能比 Fragment 的视图更早，这里补一次
-        applyInsetDiagnostics()
     }
 
     // ---------- 系统栏 ----------
@@ -122,12 +120,6 @@ class MainActivity : AppCompatActivity() {
              */
             val reportedBottom = maxOf(bars.bottom, stableBars.bottom, navBars.bottom)
             val bottomInset = reportedBottom
-            if (BuildConfig.INSET_DIAGNOSTICS) {
-                pendingInsetDiagnostics = buildInsetDiagnostics(
-                    view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom,
-                )
-                applyInsetDiagnostics()
-            }
             if (BuildConfig.DEBUG) {
                 logInsets(view, bars.top, bars.bottom, stableBars.bottom, navBars.bottom)
             }
@@ -146,33 +138,6 @@ class MainActivity : AppCompatActivity() {
             calculator.applyInsets(bottomInset, view.height)
             insets
         }
-    }
-
-    /**
-     * 诊断模式用：把键盘高度那几个原始数据拼成一行短文本（见 CalculatorFragment）。
-     * 顺序和 logcat 那条日志一致，方便对着看。
-     */
-    private var pendingInsetDiagnostics: String? = null
-
-    private fun buildInsetDiagnostics(
-        view: android.view.View,
-        top: Int,
-        bottom: Int,
-        stableBottom: Int,
-        navBarBottom: Int,
-    ): String {
-        val navVisible = ViewCompat.getRootWindowInsets(view)
-            ?.isVisible(WindowInsetsCompat.Type.navigationBars()) == true
-        val mode = runCatching {
-            android.provider.Settings.Secure.getInt(contentResolver, "navigation_mode", -1)
-        }.getOrDefault(-1)
-        return "v${BuildConfig.VERSION_NAME} H${view.height} t$top b$bottom s$stableBottom " +
-            "n$navBarBottom vis${if (navVisible) 1 else 0} m$mode"
-    }
-
-    private fun applyInsetDiagnostics() {
-        if (!::calculator.isInitialized) return
-        calculator.insetDiagnostics = pendingInsetDiagnostics
     }
 
     /**

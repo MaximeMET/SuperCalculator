@@ -65,6 +65,33 @@ pwsh tools/matheditor/run_probes.ps1             # 有原版 min.js 时两边一
 Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，空槽位又不能再留一个
 孤零零的 `*`——原版就是这么按槽位分别处理的，照着做才逐字符一致。
 
+##### 三角函数里敲数字自动补度数
+
+原版的按键不止「插入一段 LaTeX」这一件事：每次按键前会先过一道
+`Matharea.filterCommand()`（在 `bundle.min.js` 的 React 层，**不在 MathQuill 里**）。
+最明显的一条是——**在 sin/cos/tan 的槽位里敲数字会自动补 `\degree`**，所以
+`sin(5)` 算的是 5°（= sin(π/36) = 0.0871557427），不是弧度。
+
+这段逻辑现在搬在 `assets/matheditor/editor.js` 的 `filterCommand()`，
+Kotlin 侧多传一个 `KeyItem.symbol` 当按键标识（原版的 switch 就是按 symbol 分支的）。
+已移植的分支：
+
+- 数字：sin/cos/tan 里补 °，光标停在数字和 ° 中间（连打得到 `123°` 而不是 `1°23`）
+- `+ −`：光标先挪到 ° 右边（`sin(5°+2)`）
+- `× ÷`、`x y z a b π`：把紧跟其后的 ° 删掉（`sin(5×2)`、`sin(5x)` 里的 5 不是角度）
+- `°` 键自己：左右已经有 ° 就不重复插
+- `°′″`：把光标边的数字串收进度槽（原版 `findAngleContent`）
+- 退格：光标左边已经空了、右边还挂着 ° 且外层是 sin/cos/tan 时，连 ° 一起删——
+  否则整串数字删完会剩一个退格删不掉的 °
+
+引擎侧不用改：`\degree` 的 symja 一直是 `degree`，Symja 认它。
+回归锁在 `EngineRegressionTest.编辑器补的度数符号按角度算`。
+
+还有两条原版分支没移植（和度数无关，等有人踩到再说）：
+`°′″` 内部只允许数字的闸门、`≥/≤` 在上标里的光标修正。
+另外原版 filterCommand 的变量名单只有 `x y z a b π`（键盘上还有 `c h k p`），
+这条按原版保持原样。
+
 键盘的几何不是拍脑袋定的，几条规则都来自原版源码：
 
 - 键盘高度 = 窗口高度的 **50%**（`keyboardHeightScreenPercent`）

@@ -16,6 +16,7 @@ class EngineDumpTest {
         "sqrt(2)",
         "pi",
         "sin(30*Degree)",
+        "sin(5degree)",
         "x^2",
         "x^2-1",
         "1/x",

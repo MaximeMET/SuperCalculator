@@ -1165,6 +1165,173 @@
   }
 
   // ---------------------------------------------------------------
+  // 4b. 三角函数里敲数字自动补度数（原版 filterCommand）
+  // ---------------------------------------------------------------
+
+  /**
+   * 原版每次按键前会先过一道 `Matharea.filterCommand()`：返回 true 表示这一下
+   * 已经处理完了，不要再走默认插入。这段逻辑在原版里**不在 MathQuill 里**
+   * （在 bundle.min.js 的 React 层），所以得自己接回来。
+   *
+   * 原版判定用的是那支改版 MathQuill 才有的 `preCtrl() / nextCtrl() /
+   * currentCtrl()`。官方 MathQuill 没有这三个口子，这里按同一语义直接读
+   * `__controller.cursor`：`cursor[-1]` 是左邻节点、`cursor[1]` 是右邻节点，
+   * `cursor.parent.parent` 是光标所在的最小外层命令（原版 currentCtrl()
+   * 取的就是它的 ctrlSeq）。
+   */
+  var DEGREE_CTRL = '^\\circ';
+
+  function ctrlOf(node) {
+    if (!node || !node.ctrlSeq) return '';
+    // 原版的 ° 是 `^\circ `（带尾空格），我们这版没有；比较前统一去掉。
+    return String(node.ctrlSeq).replace(/\s+$/, '');
+  }
+
+  function editorCursor() {
+    var controller = formulaField.__controller;
+    return controller && controller.cursor ? controller.cursor : null;
+  }
+
+  function preCtrl() {
+    var cursor = editorCursor();
+    return cursor ? ctrlOf(cursor[-1]) : '';
+  }
+
+  function postCtrl() {
+    var cursor = editorCursor();
+    return cursor ? ctrlOf(cursor[1]) : '';
+  }
+
+  function currentCtrl() {
+    var cursor = editorCursor();
+    if (!cursor || !cursor.parent || !cursor.parent.parent) return '';
+    return ctrlOf(cursor.parent.parent);
+  }
+
+  function isDigitCtrl(ctrl) {
+    return /^[0-9]$/.test(ctrl);
+  }
+
+  /** 光标是不是直接待在 sin/cos/tan 的槽位里（不含更深一层的分式之类）。 */
+  function isTrigonometric() {
+    var ctrl = currentCtrl();
+    // 我们的函数命令 ctrlSeq 带反斜杠（原版那支 MathQuill 的 ctrlSeq 是裸名字）
+    return ctrl === '\\sin' || ctrl === '\\cos' || ctrl === '\\tan';
+  }
+
+  function isDegreeCtrl(ctrl) {
+    return ctrl === DEGREE_CTRL;
+  }
+
+  /** 删掉光标右边那个 °：先右移一格再退格。 */
+  function deleteDegreeOnRight() {
+    formulaField.keystroke('Right');
+    formulaField.keystroke('Backspace');
+  }
+
+  /**
+   * 原版 `findAngleContent()`：把光标两边连着的数字串从公式里取出来，
+   * 顺手删掉紧跟其后的 °，返回那串数字。°′″ 键用它。
+   */
+  function takeAngleContent() {
+    var cursor = editorCursor();
+    if (!cursor) return '';
+    var digits = [];
+    // 左边紧挨着 ° 时先跨过去，它等下会被右边的规则删掉
+    if (cursor[-1] && /circ/.test(String(cursor[-1].ctrlSeq || ''))) {
+      formulaField.keystroke('Left');
+    }
+    while (cursor[-1] && isDigitCtrl(ctrlOf(cursor[-1]))) {
+      digits.unshift(ctrlOf(cursor[-1]));
+      formulaField.keystroke('Backspace');
+    }
+    while (cursor[1] && isDigitCtrl(ctrlOf(cursor[1]))) {
+      digits.push(ctrlOf(cursor[1]));
+      formulaField.keystroke('Right');
+      formulaField.keystroke('Backspace');
+    }
+    if (cursor[1] && isDegreeCtrl(ctrlOf(cursor[1]))) deleteDegreeOnRight();
+    return digits.join('');
+  }
+
+  /**
+   * 原版退格规则：光标左边已经空了、右边还挂着一个 °，而且外层是 sin/cos/tan 时，
+   * 先把那个 ° 删掉，再走正常退格。
+   *
+   * 不这么做的话，sin(5°) 连按退格会把 5 删掉、剩下一个删不掉的 °
+   * （光标停在 ° 左边，退格删不到它）。
+   */
+  function filterBackspace() {
+    var cursor = editorCursor();
+    if (!cursor || cursor[-1]) return;
+    if (!isDegreeCtrl(ctrlOf(cursor[1]))) return;
+    var ctrl = ctrlOf(cursor[1].parent && cursor[1].parent.parent);
+    if (ctrl !== '\\sin' && ctrl !== '\\cos' && ctrl !== '\\tan') return;
+    deleteDegreeOnRight();
+  }
+
+  /**
+   * 按键过滤器。返回 true = 这一下已经被吃掉，不要再走默认插入。
+   *
+   * [symbol] 是参考实现里的按键标识（KeyItem.symbol），[code] 是插入内容。
+   * 逐条对照原版 `Matharea.filterCommand` 的分支，只少了两条与本轮无关的
+   * （°′″ 内部只允许数字的闸门、≥/≤ 在上标里的光标修正）。
+   */
+  function filterCommand(symbol, code) {
+    switch (symbol) {
+      // 数字：在 sin/cos/tan 的槽位里自动补 °。光标停在数字和 ° 中间，
+      // 所以接着敲的数字会补进 ° 前面（123 → 123°，不是 1°23）。
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
+        if (isTrigonometric()) {
+          var post = postCtrl();
+          if (!isDegreeCtrl(post) && !isDigitCtrl(post)) {
+            formulaField.write(code + '\\degree');
+            formulaField.keystroke('Left');
+            return true;
+          }
+        }
+        return false;
+
+      // 加减号排在度数后面：sin(5°+2)
+      case '+':
+      case '-':
+        if (isDegreeCtrl(postCtrl())) formulaField.keystroke('Right');
+        return false;
+
+      // 乘除号：sin(5×2) 不是角度，先把 ° 摘掉
+      case '*':
+      case '/':
+        if (isTrigonometric() && isDegreeCtrl(postCtrl())) deleteDegreeOnRight();
+        return false;
+
+      // 变量和 π 同理：sin(5x) 里的 5 不是角度
+      case 'x': case 'y': case 'z': case 'a': case 'b': case 'pi':
+        if (isDegreeCtrl(postCtrl())) deleteDegreeOnRight();
+        return false;
+
+      // ° 键自己：左右已经有 ° 就别再叠一个
+      case 'degree':
+        return isDegreeCtrl(postCtrl()) || isDegreeCtrl(preCtrl());
+
+      // °′″：光标边上有数字（或 °）时，把数字收进度槽
+      case 'dms': {
+        var pre = preCtrl();
+        if (isDigitCtrl(pre) || isDegreeCtrl(postCtrl()) || isDegreeCtrl(pre)) {
+          var content = takeAngleContent();
+          formulaField.write('\\dms{' + content + '}{}{}');
+          formulaField.keystroke('Left');
+          formulaField.keystroke('Left');
+          formulaField.keystroke('Left');
+          return true;
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // ---------------------------------------------------------------
   // 5. 暴露给 Android 的接口
   // ---------------------------------------------------------------
 
@@ -1177,8 +1344,17 @@
      *                 分式键靠它（敲 `/` 会变成真分式）、括号键靠它（自动配对）。
      *   typed=false → write()，插入一段 LaTeX 命令，例如 \sqrt[]{}、\sin{}。
      * 参考实现里这两类分别对应 actions 用的是 u() 还是 a()，是逐条分开的。
+     *
+     * `symbol` 是按键标识，先过一遍 [filterCommand]（原版同款）：三角函数里
+     * 自动补度数、° 键去重、退格收拾多余的 ° 都在那里面。
      */
-    writeCommand: function (code, cursorBack, typed) {
+    writeCommand: function (code, cursorBack, typed, symbol) {
+      try {
+        if (filterCommand(symbol, code)) return;
+      } catch (e) {
+        var bridge = window.Android;
+        if (bridge && bridge.log) bridge.log('filter 失败 ' + symbol + ': ' + e.message);
+      }
       try {
         if (typed) formulaField.typedText(code);
         else formulaField.write(code);
@@ -1197,7 +1373,10 @@
     },
 
     keystroke: function (name, times) {
-      for (var i = 0; i < (times || 1); i += 1) formulaField.keystroke(name);
+      for (var i = 0; i < (times || 1); i += 1) {
+        if (name === 'Backspace') filterBackspace();
+        formulaField.keystroke(name);
+      }
     },
 
     clear: function () {
