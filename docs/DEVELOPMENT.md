@@ -77,26 +77,16 @@ Symja 不认 `5x`，所以 `y=kx+b` 这类模板在系数非空时要补 `*`，�
   所以左右的分隔线能一路对齐；跨两行的标签（比如「圆」）内部不画线。
   左栏总高要按「weight 个格子 + (weight-1) 条线」算，才算得和网格一样高，
   否则列底会剩一条灰边。
-- 键盘高度是 `窗口高度 - 底部 inset` 的一半，但「底部 inset」不能直接信
-  `systemBars`。原版是老 targetSdk，算的是 `Display.getSize().y / 2`，那个 y 是
-  **窗口高 = 整屏 − 系统给老应用预留的导航栏**；我们是 edge-to-edge，
-  `getSize()` 返回整屏（模拟器实测 `root=1280x2800 display=1280x2800`），
-  只能自己把导航栏那段减掉。实机上踩过两层坑：
-  1. 个别 ROM（应用被设成「全屏显示」、手势栏被隐藏时）把 `systemBars` 的 bottom
-     报成 0，而导航栏其实还在——所以要取
-     `systemBars(可见)` / `systemBars(忽略可见性)` / `navigationBars(忽略可见性)`
-     三者的最大值；
-  2. 华为/荣耀这种「手势栏只有 8dp、系统仍按 48dp 给老应用预留」的机器，
-     三份 inset 全都不够——键盘会顶到整屏 50%，比原版高 24dp 左右。最后补上
-     `android` 资源 `navigation_bar_height`（只在 `navigationBars` 可见时才算），
-     这才是和原版 `getSize()` 对齐的口径。实机验收标准：键盘白区高 =
-     `(整屏高 − 系统导航栏高) / 2`，1280×2800 上就是 1328（三键）或 1364（手势）。
-  3. **高度和边距必须分开**：上面那截「预留高度」只用来算键盘**多高**
-     （原版 `getSize().y / 2`），键盘本身是贴着窗口底的。要是把它同时当成
-     底部 margin，键盘底下会凭空多出一条黑边（实机反馈「底下整出一团黑的」）。
-     所以 `applyInsets(bottomInset, windowHeight, heightReserve)` 收三个参数：
-     `bottomInset` 是真实的系统栏 inset，只负责让开导航栏和画那条 scrim；
-     `heightReserve` 只负责扣高度。华为/荣耀上前者是 0、后者是 48dp。
+- **键盘高度是刻意和原版不同的**：原版 `keyboardHeightScreenPercent = 50`
+  （`Display.getSize().y / 2`），用户实测觉得太高，明确要求改成
+  「距顶 8/15、距底 7/15」，所以现在是
+  `可用高度 = 窗口高 − 底部 inset`，`键盘高 = 可用高度 × 7 / 15`。
+  比例写在 `CalculatorFragment` 的 `KEYBOARD_HEIGHT_RATIO_NUM/DEN`，要调就改这两个数。
+  这里**不要**再去做「和原版对齐」的兜底（`android:navigation_bar_height`、
+  48dp 之类的常数都删掉了）：一是没必要，二是华为/荣耀那类把 inset 全报 0 的
+  ROM 上，兜底值同时当高度和边距会凭空多出一条黑边，实机上翻过车。
+  `bottomInset` 只负责「键盘让开导航栏 + 底部那条 scrim 多高」，
+  ROM 报多少就避让多少，报 0 就贴着屏幕底。
 - 键盘图标（`ic_keyboard_*.xml`）是**填充**矢量，不是描边：任何画成
   `M…L…` 单线的装饰都会光栅化成零面积、直接消失。分数线一开始就是这么丢的
   （反比例函数、椭圆、双曲线的分式键都没有横线），现在按矩形画。

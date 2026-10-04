@@ -107,9 +107,7 @@ class CalculatorFragment : Fragment() {
         if (insetDiagnostics != null) refreshExampleTip()
         startEngine()
         // insets 可能比 Fragment 的视图先到，这里补一次
-        if (pendingWindowHeight > 0) {
-            applyInsets(pendingBottomInset, pendingWindowHeight, pendingHeightReserve)
-        }
+        if (pendingWindowHeight > 0) applyInsets(pendingBottomInset, pendingWindowHeight)
     }
 
     override fun onDestroy() {
@@ -121,29 +119,20 @@ class CalculatorFragment : Fragment() {
 
     // ---------- 给外面用的几个口子 ----------
 
-    /**
-     * 主界面拿到 insets 后转给键盘。
-     *
-     * [bottomInset] 是**真实的**系统栏高度：键盘靠它让开导航栏，底部那条 scrim
-     * 也按它画。[heightReserve] 只用来算键盘高度（原版 `getSize().y / 2` 里那个
-     * 「扣掉导航栏的窗口高」）。多数机器两者相同；华为/荣耀开了「全屏显示」后
-     * inset 全报 0、却仍给老应用留 48dp，这时高度要扣、底下不能多画黑边。
-     */
-    fun applyInsets(bottomInset: Int, windowHeight: Int, heightReserve: Int = bottomInset) {
+    /** 主界面拿到 insets 后转给键盘：底部让开导航栏，高度按可用高度的 7/15。 */
+    fun applyInsets(bottomInset: Int, windowHeight: Int) {
         pendingBottomInset = bottomInset
         pendingWindowHeight = windowHeight
-        pendingHeightReserve = heightReserve
         if (_binding == null) return
         binding.mathKeyboard.layoutParams =
             (binding.mathKeyboard.layoutParams as ViewGroup.MarginLayoutParams).apply {
                 bottomMargin = bottomInset
             }
-        applyKeyboardHeight(windowHeight - heightReserve)
+        applyKeyboardHeight(windowHeight - bottomInset)
     }
 
     private var pendingBottomInset = 0
     private var pendingWindowHeight = 0
-    private var pendingHeightReserve = 0
 
     /** 设置页改了字体大小 / 举例展示之后通知过来。 */
     fun onSettingsChanged() {
@@ -166,18 +155,15 @@ class CalculatorFragment : Fragment() {
     fun redo() = editor.redo()
 
     /**
-     * 键盘高度 = 窗口高度 / 2。
+     * 键盘高度 = 可用高度（窗口高 − 底部 inset）的 7/15 ≈ 46.7%。
      *
-     * 参考实现是 `KeyboardLayout.onMeasure` 里
-     * `DeviceUtils.getWindowHeight() * keyboardHeightScreenPercent / 100`，
-     * 外加 `initKeyboard()` 里又写了一遍 `height / 2`。那个 `getWindowHeight()`
-     * 走的是 `Display.getSize()`，**不含导航栏、但含状态栏**——所以这里减掉的只有
-     * 底部 inset。之前按「可用高度（去掉上下两条）的一半」算，同一台机器上
-     * 键盘矮 36px，整块键盘的行高会跟着全错。
+     * 这里**故意不照原版**：原版是 `getSize().y * 50 / 100`（正好一半），
+     * 用户实测觉得太高，明确要求改成「距顶 8/15、距底 7/15」。
+     * 想调比例只改下面两个常量。
      */
     private fun applyKeyboardHeight(available: Int) {
         if (available <= 0 || _binding == null) return
-        val target = available * KEYBOARD_HEIGHT_PERCENT / 100
+        val target = available * KEYBOARD_HEIGHT_RATIO_NUM / KEYBOARD_HEIGHT_RATIO_DEN
         val params = binding.mathKeyboard.layoutParams
         if (params.height != target) {
             params.height = target
@@ -682,8 +668,14 @@ class CalculatorFragment : Fragment() {
         const val KEY_RIGHT = "Right"
         const val KEY_BACKSPACE = "Backspace"
 
-        /** 参考实现的 keyboardHeightScreenPercent。 */
-        const val KEYBOARD_HEIGHT_PERCENT = 50
+        /**
+         * 键盘占可用高度的比例：7/15。
+         *
+         * 原版是 50%（`keyboardHeightScreenPercent`），用户要求改成
+         * 「距顶 8/15、距底 7/15」，所以这里是刻意的差异，不是没对齐。
+         */
+        const val KEYBOARD_HEIGHT_RATIO_NUM = 7
+        const val KEYBOARD_HEIGHT_RATIO_DEN = 15
 
         /** 结果串里精确解和数值解之间的分隔符，参考实现里就是 `$$`。 */
         const val DIVIDER = "$$"
