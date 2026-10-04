@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "comment": "多项式分解的公式表：按顺序取第一条命中的规则（兜底规则放最后）。match 里的 u_/v_ 是通配符，degree 是次数条件，factorable 表示要求分解结果真的是乘积/幂。匹配时先用引擎自己的 Factor 输出收集候选 u/v，代入模板后回验（模板实例必须等于 Factor 输出、展开后必须等于原式），验不过就跳过。label 是步骤标签，formula 是顺带显示的公式原文（纯文本，可为空）。数值内容因子（2x³-16 里的 2）会先提出来再匹配。",
+  "rules": [
+    {
+      "id": "cube",
+      "label": "立方和差公式",
+      "formula": "a³±b³=(a±b)(a²∓ab+b²)",
+      "degree": 3,
+      "match": "(u_-v_)*(u_^2+u_*v_+v_^2)"
+    },
+    {
+      "id": "square-diff",
+      "label": "平方差公式",
+      "formula": "a²-b²=(a+b)(a-b)",
+      "degree": 2,
+      "match": "(u_-v_)*(u_+v_)"
+    },
+    {
+      "id": "complete-square",
+      "label": "完全平方公式",
+      "formula": "a²±2ab+b²=(a±b)²",
+      "degree": 2,
+      "match": "(u_+v_)^2"
+    },
+    {
+      "id": "cross",
+      "label": "十字相乘",
+      "formula": "x²+(p+q)x+pq=(x+p)(x+q)",
+      "degree": 2,
+      "factorable": true
+    },
+    {
+      "id": "generic",
+      "label": "因式分解"
+    }
+  ]
+}

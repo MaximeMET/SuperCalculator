@@ -54,7 +54,10 @@ class PolynomialStepsTest {
 
     @Test
     fun differenceOfSquares() {
-        assertTrue("平方差公式" in labelsOf("x^2-4", Method.Decompose), "x²-4 该走平方差")
+        val labels = labelsOf("x^2-4", Method.Decompose)
+        assertTrue("平方差公式" in labels, "x²-4 该走平方差")
+        assertTrue(textOf("x^2-4", Method.Decompose).contains("a²-b²=(a+b)(a-b)"),
+            "公式原文没显示：${textOf("x^2-4", Method.Decompose)}")
     }
 
     @Test
@@ -76,8 +79,9 @@ class PolynomialStepsTest {
 
     @Test
     fun contentKeepsEngineForm() {
-        // Symja 给的是 (2x-4)(x+2)，过程最后一行必须和它一致
-        assertTrue("十字相乘" in labelsOf("2*x^2-8", Method.Decompose), "该走十字相乘")
+        // Symja 给的是 (2x-4)(x+2)，过程最后一行必须和它一致。
+        // 内容因子 2 会先被提出来，公式按括号里的 x²-4 认成平方差。
+        assertTrue("平方差公式" in labelsOf("2*x^2-8", Method.Decompose), "2 该先提出去再认公式")
         assertTrue(textOf("2*x^2-8", Method.Decompose).contains("2\\,x-4") ||
             textOf("2*x^2-8", Method.Decompose).contains("2x-4"),
             "分解行和引擎结果不一致：${textOf("2*x^2-8", Method.Decompose)}")

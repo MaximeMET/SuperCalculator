@@ -121,7 +121,7 @@ Windows 上把 `./gradlew` 换成 `gradlew.bat`。首次运行会去 services.gr
 
 ```
 engine/   纯 JVM 数学引擎，不依赖 Android，可独立测试
-  └ resources/rules/   知识规则包（基本积分表、等价无穷小表）：加公式只动 JSON，不用改 Kotlin
+  └ resources/rules/   知识规则包（基本积分表、等价无穷小表、多项式公式表）：加公式只动 JSON，不用改 Kotlin
 app/      Android 应用（Kotlin + 原生 View）
 tools/    素材生成与组件重建脚本（改素材时才用）
 docs/     截图与开发笔记

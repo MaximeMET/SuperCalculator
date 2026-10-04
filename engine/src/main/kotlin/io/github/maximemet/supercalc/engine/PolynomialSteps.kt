@@ -9,7 +9,8 @@ import org.matheclipse.core.interfaces.IExpr
  *
  * 原版的过程引擎只覆盖方程，这两份是补的，思路和[DerivativeSteps]一致：
  *  - 展开：分配律逐项相乘（幂先拆成乘法）→ 合并同类项；
- *  - 分解：提公因式 → 公式法（平方差 / 完全平方 / 立方和差）/ 十字相乘 → 结果。
+ *  - 分解：提公因式 → 公式法（形状识别走 `rules/polynomials.json` 规则包：
+ *    平方差 / 完全平方 / 立方和 / 立方差 / 十字相乘）→ 结果。
  *
  * 分解的每一步都往**引擎自己的 Factor 输出**上收：`Factor(2x^2-8)` 在 2016 版
  * Symja 里给的是 `(2x-4)(x+2)`（数字系数留在括号里），结果页顶部也是这一串，
@@ -182,53 +183,26 @@ object PolynomialSteps {
             }
         }
 
-        val label = techniqueLabel(engine, (if (minPower > 0) inner else expr) ?: expr, x)
+        // 公式描述的是提完公因式后括号里那一份（x³-x → 看 x²-1），但结果行仍旧
+        // 用整体 Factor 输出，保证最后一行和结果页顶部一致。
+        val techniqueExpr = (if (minPower > 0) inner else expr) ?: expr
+        val techniqueFactored = if (minPower > 0 && inner != null) {
+            engine.decompose(inner.toString()) ?: factored
+        } else {
+            factored
+        }
+        val rule = PolynomialRulePack.technique(engine, techniqueExpr, techniqueFactored, x)
+        val label = rule?.label ?: "因式分解"
         val lineAlreadyFactored = extracted != null && sameFactors(extracted, factored)
-        if (label != null && !lineAlreadyFactored) {
-            steps += ProcessStep("formula", label, listOf("=$factoredTex"))
+        if (!lineAlreadyFactored) {
+            val lines = mutableListOf<String>()
+            rule?.formula?.let { lines += "T:$it" }
+            lines += "=$factoredTex"
+            steps += ProcessStep("formula", label, lines)
         }
 
         steps += ProcessStep("result", "计算结果", listOf("= $factoredTex"))
         return steps
-    }
-
-    /** 分解技巧的名字：能一眼认出的给具体公式名，其余给通用的「因式分解」。 */
-    private fun techniqueLabel(engine: SymjaEngine, expr: IExpr, x: IExpr): String {
-        val coefficients = coefficientsOf(engine, expr, x) ?: return "因式分解"
-        val degree = coefficients.indexOfLast { !it.isZero }
-        return when (degree) {
-            2 -> quadraticTechnique(engine, coefficients)
-            3 -> {
-                // x³ ± k³ 形状：中间两项系数为 0
-                if (coefficients[1].isZero && coefficients[2].isZero) "立方和差公式" else "因式分解"
-            }
-            else -> "因式分解"
-        }
-    }
-
-    private fun quadraticTechnique(engine: SymjaEngine, coefficients: List<IExpr>): String {
-        val constant = coefficients[0]
-        val linear = coefficients[1]
-        val quadratic = coefficients[2]
-        val discriminant = engine.evaluateOrNull(
-            F.Subtract(F.Power(linear, F.C2), F.Times(F.C4, quadratic, constant))
-        ) ?: return "因式分解"
-        if (discriminant.isZero) return "完全平方公式"
-        if (linear.isZero && isPerfectSquare(engine, quadratic) && constant.isNegative() &&
-            isPerfectSquare(engine, F.eval(F.Negate(constant)))
-        ) {
-            return "平方差公式"
-        }
-        return if (isPerfectSquare(engine, discriminant)) "十字相乘" else "因式分解"
-    }
-
-    /** 有理数是不是完全平方（4、9/4 这种）。 */
-    private fun isPerfectSquare(engine: SymjaEngine, value: IExpr): Boolean {
-        if (!value.isNumber || value.isNegative()) return false
-        val root = engine.evaluateOrNull(engine.parseOrNull("Sqrt($value)")) ?: return false
-        if (!root.isNumber) return false
-        val text = root.toString()
-        return !text.contains("Sqrt") && !text.contains(".") && !text.contains("E")
     }
 
     /** 升幂排列的系数表；非多项式返回 null。 */
