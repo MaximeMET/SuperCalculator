@@ -455,6 +455,13 @@ class CalculatorFragment : Fragment() {
             val output = runCatching { current.evaluate(method) }.getOrNull()
             val latex = current.latex
             val formula = current.formula
+            // 「过程展示」开着时，顺手把解题步骤也算出来。
+            // 参考实现是去服务器要过程，服务下线后改成本地算（内核里的解方程 trace）。
+            val process = if (AppSettings.processVisible) {
+                runCatching { current.processSteps(method) }.getOrNull()
+            } else {
+                null
+            }
             // 参考实现在方法任务的 onPostExecute 里记历史（不带结果）
             saveRecord(formula, latex, method.typeCode)
             mainHandler.post {
@@ -464,19 +471,22 @@ class CalculatorFragment : Fragment() {
                     Toast.makeText(requireContext(), R.string.no_result, Toast.LENGTH_SHORT).show()
                     return@post
                 }
-                startResultPage(method, latex, output)
+                startResultPage(method, latex, output, process)
             }
         }
     }
 
     /** 打开运算结果页（参考实现的 CalculatorResultActivity，请求码 1024）。 */
-    private fun startResultPage(method: Method, latex: String, result: String) {
+    private fun startResultPage(method: Method, latex: String, result: String, process: String?) {
         val intent = Intent(requireContext(), ResultActivity::class.java)
             .putExtra(ResultActivity.EXTRA_LATEX, latex)
             .putExtra(ResultActivity.EXTRA_METHOD, method.label)
             .putExtra(ResultActivity.EXTRA_METHOD_KEY, method.key)
             .putExtra(ResultActivity.EXTRA_RESULT, result)
             .putExtra(ResultActivity.EXTRA_NEW_ENABLED, ResultActivity.allowsReuse(method))
+        if (process != null) {
+            intent.putExtra(ResultActivity.EXTRA_PROCESS, process)
+        }
         @Suppress("DEPRECATION")
         startActivityForResult(intent, ResultActivity.REQUEST_CODE)
     }

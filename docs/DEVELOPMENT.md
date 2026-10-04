@@ -21,6 +21,7 @@
 | M3 | 结果页 / 历史 / 设置 / 教程 / 反馈 / 关于 | ✅ |
 | M4 | 函数图像 | ✅ 绘图 / 拖动 / 缩放 / 最多 3 条函数 / 交点与点选气泡 / 图例 / 分享 |
 | M6 | 素材替换 + 开源发布 | ✅ 品牌、文案、字体、图标全部自有；v0.1.0 已发布 |
+| M7 | 解题步骤（原版那个「解决过程」） | ✅ 离线算；单变量多项式方程 + 线性方程组，不等式未接 |
 
 > 原版抽屉里的「超级 24 点」不在复刻范围内，已按设计取消（M5 阶段整段跳过）：
 > 抽屉项、图标、字符串和历史记录里那个类型号都删掉了。
@@ -480,7 +481,7 @@ python tools/make_result_icons.py
 在上游 tag `version_2016-04-15` 上打最小补丁。选它的依据是**顶级类名集合比对**——
 和基准的重合度最高（差异 140，次优 `2017-04-06` 是 465）。
 
-目前的四处补丁：
+目前的补丁：
 
 | 补丁 | 内容 |
 |---|---|
@@ -488,6 +489,37 @@ python tools/make_result_icons.py
 | `TeXFormFactory` | `Log` 不进 `operTab`；补 `Sec`/`Csc`；补 `E → e`；通用函数用 `\left( \right)` 而不是裸括号 |
 | `TeXFunction` | `\cos(x)` → `\cos{x}`，多参数用 `\,` 分隔 |
 | `EvalAttributes` + `EvalEngine` | 每次顶层求值后，递归把结果里的 `Plus` 按**降幂**重排（原版 `x^2-1` 显示成 `x^{2}-1`，而不是 Symja 默认的 `-1+x^{2}`） |
+| `core/computeprocess` | 参考实现里「解方程过程」的一整包（`StepJournal`、`ProcessName`、各类求解策略），见下一节 |
+| `Solve` / `Roots` / `QuarticSolver` / `TraceStack` | 解方程过程要用的一批发点（度数、因式分解、系数、求根公式、配方），`TraceStack` 收到后顺手记进 `StepJournal` |
+
+### 解题步骤：过程引擎搬回本地
+
+参考 App 的结果页会附一段「解决过程」，但那是**服务器**算的：
+`CalculatorResultActivity.gettingProcess()` 把公式 POST 到
+`http://calculator.youdao.com/api/symja/process?method=calculate`，服务早已下线。
+
+算法本身在 APK 的 Symja 分支里：`org.matheclipse.core.computeprocess` 一整包
+（移项、因式分解、求根公式、配方、高斯消元…）加 `TraceStack` / `IEvalStepListener`。
+但那份策略是**按 trace 尾部下标取帧**的（二次方程取 `size-6/-5/-4`，三次取
+`size-4/-5`），实测换一个方程就会 `IndexOutOfBoundsException`——中间求值产生的
+frame 数量随方程变化，尾部下标对不上。
+
+所以这里保留发点、换一条整理路线：
+
+1. `Solve / Roots / QuarticSolver` 在算法关键位置照旧发 trace（次数、因式分解、
+   系数、求根公式、配方、消元）；
+2. `TraceStack` 收到发点时顺手往线程本地的 `StepJournal` 记一条
+   `[步骤码, 输入, 结果]`，顺序就是算法真实执行顺序；
+3. `SolveSteps`（engine 模块）把它翻译成中文步骤，标签沿用原版前端
+   `result.min.js` 里的那份表：移项，合并同类项 / 因式分解 / 求根公式 /
+   配方法 / 消元 / 计算结果；
+4. 结果页的 `window.__Result.setProcess(json)` 渲染，排版照原版 `.less`：
+   深灰圆角序号 + 标签 + 内容，「解决过程」横线居中。
+
+记账本只在显式 `begin()` 之后才记录，日常求值没有额外开销；过程只在用户真的点
+「求解方程 / 求解方程组」并且设置里开着「过程展示」时才算。
+
+覆盖范围：单变量多项式方程（一次到四次）与线性方程组；解不等式还没接。
 
 ### 不等式求解是自己写的
 

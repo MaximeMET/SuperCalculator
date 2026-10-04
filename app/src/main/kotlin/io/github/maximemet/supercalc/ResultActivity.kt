@@ -25,8 +25,9 @@ import org.json.JSONObject
  * 用 WebView 里的 MathJax 排版；底部三个按钮把「继续编辑 / 清空 / 用结果继续运算」
  * 三条命令回传给计算页。
  *
- * 参考实现还会往服务器要「运算过程」并塞进同一个 WebView（`__Result.setProcess`），
- * 服务早就下线了，这里保留接口、不请求。
+ * 参考实现往服务器要「运算过程」再塞进同一个 WebView（`__Result.setProcess`）；
+ * 服务下线后这份过程改成计算页那边离线算好（见 `SolveSteps`），
+ * 通过 [EXTRA_PROCESS] 带进来，这里只负责转交给页面。
  */
 class ResultActivity : AppCompatActivity() {
 
@@ -150,6 +151,22 @@ class ResultActivity : AppCompatActivity() {
         webView.evaluateJavascript(script) { value ->
             Log.d(TAG, "setResult -> $value")
         }
+        pushProcess()
+    }
+
+    /**
+     * 把解题步骤交给页面。
+     *
+     * 内容是计算页生成好的 JSON（`{"steps":[...]}`），这里先解析一遍再注入：
+     * 万一以后哪条链路搞坏了，也不会往页面里塞一段非法脚本。
+     */
+    private fun pushProcess() {
+        val raw = intent.getStringExtra(EXTRA_PROCESS) ?: return
+        if (raw.isEmpty()) return
+        val parsed = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        webView.evaluateJavascript("window.__Result.setProcess($parsed)") { value ->
+            Log.d(TAG, "setProcess -> $value")
+        }
     }
 
     private fun quote(value: String): String = JSONObject.quote(value)
@@ -189,6 +206,7 @@ class ResultActivity : AppCompatActivity() {
         const val EXTRA_METHOD_KEY = "method_key"
         const val EXTRA_RESULT = "result"
         const val EXTRA_NEW_ENABLED = "btn_new_enable"
+        const val EXTRA_PROCESS = "process_steps"
 
         const val EXTRA_BACK_CMD = "back_cmd"
         const val EXTRA_BACK_FORMULA = "back_formula"

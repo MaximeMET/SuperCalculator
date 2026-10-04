@@ -130,6 +130,20 @@ class SymjaEngine {
     }
 
     /**
+     * 表达式 -> LaTeX，科研排版用的「原样」通道：不做噪声归零，也不做小数截断。
+     *
+     * 结果区要的是「算出来的数」，`1.0E-17` 当然要归零；但解题步骤里显示的是
+     * 方程系数这类精确值，`0` 不能变成 `0.0`，否则「代入 a=1，b=0，c=-2」会写成
+     * `b=0.0`，在步骤里很扎眼。
+     */
+    fun toExactLatex(rawExpr: IExpr?): String? {
+        if (rawExpr == null) return null
+        val writer = StringWriter()
+        texUtilities.toTeX(rawExpr, writer)
+        return LatexText.withoutScientificNotation(writer.toString())
+    }
+
+    /**
      * 走 `TexForm(...)` 通道求值，返回已经去掉引号、修好精度与科学计数法的 LaTeX。
      * 这是方法按钮（积分/求导/…）显示结果时走的路径。
      */

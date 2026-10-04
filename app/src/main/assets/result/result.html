@@ -92,6 +92,63 @@
         }
         .tip-content.open { display: block; }
         .hidden { display: none; }
+
+        /*
+         * 解题过程。排版照原版 result.min.js 的那套：
+         * 一条「解决过程」横线，步骤行 = 深灰圆角序号 + 标签 + 内容。
+         */
+        .process-head {
+            height: 1px;
+            border-top: 1px solid #d9d9d9;
+            margin: 0.66rem 0 0.47rem;
+            position: relative;
+            text-align: center;
+        }
+        .process-head span {
+            display: inline-block;
+            background-color: #fff;
+            color: #797979;
+            font-size: 0.32rem;
+            height: 0.42rem;
+            line-height: 0.42rem;
+            width: 2rem;
+            top: -0.21rem;
+            left: 50%;
+            margin-left: -1rem;
+            position: absolute;
+        }
+        .process-step { overflow: hidden; margin: 0.45rem 0; }
+        .process-order {
+            float: left;
+            border-radius: 0.36rem;
+            background-color: #53595e;
+            display: inline-block;
+            color: #fff;
+            font-size: 0.28rem;
+            text-align: center;
+            line-height: 0.36rem;
+            min-width: 0.36rem;
+            height: 0.36rem;
+            padding: 0 0.11rem;
+        }
+        .process-body { margin-left: 0.55rem; }
+        .process-label {
+            display: inline-block;
+            font-size: 0.3rem;
+            font-weight: 700;
+            color: #393939;
+            text-decoration: underline;
+            text-decoration-color: #e8ac3f;
+            text-underline-offset: 0.06rem;
+        }
+        .process-line {
+            margin-top: 0.16rem;
+            font-size: 0.32rem;
+            color: #53595e;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .process-text { color: #868686; white-space: normal; }
         mjx-container { display: block !important; text-align: left !important; margin: 0 !important; }
     </style>
 </head>
@@ -100,6 +157,10 @@
     <div id="formula"></div>
     <div id="method"></div>
     <div id="result"></div>
+    <div id="process" class="hidden">
+        <div class="process-head"><span>解决过程</span></div>
+        <div id="processSteps"></div>
+    </div>
     <div id="tip" class="hidden">
         <span id="tipMark" class="tip-mark"></span>
         <div id="tipContent" class="tip-content"></div>

@@ -102,6 +102,19 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
     fun evaluateCurrentAsLatex(): String = engine.evaluateAsLatex(formula)
 
     /**
+     * 结果页「解决过程」要的步骤 JSON。
+     *
+     * 参考实现是把这个串发给服务器、由服务器算好回传；服务下线后改成本地算：
+     * 内核里的解方程 trace 发点（`Solve / Roots / QuarticSolver`）已经能给出
+     * 移项、因式分解、求根公式、配方这些中间结果，[SolveSteps] 负责整理。
+     * 拿不到步骤（不是多项式方程）时返回 null，结果页不显示过程区。
+     */
+    fun processSteps(method: Method): String? = when (method) {
+        Method.Solve, Method.Solve2 -> SolveSteps.buildJson(engine, formula, lastFormula, method)
+        else -> null
+    }
+
+    /**
      * 输入停顿时的自动结果预览。
      *
      * 只有**不含任何未知数**的常量表达式才会给预览——含未知数的式子交给方法按钮，

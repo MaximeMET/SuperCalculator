@@ -171,6 +171,27 @@ $engineText = Edit-SourceOnce $engineText $anchorEval $addedEval "EvalEngine/sor
 
 # 补丁 4（TeXFunction 用花括号）走 tools/symja-patches 的文件覆盖，见上面 Copy-Item。
 
+# ---- 补丁 5：F 增加 SolveInEquality 符号 ----
+# 参考实现的分支多了 core/computeprocess 一整包（解方程过程），那份代码里
+# ComputeProcessFactory / SolveInequalityComputeProcess 会引用 F.SolveInEquality。
+# 我们只搬它的方程过程，不等式的过程暂不走这条链，但符号得先有，否则编译不过。
+$fSource = Join-Path $root "matheclipse-core/src/main/java/org/matheclipse/core/expression/F.java"
+$fText = Normalize-Lf ([System.IO.File]::ReadAllText($fSource))
+$anchorSolve = "`tpublic final static ISymbol Solve = initFinalSymbol(Config.PARSER_USE_LOWERCASE_SYMBOLS ? ""solve"" : ""Solve"");`n"
+$replSolve = $anchorSolve +
+    "`tpublic final static ISymbol SolveInEquality = initFinalSymbol(`n" +
+    "`t`t`tConfig.PARSER_USE_LOWERCASE_SYMBOLS ? ""solveinequality"" : ""SolveInEquality"");`n"
+$fText = Edit-SourceOnce $fText $anchorSolve $replSolve "F/SolveInEquality"
+[System.IO.File]::WriteAllText($fSource, $fText)
+
+# ---- 补丁 6：解方程过程的 trace 发点 + 记账本 ----
+# Solve / Roots / QuarticSolver 里按点插入 `getStepListener().add(...)`，
+# 让 evalTrace 能把「度数、因式分解、求根公式、配方、高斯消元」这些中间结果
+# 记进 trace 列表；TraceStack 收到发点时顺手写进 StepJournal，
+# engine 模块的 SolveSteps 再把它整理成结果页的解题步骤。
+python (Join-Path $PSScriptRoot "patch-symja-trace.py") $root
+if ($LASTEXITCODE -ne 0) { throw "patch-symja-trace.py 失败" }
+
 Write-Host "编译 ..."
 New-Item -ItemType Directory -Force -Path $classes | Out-Null
 $dirs = @(
