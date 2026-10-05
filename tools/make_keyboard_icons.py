@@ -581,8 +581,8 @@ LOG_SIZE = 42.0
 #: 原版 log 位图：基线 y≈27，两块分别是 14..26 和 4..28，即都坐在基线上方。
 LOG_BASE_SLOT = (12.0, 13.0)
 LOG_ARG_SLOT = (20.0, 25.0)
-#: 比较号（< > ≤ ≥）：自绘，笔画宽度与数字主干一致。
-COMPARE_STROKE = 5.0
+#: 比较号（< > ≤ ≥）：自绘，笔画宽度按原版位图量（约 4px，≈2dp）。
+COMPARE_STROKE = 4.2
 
 
 def _tight_specs(size, texts, fill=None, extra_slots=None):
@@ -650,21 +650,29 @@ def _thick_polyline(points, width):
 
 
 def _build_compare_paths(kind):
-    """比较号：折线 + 横杠，统一笔画宽度（字形版的 ≤/≥ 横线天生偏细）。"""
+    """比较号：折线 + 横杠，形状按原版位图来。
+
+    原版 less/greater 是 26×27、le/ge 是 27×29，折线几乎占满画布（半角约 28°），
+    ≤/≥ 的横杠压在最底下、通宽，和折线一样粗（4px）。早期版本折线只有 15px 高、
+    画布却按 34 高留白，看起来明显偏小（用户对照原版报过）。
+    """
     left = kind in ("less", "le")
-    top = (19.5, 10.5) if left else (5.5, 10.5)
-    mid = (5.5, 18.0) if left else (19.5, 18.0)
-    bottom = (19.5, 25.5) if left else (5.5, 25.5)
-    paths = [_thick_polyline([top, mid, bottom], COMPARE_STROKE)]
-    if kind in ("le", "ge"):
-        paths.append(_thick_polyline([(5.5, 30.0), (19.5, 30.0)], COMPARE_STROKE))
+    if kind in ("less", "greater"):
+        w, top, apex, bottom, bar_y = 26.0, (24.0, 2.6), (2.6, 13.5), (24.0, 24.4), None
+    else:
+        w, top, apex, bottom, bar_y = 27.0, (25.4, 1.85), (3.5, 11.0), (25.4, 20.15), 26.8
+    if not left:
+        top, apex, bottom = (w - top[0], top[1]), (w - apex[0], apex[1]), (w - bottom[0], bottom[1])
+    paths = [_thick_polyline([top, apex, bottom], COMPARE_STROKE)]
+    if bar_y is not None:
+        paths.append(_thick_polyline([(0.6, bar_y), (w - 0.6, bar_y)], COMPARE_STROKE))
     return paths
 
 
 def compare_icons():
-    canvas = (25, 34)
     specs = {}
     for kind in ("less", "greater", "le", "ge"):
+        canvas = (26, 27) if kind in ("less", "greater") else (27, 29)
         # 自绘几何直接按填充多边形写（build_icon 里两条元素的项就是纯色填充）
         specs[kind] = dict(
             canvas=canvas,
