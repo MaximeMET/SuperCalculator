@@ -203,45 +203,90 @@ class Shaper:
 # 节点：("t", text) / ("sub", text) / ("sup", text) / ("seq", [节点...]) / ("frac", 上, 下)
 #       / ("grid", [[左上, 右上], [左下, 右下]])
 
-SUB_SCALE = 0.62
-SUB_DROP = 0.16
-SUP_RISE = 0.46
-FRAC_SCALE = 0.74
+
+class LayoutProfile:
+    """上下标 / 分式的排版参数（相对基准字号的比例）。
+
+    字号规则只有两条，避免"层层相乘"：
+      1. 正文字号 = 基准字号（分式的分子分母也算正文，见 frac_scale）；
+      2. 上下标字号 = 基准字号 × script_scale，**不再乘所在层的缩放**——
+         所以"分子里的上标"和"单行里的上标"永远同一字号。
+    """
+
+    def __init__(self, script_scale, sub_drop, sup_rise, frac_scale,
+                 frac_bar_y, frac_gap, frac_bar_h):
+        #: 上下标字号比例。0.62 ≈ 字体自带上标字符的设计比例（Noto Sans SC 里
+        #: "²" 的墨迹高 45px，全尺寸 "2" 是 74.6px，比值 0.60）。
+        self.script_scale = script_scale
+        self.sub_drop = sub_drop
+        self.sup_rise = sup_rise
+        #: 分式分子/分母的字号比例。函数页用 1.0：分子里的 y 必须和单行的 y 一样大。
+        self.frac_scale = frac_scale
+        #: 分数线相对基线的位置（负值 = 基线以上）。0.369 是等号/加号的中心高度，
+        #: 也就是数学排版里的轴线（axis），分数线压在这条线上最规范。
+        self.frac_bar_y = frac_bar_y
+        self.frac_gap = frac_gap
+        self.frac_bar_h = frac_bar_h
+
+
+# 普通键（log₂、x²、A_P 这些）沿用原来的比例。
+SCRIPT_PROFILE = LayoutProfile(
+    script_scale=0.62, sub_drop=0.16, sup_rise=0.46,
+    frac_scale=0.74, frac_bar_y=-0.30, frac_gap=0.10, frac_bar_h=0.05,
+)
+
+# 「函数」页 13 个公式：分子分母和单行正文一个字号（原版这几处是缩小的，
+# 用户要求比原版更整齐）。上下标仍按 script_scale 缩小——这是数学排版的惯例，
+# 关键是它在 13 个图标里处处一致。
+# 全尺寸的分子分母比原来高，分数线要往上挪到轴线（-0.369），缝隙也要比
+# 普通键宽一点，否则会和分数线贴住。
+UNIFORM_PROFILE = LayoutProfile(
+    script_scale=0.62, sub_drop=0.16, sup_rise=0.46,
+    frac_scale=1.0, frac_bar_y=-0.369, frac_gap=0.15, frac_bar_h=0.05,
+)
 
 # 「函数」页 13 个公式的统一字号（单位：画布里的 px，1px = 0.5dp）。
 # 27px ÷（首字母 y 在 size=100 时的墨迹高 77.7px）≈ 34.7。
 FORMULA_SIZE = 34.7
 
 
-def node_layout(sha, node, size):
-    """把节点排版到“基线 y=0、起点 x=0”的坐标系，返回 (cmds 列表, advance, bbox)。"""
+def node_layout(sha, node, size, profile=SCRIPT_PROFILE, ctx=1.0):
+    """把节点排版到“基线 y=0、起点 x=0”的坐标系，返回 (cmds 列表, advance, bbox)。
+
+    size 是整个图标正文的基准字号；ctx 是当前所在层相对正文的缩放
+    （分式的分子/分母会带一个 frac_scale）。上下标只按基准字号算，
+    不乘 ctx——这是"分子的上标和单行的上标字号统一"的保证。
+    """
     kind = node[0]
     if kind == "t":
-        tracking = (node[2] if len(node) > 2 else 0.0) * size
-        cmds, adv = sha.run(node[1], size, tracking=tracking)
+        em = size * ctx
+        tracking = (node[2] if len(node) > 2 else 0.0) * em
+        cmds, adv = sha.run(node[1], em, tracking=tracking)
         return cmds, adv, None
     if kind in ("sub", "sup"):
-        small = size * SUB_SCALE
-        dy = size * (SUB_DROP if kind == "sub" else -SUP_RISE)
+        small = size * profile.script_scale
+        dy = size * ctx * (profile.sub_drop if kind == "sub" else -profile.sup_rise)
         cmds, adv = sha.run(node[1], small, y=dy)
         return cmds, adv, None
     if kind == "seq":
         all_cmds, x = [], 0.0
         for part in node[1]:
-            cmds, adv, _ = node_layout(sha, part, size)
+            cmds, adv, _ = node_layout(sha, part, size, profile, ctx)
             all_cmds += transform_group(cmds, 1, x, 0)
             x += adv
         return all_cmds, x, None
     if kind == "frac":
-        small = size * FRAC_SCALE
+        inner = ctx * profile.frac_scale
         num, den = node[1], node[2]
-        num_cmds, _, _ = node_layout(sha, num, small)
-        den_cmds, _, _ = node_layout(sha, den, small)
+        num_cmds, _, _ = node_layout(sha, num, size, profile, inner)
+        den_cmds, _, _ = node_layout(sha, den, size, profile, inner)
         nb = union_bbox(num_cmds)
         db = union_bbox(den_cmds)
         w = max(nb[2] - nb[0], db[2] - db[0])
-        bar_y = -size * 0.30
-        gap = size * 0.10
+        # 分数线、缝隙按**当前层的正文尺寸**走，不跟分子分母的缩放
+        em = size * ctx
+        bar_y = em * profile.frac_bar_y
+        gap = em * profile.frac_gap
         # 分子贴在横线上方，分母贴在下方，整体水平居中
         num_dx = (w - (nb[2] - nb[0])) / 2 - nb[0]
         den_dx = (w - (db[2] - db[0])) / 2 - db[0]
@@ -253,7 +298,7 @@ def node_layout(sha, node, size):
         # 矢量图标最终是按 fillColor 填充的，零面积的线会被光栅化成「什么都没有」
         # （反比例函数、椭圆、双曲线那几个键的分数线就是这么丢的）。
         # 粗细细和 Noto 字形的横画接近，缩放后在图标里大约 1dp。
-        bar_h = size * 0.05
+        bar_h = size * profile.frac_bar_h
         cmds += [("M", [0.0, bar_y - bar_h / 2]), ("L", [w, bar_y - bar_h / 2]),
                  ("L", [w, bar_y + bar_h / 2]), ("L", [0.0, bar_y + bar_h / 2]), ("Z", [])]
         return cmds, w, None
@@ -609,12 +654,14 @@ def build_icon(sha, name, spec, color_override=None):
     contain = (bool(spec.get("slots")) or bool(spec.get("paths"))
                or len(spec.get("glyph", [])) > 1)
     noscale = bool(spec.get("noscale"))
+    # 「函数」页 13 个公式（目前唯一用 noscale 的一组）走统一字号排版。
+    profile = UNIFORM_PROFILE if noscale else SCRIPT_PROFILE
     for node, box, color in spec.get("glyph", []):
         if color_override:
             color = color_override
         if noscale:
             # 统一字号：按 FORMULA_SIZE 排版，只居中不缩放
-            cmds, _, _ = node_layout(sha, node, FORMULA_SIZE)
+            cmds, _, _ = node_layout(sha, node, FORMULA_SIZE, profile)
             solids.append((center_in_box(cmds, box), color))
         else:
             cmds, _, _ = node_layout(sha, node, 100.0)
