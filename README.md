@@ -87,6 +87,16 @@ Android 14 起连安装都会被系统拒绝）。目标是**功能与输出对�
 - 应用名仍是「超级计算器」，和原版同名是为了界面一致；想区分就改
   `app/src/main/res/values/strings.xml` 里的 `app_name`。
 
+### 怎么第一时间知道新版本
+
+App 本身不联网，「有没有新版」交给外部渠道来盯——订阅一次，之后自动通知：
+
+- **GitHub 邮件通知**：仓库页点 `Watch` → `Custom` → 只勾 `Releases`；
+- **RSS / Atom**：把 <https://github.com/MaximeMET/SuperCalculator/releases.atom>
+  丢进任意阅读器（Feedly、Inoreader、FreshRSS 之类）；
+- **Obtainium**（安卓）：把仓库地址加进去，它替你盯 Releases，新版直接提示安装；
+- 规则包（积分表、等价无穷小、多项式公式）随版本发布，升级 App 就是升级规则。
+
 APK 用下面这份证书签名，之后的版本也会用同一份，可以用它校验安装包：
 
 ```
