@@ -634,7 +634,9 @@ push 之后还要跑 `pwsh tools/purge-cdn.ps1 -Version N`：jsDelivr 对分支�
 
 清单的 app 段是**发应用版本时人工改**的（`pack-rules.ps1` 只动 rules 段）：
 versionCode / versionName 跟新 Release 对齐，url 固定指 `releases/latest`，
-notes 抄一句 Release 摘要；改完同样要 purge 一次。
+`apkUrl` 指这一版 Release 资产的直链
+（`releases/download/v<版本>/SuperCalculator-<版本>.apk`），notes 抄一句 Release
+摘要；改完同样要 purge 一次。apkUrl 是应用内下载安装用的，填错/缺失只会退回浏览器。
 
 **多项式分解的公式表也进了规则包**（`rules/polynomials.json`）：立方和差、平方差、
 完全平方、十字相乘，加一条兜底「因式分解」。匹配思路和上面两个包不同——公式法认的
