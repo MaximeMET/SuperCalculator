@@ -1,10 +1,10 @@
 {
   "app": {
-    "versionCode": 21,
-    "versionName": "0.1.2-dev19",
+    "versionCode": 2,
+    "versionName": "0.1.1",
     "url": "https://github.com/MaximeMET/SuperCalculator/releases/latest",
-    "apkUrl": "https://raw.githubusercontent.com/MaximeMET/SuperCalculator-update-test/master/SuperCalculator-0.1.2-dev19-local.apk",
-    "notes": "（临时清单，仅用于本机验证应用内下载安装，稍后即还原）"
+    "apkUrl": "https://github.com/MaximeMET/SuperCalculator/releases/download/v0.1.1/SuperCalculator-0.1.1.apk",
+    "notes": "根号横线、键盘第四页分隔线、结果页长公式可拖动、提示圆点裁切、键盘高度兜底等一批细节修复；详见 Release 说明。"
   },
   "rules": {
     "version": 2,
