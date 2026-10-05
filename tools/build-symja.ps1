@@ -192,6 +192,28 @@ $fText = Edit-SourceOnce $fText $anchorSolve $replSolve "F/SolveInEquality"
 python (Join-Path $PSScriptRoot "patch-symja-trace.py") $root
 if ($LASTEXITCODE -ne 0) { throw "patch-symja-trace.py 失败" }
 
+# ---- 补丁 7：Limit 补一条 Sec 特判（重要极限算错的根因）----
+# 用户报「lim x→0 x/sin x 算成 0」——原版算得对，我们算错。根因：洛必达之后
+# 1/cos(x) 会被 Symja 求值成 Sec(x)，而 2016 上游的 evalLimit 只认
+# Sin/Cos/Plus/Times/Power，Sec 落到最后返回 NIL，外层再退回 mapLimit，
+# 得到 `Limit(x)·Limit(csc x)`＝0·∞ 被简化成 0（错的）。
+# 参考实现的分支里多一条 Sec 分支：把极限推进去（Sec(lim x)=Sec(0)=1）。
+$limitSource = Join-Path $root "matheclipse-core/src/main/java/org/matheclipse/core/reflection/system/Limit.java"
+$limitText = Normalize-Lf ([System.IO.File]::ReadAllText($limitSource))
+$anchorSec = "`t`t`t} else if (arg1.isPower()) {`n" +
+             "`t`t`t`treturn powerLimit(arg1, data);`n" +
+             "`t`t`t}`n"
+$replSec = "`t`t`t} else if (arg1.isPower()) {`n" +
+           "`t`t`t`treturn powerLimit(arg1, data);`n" +
+           "`t`t`t} else if (arg1.head().equals(F.Sec) && arg1.size() == 2`n" +
+           "`t`t`t`t`t&& !F.evalQuiet(F.Cos(data.getRule().arg2())).equals(F.C0)) {`n" +
+           "`t`t`t`t// 参考实现的分支：1/cos(x) 经洛必达会变成 Sec(x)，`n" +
+           "`t`t`t`t// 这里把极限推进去（cos(lim) 非 0 时 Sec 连续）。`n" +
+           "`t`t`t`treturn F.unaryAST1(arg1.head(), F.Limit(arg1.arg1(), data.getRule()));`n" +
+           "`t`t`t}`n"
+$limitText = Edit-SourceOnce $limitText $anchorSec $replSec "Limit/Sec"
+[System.IO.File]::WriteAllText($limitSource, $limitText)
+
 Write-Host "编译 ..."
 New-Item -ItemType Directory -Force -Path $classes | Out-Null
 $dirs = @(

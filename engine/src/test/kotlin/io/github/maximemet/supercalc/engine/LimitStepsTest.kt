@@ -36,6 +36,17 @@ class LimitStepsTest {
     }
 
     @Test
+    fun xOverSinXIsCorrectedByNumericCrossCheck() {
+        // Symja 对 x/sinx 直接给 0（错的），对拍后整段过程以 1 收尾
+        val keys = keysOf("Limit(x/Sin(x),x->0)")
+        assertTrue("equivalentInfinitesimal" in keys, "缺少等价无穷小：$keys")
+        assertTrue(
+            textOf("Limit(x/Sin(x),x->0)").trimEnd().endsWith("= 1"),
+            "最终结果没被纠正：${textOf("Limit(x/Sin(x),x->0")}",
+        )
+    }
+
+    @Test
     fun oneMinusCosUsesEquivalentInfinitesimal() {
         val keys = keysOf("Limit((1-Cos(x))/x^2,x->0)")
         assertTrue("equivalentInfinitesimal" in keys, "缺少等价无穷小：$keys")

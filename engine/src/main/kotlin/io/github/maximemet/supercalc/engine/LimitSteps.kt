@@ -57,7 +57,8 @@ object LimitSteps {
         val input = parseLimit(engine, formula) ?: return null
         val finalExpr = engine.evaluateOrNull(engine.parseOrNull(formula))
         val finalLatex = finalLatexOf(engine, formula) ?: return null
-        val finalDouble = evalDouble(finalExpr) ?: numericValue(engine, input) ?: return null
+        // 最终值同样要过一遍数值对拍：Symja 对 `x/sin x` 这类会给出一个错的有限值
+        val finalDouble = LimitFallback.resultNumber(engine, formula, finalExpr) ?: return null
         if (!finalDouble.isFinite()) return null
 
         val bodyTex = engine.toExactLatex(input.body) ?: return null
@@ -119,16 +120,14 @@ object LimitSteps {
         return LimitInput(limit.arg1(), rule.arg1().toString(), rule.arg2())
     }
 
-    /** 与结果页同源的最终结果（精确通道，未求值走 [LimitFallback]）。 */
+    /**
+     * 与结果页同源的最终结果：精确通道 + 数值对拍，未求值走 [LimitFallback] 的改写。
+     * （Symja 对 `lim x→0 x/sinx` 会给 0 这个错值，见 [LimitFallback.resultLatex]。）
+     */
     private fun finalLatexOf(engine: SymjaEngine, formula: String): String? {
         val raw = engine.evaluateAsLatex(formula)
         if (raw.isEmpty()) return null
-        if (raw.contains("\\lim_") || raw.contains("\\text{Limit}") ||
-            raw.contains("indeterminate", ignoreCase = true)
-        ) {
-            return LimitFallback.evaluateUnevaluated(engine, formula)
-        }
-        return raw
+        return LimitFallback.resultLatex(engine, formula, raw)
     }
 
     // ---------- 判型 ----------

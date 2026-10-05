@@ -86,7 +86,74 @@ object LimitFallback {
     }
 
     /**
-     * 极限值：先让引擎精确算（不套 `N(...)`），算不出来再用数值逼近。
+     * 极限的最终结果，带数值对拍。
+     *
+     * Symja 2016 的 `Limit` 规则有**算错**的时候：`Limit(x/Sin(x), x->0)` 直接给 `0`
+     * （正确值 1，实测见 [LimitProbeDiagnosticTest]）。这类结果不是"没求值"，而是
+     * 一个看起来正常的错数——所以在有限极限点上，只要数值逼近拿得到，就把精确值和
+     * 它对比一次：对不上以数值为准（数值通道是"代入小偏移取平均"，在这种点上是可靠的；
+     * 反过来精确通道有已知的规则 bug）。数值拿不到（含符号参数、两侧对不上）时保持原样。
+     *
+     * [exactLatex] 是引擎直接给的 LaTeX（可能是一条没求值的极限式）；返回 null
+     * 表示连数值兜底都没有结果，调用方可以回显原式。
+     */
+    fun resultLatex(engine: SymjaEngine, formula: String, exactLatex: String?): String? = try {
+        val limit = parse(engine, formula)
+        if (limit == null) {
+            // 无穷远点的极限：数值逼近定不了步长（见 [parse] 的注释），只信引擎
+            exactLatex
+        } else {
+            val exact = engine.evaluateOrNull(engine.parseOrNull(formula))
+            val numeric = numericValueAt(engine, limit.body, limit.variable, limit.point, limit.direction)
+            val exactDouble = finiteDouble(exact)
+            when {
+                // 发散：保留引擎的 ±∞ 写法，别拿一个巨大的数值结果顶上去
+                isInfiniteValue(exact) -> exactLatex
+                // 有限精确值和数值吻合（或数值拿不到）：用引擎的排版
+                exactDouble != null && (numeric == null || agrees(exactDouble, numeric)) -> exactLatex
+                // 有限精确值但和数值对不上：引擎算错了，以数值为准
+                exactDouble != null && numeric != null -> LatexText.fromDouble(numeric)
+                // 未求值 / 不定式：先试取对数改写，再退纯数值
+                else -> {
+                    val rewritten = powerRewrite(engine, limit)
+                    val rewrittenValue = finiteDouble(rewritten)
+                    if (rewritten != null && rewrittenValue != null &&
+                        (numeric == null || agrees(rewrittenValue, numeric))
+                    ) {
+                        engine.toLatex(rewritten) ?: exactLatex
+                    } else {
+                        numeric?.let { LatexText.fromDouble(it) } ?: exactLatex
+                    }
+                }
+            }
+        }
+    } catch (e: Exception) {
+        exactLatex
+    } catch (e: StackOverflowError) {
+        exactLatex
+    }
+
+    /**
+     * 极限的数值结果（带同样的对拍），给「解决过程」用。
+     *
+     * 精确值被数值推翻时用数值——`lim x→0 x/sinx` 的过程里 [LimitSteps] 会拿这个值
+     * 当作最终答案来校验等价无穷小替换，不修的话整段过程会朝 0 去凑。
+     */
+    fun resultNumber(engine: SymjaEngine, formula: String, exact: IExpr?): Double? {
+        val limit = parse(engine, formula) ?: return finiteDouble(exact)
+        if (isInfiniteValue(exact)) return null
+        val numeric = numericValueAt(engine, limit.body, limit.variable, limit.point, limit.direction)
+        val exactDouble = finiteDouble(exact)
+        return when {
+            exactDouble != null && (numeric == null || agrees(exactDouble, numeric)) -> exactDouble
+            numeric != null -> numeric
+            else -> exactDouble
+        }
+    }
+
+    /**
+     * 极限值：先让引擎精确算（不套 `N(...)`），算不出来再用数值逼近；
+     * 两边都算得出来但对不上时以数值为准（同 [resultLatex] 的口径）。
      *
      * 绘图页的 y 轴交点、以及「点是否落在曲线上」的判定都走这里。
      */
@@ -96,8 +163,17 @@ object LimitFallback {
         variable: String,
         point: Double,
         direction: Int? = null,
-    ): Double? = finiteDouble(exactLimit(engine, body, variable, point, direction))
-        ?: numericValueAt(engine, body, variable, point, direction)
+    ): Double? {
+        val exact = exactLimit(engine, body, variable, point, direction)
+        if (isInfiniteValue(exact)) return null
+        val numeric = numericValueAt(engine, body, variable, point, direction)
+        val exactDouble = finiteDouble(exact)
+        return when {
+            exactDouble != null && (numeric == null || agrees(exactDouble, numeric)) -> exactDouble
+            numeric != null -> numeric
+            else -> exactDouble
+        }
+    }
 
     /**
      * 精确极限。
@@ -203,6 +279,10 @@ object LimitFallback {
 
     private fun agrees(a: Double, b: Double): Boolean =
         Math.abs(a - b) <= AGREEMENT * maxOf(1.0, Math.abs(a), Math.abs(b))
+
+    /** 引擎给的 ±∞ / 复无穷：这是"发散"的答案，不能用数值结果顶掉。 */
+    private fun isInfiniteValue(expr: IExpr?): Boolean =
+        expr != null && (expr.isInfinity || expr.isNegativeInfinity || expr.isDirectedInfinity)
 
     /**
      * 是实数、有限，才算拿到了结果。

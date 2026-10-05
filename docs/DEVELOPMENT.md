@@ -494,6 +494,19 @@ python tools/make_result_icons.py
 | `core/computeprocess` | 参考实现里「解方程过程」的一整包（`StepJournal`、`ProcessName`、各类求解策略），见下一节 |
 | `Solve` / `Roots` / `QuarticSolver` / `TraceStack` | 解方程过程要用的一批发点（度数、因式分解、系数、求根公式、配方），`TraceStack` 收到后顺手记进 `StepJournal` |
 
+#### 极限：`Limit` 少了一条 `Sec` 分支（用户报的「重要极限算错」）
+
+用户拿 `lim x→0 x/sinx` 试出来的：原版给 1，我们给 0。追下去发现根因在**上游**——
+洛必达之后 `1/cos(x)` 会被 Symja 求值成 `Sec(x)`，而 2016 上游的 `evalLimit`
+只认 `Sin/Cos/Plus/Times/Power` 五个形状，`Sec` 落到最后返回 `NIL`；外层再退回
+`timesLimit` 的 `mapLimit` 兜底，得到 `Limit(x)·Limit(csc x)`，Symja 把 `0·∞`
+简化成 `0`——错误答案就这么来的。参考实现的分支里多一条 `Sec` 分支
+（把极限推进去，`cos(limit)≠0` 时 `Sec` 连续），补上之后 `Limit(x/Sin(x),x->0)`
+直接给 1，`x/Tan(x)` 同理。
+
+这条补丁在 `tools/build-symja.ps1` 的「补丁 7」，重建内核即生效；回归用例在
+`engine/src/test/.../ImportantLimitsTest.kt`。
+
 ### 解题步骤：过程引擎搬回本地
 
 参考 App 的结果页会附一段「解决过程」，但那是**服务器**算的：
