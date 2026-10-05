@@ -16,8 +16,12 @@ import org.matheclipse.core.interfaces.IExpr
  */
 object IntegrateSteps {
 
-    /** 回验采样点，避开常见奇点。 */
-    private val SAMPLE_POINTS = doubleArrayOf(0.6, 1.4, 2.3, 3.7)
+    /**
+     * 回验采样点：避开 0、±1、±2 这些常见奇点，同时留几个落在 (-1,1) 里的点——
+     * arcsin / arccos / artanh 型公式（∫dx/√(1-x²)、∫arcsin x dx…）只在 (-1,1)
+     * 上有实数值，点全取大了这些规则会一条都验不过。
+     */
+    private val SAMPLE_POINTS = doubleArrayOf(0.6, 0.3, 1.4, 2.3, 3.7)
 
     fun buildJson(
         engine: SymjaEngine,
@@ -263,6 +267,7 @@ object IntegrateSteps {
     private fun rulePackNote(engine: SymjaEngine, variable: String, core: IExpr): String? {
         for (rule in IntegralRulePack.rules) {
             val claimed = IntegralRulePack.apply(engine, core, rule, variable) ?: continue
+            println("DBG pack ${rule.id} claimed=$claimed verified=${verifies(engine, core, claimed, variable)}")
             if (!verifies(engine, core, claimed, variable)) continue
             return rule.note
         }

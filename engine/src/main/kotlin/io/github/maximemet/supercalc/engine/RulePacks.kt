@@ -9,14 +9,15 @@ import java.security.spec.X509EncodedKeySpec
 /**
  * 规则包总入口：内置包 + 可选的"手动更新包"。
  *
- * 三张表（积分 / 等价无穷小 / 多项式）默认随 App 打包。用户在设置里点
+ * 四张表（积分 / 求导 / 等价无穷小 / 多项式）默认随 App 打包。用户在设置里点
  * 「检查更新」、下载到合并包并**验签通过**之后，交给 [installUpdate]，
  * 之后各表优先读这份数据；验签失败、解析失败、版本比内置的还旧，
  * 都退回内置包——更新通道坏掉不影响使用，更不会执行来路不明的规则。
  *
  * 合并包格式（`updates/rules-vN.json`，由 `tools/pack-rules.ps1` 生成）：
  *
- *     {"version": 2, "integrals": [...], "equivalents": [...], "polynomials": [...]}
+ *     {"version": 3, "integrals": [...], "derivatives": [...],
+ *      "equivalents": [...], "polynomials": [...]}
  *
  * 签名对象是 **JSON 文本的 UTF-8 字节**，算法 ECDSA P-256 / SHA-256，DER 签名
  * （`SHA256withECDSA`）。公钥写死在下面；私钥在私有子模块
@@ -24,14 +25,21 @@ import java.security.spec.X509EncodedKeySpec
  */
 object RulePacks {
 
-    /** 内置规则包的版本。改了 `rules/` 下的 JSON 就把它 +1，并同步发布新的合并包。 */
-    const val BUNDLED_VERSION = 1
+    /**
+     * 内置规则包的版本。改了 `rules/` 下的 JSON 就把它 +1，并同步发布新的合并包。
+     *
+     * v3 起：等价无穷小/求导/积分三张表扩容，新的匹配语义（交换律按项匹配、负数绑定、
+     * 常数与正数校验）只有本版 App 认识——发布包会跳过标了 `needsParser: 2` 的规则，
+     * 那些规则随 App 内置分发，不经过老版本的解析器。
+     */
+    const val BUNDLED_VERSION = 3
 
     private const val PUBLIC_KEY_B64 =
         "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaYacHVaYTtso6b/YYTefxRwwr80E" +
             "+gyFCFfacUt4ZyHeuTBau81LdbnrA5aCnzhUpovlno18vRdZ7Cs7n3koOQ=="
 
-    private val KNOWN_SECTIONS = listOf("integrals", "equivalents", "polynomials")
+    private val KNOWN_SECTIONS =
+        listOf("integrals", "derivatives", "equivalents", "polynomials")
 
     private val lock = Any()
     private var overridePack: Map<String, Any?>? = null
@@ -102,6 +110,7 @@ object RulePacks {
 
     private fun invalidatePacks() {
         IntegralRulePack.invalidate()
+        DerivativeRulePack.invalidate()
         LimitRulePack.invalidate()
         PolynomialRulePack.invalidate()
     }

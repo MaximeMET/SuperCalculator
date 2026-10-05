@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "comment": "等价无穷小替换表（u→0 时 f(u) ~ g(u)）。match 整串匹配，result 是替换后的表达式模板，note 是写进步骤的文案（{u} 会被换成实际绑定的表达式）。复合形状 1-cos u、e^u-1 带加减号，结构性匹配太脆，留在 LimitSteps 代码里。",
+  "version": 2,
+  "comment": "等价无穷小替换表（u→0 时 f(u) ~ g(u)）。match 整串匹配（Plus/Times 按项匹配、不看顺序），result 是替换后的表达式模板，note 是写进步骤的文案（{u}、{a} 会被换成实际绑定）。u 是趋于 0 的那个内层表达式，其它占位符（a_ 这类）必须与极限变量无关——底数/指数带 x 的形状不认（见 LimitRulePack.apply）。",
   "rules": [
     {
       "id": "sin",
@@ -45,10 +45,79 @@
       "note": "arsh({u}) ~ {u}"
     },
     {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "u_",
+      "note": "arth({u}) ~ {u}"
+    },
+    {
       "id": "ln1pu",
       "match": "Log(1+u_)",
       "result": "u_",
       "note": "ln(1+{u}) ~ {u}"
+    },
+    {
+      "id": "loga1pu",
+      "match": "Log(a_,1+u_)",
+      "result": "u_/Log(a_)",
+      "needsParser": 2,
+      "note": "log_{a}(1+{u}) ~ {u}/ln {a}"
+    },
+    {
+      "id": "expm1",
+      "match": "E^u_-1",
+      "result": "u_",
+      "note": "e^({u})-1 ~ {u}"
+    },
+    {
+      "id": "aexpm1",
+      "match": "a_^u_-1",
+      "result": "u_*Log(a_)",
+      "needsParser": 2,
+      "note": "{a}^({u})-1 ~ {u}·ln {a}"
+    },
+    {
+      "id": "pow1p",
+      "match": "(1+u_)^(a_)-1",
+      "result": "a_*u_",
+      "needsParser": 2,
+      "note": "(1+{u})^({a})-1 ~ {a}·{u}"
+    },
+    {
+      "id": "oneminuscos",
+      "match": "1-Cos(u_)",
+      "result": "u_^2/2",
+      "note": "1-cos({u}) ~ ({u})²/2"
+    },
+    {
+      "id": "cosminus1",
+      "match": "Cos(u_)-1",
+      "result": "-u_^2/2",
+      "note": "cos({u})-1 ~ -({u})²/2"
+    },
+    {
+      "id": "xminussin",
+      "match": "u_-Sin(u_)",
+      "result": "u_^3/6",
+      "note": "{u}-sin({u}) ~ ({u})³/6"
+    },
+    {
+      "id": "tanminusx",
+      "match": "Tan(u_)-u_",
+      "result": "u_^3/3",
+      "note": "tan({u})-{u} ~ ({u})³/3"
+    },
+    {
+      "id": "tanminussin",
+      "match": "Tan(u_)-Sin(u_)",
+      "result": "u_^3/2",
+      "note": "tan({u})-sin({u}) ~ ({u})³/2"
+    },
+    {
+      "id": "xminusln1p",
+      "match": "u_-Log(1+u_)",
+      "result": "u_^2/2",
+      "note": "{u}-ln(1+{u}) ~ ({u})²/2"
     }
   ]
 }

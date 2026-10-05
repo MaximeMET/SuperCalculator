@@ -1,0 +1,497 @@
+{
+  "version": 3,
+  "generated": "2026-10-05",
+  "comment": "由 tools/pack-rules.ps1 从 engine/src/main/resources/rules/ 生成；验签通过才会被 App 安装。",
+  "integrals": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "-Cos(u_)",
+      "note": "基本积分公式：∫sin x dx = -cos x"
+    },
+    {
+      "id": "cos",
+      "match": "Cos(u_)",
+      "result": "Sin(u_)",
+      "note": "基本积分公式：∫cos x dx = sin x"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "-Log(Cos(u_))",
+      "note": "基本积分公式：∫tan x dx = -ln|cos x|"
+    },
+    {
+      "id": "cot",
+      "match": "Cot(u_)",
+      "result": "Log(Sin(u_))",
+      "note": "基本积分公式：∫cot x dx = ln|sin x|"
+    },
+    {
+      "id": "sec",
+      "match": "Sec(u_)",
+      "result": "Log(Sec(u_)+Tan(u_))",
+      "note": "基本积分公式：∫sec x dx = ln|sec x + tan x|"
+    },
+    {
+      "id": "csc",
+      "match": "Csc(u_)",
+      "result": "-Log(Csc(u_)+Cot(u_))",
+      "note": "基本积分公式：∫csc x dx = -ln|csc x + cot x|"
+    },
+    {
+      "id": "sec2",
+      "match": "Sec(u_)^2",
+      "result": "Tan(u_)",
+      "note": "基本积分公式：∫sec²x dx = tan x"
+    },
+    {
+      "id": "csc2",
+      "match": "Csc(u_)^2",
+      "result": "-Cot(u_)",
+      "note": "基本积分公式：∫csc²x dx = -cot x"
+    },
+    {
+      "id": "sectan",
+      "match": "Sec(u_)*Tan(u_)",
+      "result": "Sec(u_)",
+      "note": "基本积分公式：∫sec x·tan x dx = sec x"
+    },
+    {
+      "id": "csccot",
+      "match": "Csc(u_)*Cot(u_)",
+      "result": "-Csc(u_)",
+      "note": "基本积分公式：∫csc x·cot x dx = -csc x"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "Cosh(u_)",
+      "note": "基本积分公式：∫sh x dx = ch x"
+    },
+    {
+      "id": "cosh",
+      "match": "Cosh(u_)",
+      "result": "Sinh(u_)",
+      "note": "基本积分公式：∫ch x dx = sh x"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "Log(Cosh(u_))",
+      "note": "基本积分公式：∫th x dx = ln ch x"
+    },
+    {
+      "id": "coth",
+      "match": "Coth(u_)",
+      "result": "Log(Sinh(u_))",
+      "note": "基本积分公式：∫cth x dx = ln|sh x|"
+    },
+    {
+      "id": "log",
+      "match": "Log(u_)",
+      "result": "u_*Log(u_)-u_",
+      "note": "基本积分公式：∫ln x dx = x·ln x - x"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_*ArcTan(u_)-Log(1+u_^2)/2",
+      "note": "基本积分公式：∫arctan x dx = x·arctan x - ½ln(1+x²)"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "u_*ArcSin(u_)+Sqrt(1-u_^2)",
+      "note": "基本积分公式：∫arcsin x dx = x·arcsin x + √(1-x²)"
+    },
+    {
+      "id": "arccos",
+      "match": "ArcCos(u_)",
+      "result": "u_*ArcCos(u_)-Sqrt(1-u_^2)",
+      "note": "基本积分公式：∫arccos x dx = x·arccos x - √(1-x²)"
+    },
+    {
+      "id": "arccot",
+      "match": "ArcCot(u_)",
+      "result": "u_*ArcCot(u_)+Log(1+u_^2)/2",
+      "note": "基本积分公式：∫arccot x dx = x·arccot x + ½ln(1+x²)"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "u_*ArcSinh(u_)-Sqrt(1+u_^2)",
+      "note": "基本积分公式：∫arsh x dx = x·arsh x - √(1+x²)"
+    },
+    {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "u_*ArcTanh(u_)+Log(1-u_^2)/2",
+      "note": "基本积分公式：∫arth x dx = x·arth x + ½ln(1-x²)"
+    },
+    {
+      "id": "sqrt1px2",
+      "match": "Sqrt(1+u_^2)",
+      "result": "(u_*Sqrt(1+u_^2)+Log(u_+Sqrt(1+u_^2)))/2",
+      "note": "基本积分公式：∫√(1+x²)dx = ½[x√(1+x²)+ln(x+√(1+x²))]"
+    },
+    {
+      "id": "sqrt1mx2",
+      "match": "Sqrt(1-u_^2)",
+      "result": "(u_*Sqrt(1-u_^2)+ArcSin(u_))/2",
+      "note": "基本积分公式：∫√(1-x²)dx = ½[x√(1-x²)+arcsin x]"
+    },
+    {
+      "id": "recip1px2",
+      "match": "1/(1+u_^2)",
+      "result": "ArcTan(u_)",
+      "note": "基本积分公式：∫dx/(1+x²) = arctan x"
+    },
+    {
+      "id": "recip1mx2sqrt",
+      "match": "1/Sqrt(1-u_^2)",
+      "result": "ArcSin(u_)",
+      "note": "基本积分公式：∫dx/√(1-x²) = arcsin x"
+    },
+    {
+      "id": "expbase",
+      "match": "E^u_",
+      "result": "E^u_",
+      "note": "基本积分公式：∫eˣdx = eˣ"
+    },
+    {
+      "id": "ax",
+      "match": "a_^u_",
+      "result": "a_^u_/Log(a_)",
+      "note": "基本积分公式：∫aˣdx = aˣ/ln a（a>0）"
+    },
+    {
+      "id": "recipx2ma2",
+      "match": "1/(u_^2-a_)",
+      "result": "Log((u_-Sqrt(a_))/(u_+Sqrt(a_)))/(2*Sqrt(a_))",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫dx/(x²-c) = (1/2√c)·ln|(x-√c)/(x+√c)|"
+    },
+    {
+      "id": "sqrtx2pa2",
+      "match": "Sqrt(u_^2+a_)",
+      "result": "(u_*Sqrt(u_^2+a_)+a_*Log(u_+Sqrt(u_^2+a_)))/2",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫√(x²+c)dx = ½[x√(x²+c)+c·ln(x+√(x²+c))]"
+    },
+    {
+      "id": "recipSqrtx2pa2",
+      "match": "1/Sqrt(u_^2+a_)",
+      "result": "Log(u_+Sqrt(u_^2+a_))",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫dx/√(x²+c) = ln(x+√(x²+c))"
+    },
+    {
+      "id": "sqrta2mx2",
+      "match": "Sqrt(a_-u_^2)",
+      "result": "(u_*Sqrt(a_-u_^2)+a_*ArcSin(u_/Sqrt(a_)))/2",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫√(c-x²)dx = ½[x√(c-x²)+c·arcsin(x/√c)]"
+    },
+    {
+      "id": "recipSqrta2mx2",
+      "match": "1/Sqrt(a_-u_^2)",
+      "result": "ArcSin(u_/Sqrt(a_))",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫dx/√(c-x²) = arcsin(x/√c)"
+    },
+    {
+      "id": "recipa2mx2",
+      "match": "1/(a_-u_^2)",
+      "result": "ArcTanh(u_/Sqrt(a_))/Sqrt(a_)",
+      "positive": [
+        "a"
+      ],
+      "note": "基本积分公式：∫dx/(c-x²) = (1/√c)·arth(x/√c) = (1/2√c)·ln|(√c+x)/(√c-x)|"
+    }
+  ],
+  "derivatives": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "Cos(u_)",
+      "latex": "\\cos\\left({u}\\right)",
+      "note": "基本求导公式：(sin u)' = cos u"
+    },
+    {
+      "id": "cos",
+      "match": "Cos(u_)",
+      "result": "-Sin(u_)",
+      "latex": "-\\sin\\left({u}\\right)",
+      "note": "基本求导公式：(cos u)' = -sin u"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "Sec(u_)^2",
+      "latex": "\\sec^{2}\\left({u}\\right)",
+      "note": "基本求导公式：(tan u)' = sec²u"
+    },
+    {
+      "id": "cot",
+      "match": "Cot(u_)",
+      "result": "-Csc(u_)^2",
+      "latex": "-\\csc^{2}\\left({u}\\right)",
+      "note": "基本求导公式：(cot u)' = -csc²u"
+    },
+    {
+      "id": "sec",
+      "match": "Sec(u_)",
+      "result": "Sec(u_)*Tan(u_)",
+      "latex": "\\sec\\left({u}\\right)\\tan\\left({u}\\right)",
+      "note": "基本求导公式：(sec u)' = sec u·tan u"
+    },
+    {
+      "id": "csc",
+      "match": "Csc(u_)",
+      "result": "-Cot(u_)*Csc(u_)",
+      "latex": "-\\cot\\left({u}\\right)\\csc\\left({u}\\right)",
+      "note": "基本求导公式：(csc u)' = -csc u·cot u"
+    },
+    {
+      "id": "log",
+      "match": "Log(u_)",
+      "result": "1/u_",
+      "latex": "\\frac{1}{{u}}",
+      "note": "基本求导公式：(ln u)' = 1/u"
+    },
+    {
+      "id": "logbase",
+      "match": "Log(a_,u_)",
+      "result": "1/(u_*Log(a_))",
+      "latex": "\\frac{1}{{u}\\,\\ln {a}}",
+      "note": "换底公式求导：(log_a u)' = 1/(u·ln a)"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "1/Sqrt(1-u_^2)",
+      "latex": "\\frac{1}{\\sqrt{1-\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arcsin u)' = 1/√(1-u²)"
+    },
+    {
+      "id": "arccos",
+      "match": "ArcCos(u_)",
+      "result": "-1/Sqrt(1-u_^2)",
+      "latex": "-\\frac{1}{\\sqrt{1-\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arccos u)' = -1/√(1-u²)"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "1/(1+u_^2)",
+      "latex": "\\frac{1}{1+\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arctan u)' = 1/(1+u²)"
+    },
+    {
+      "id": "arccot",
+      "match": "ArcCot(u_)",
+      "result": "-1/(1+u_^2)",
+      "latex": "-\\frac{1}{1+\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arccot u)' = -1/(1+u²)"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "Cosh(u_)",
+      "latex": "\\cosh\\left({u}\\right)",
+      "note": "基本求导公式：(sh u)' = ch u"
+    },
+    {
+      "id": "cosh",
+      "match": "Cosh(u_)",
+      "result": "Sinh(u_)",
+      "latex": "\\sinh\\left({u}\\right)",
+      "note": "基本求导公式：(ch u)' = sh u"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "1/Cosh(u_)^2",
+      "latex": "\\frac{1}{\\cosh^{2}\\left({u}\\right)}",
+      "note": "基本求导公式：(th u)' = 1/ch²u"
+    },
+    {
+      "id": "coth",
+      "match": "Coth(u_)",
+      "result": "-1/Sinh(u_)^2",
+      "latex": "-\\frac{1}{\\sinh^{2}\\left({u}\\right)}",
+      "note": "基本求导公式：(cth u)' = -1/sh²u"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "1/Sqrt(1+u_^2)",
+      "latex": "\\frac{1}{\\sqrt{1+\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arsh u)' = 1/√(1+u²)"
+    },
+    {
+      "id": "arccosh",
+      "match": "ArcCosh(u_)",
+      "result": "1/Sqrt(u_^2-1)",
+      "latex": "\\frac{1}{\\sqrt{\\left({u}\\right)^{2}-1}}",
+      "note": "基本求导公式：(arch u)' = 1/√(u²-1)"
+    },
+    {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "1/(1-u_^2)",
+      "latex": "\\frac{1}{1-\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arth u)' = 1/(1-u²)"
+    },
+    {
+      "id": "arccoth",
+      "match": "ArcCoth(u_)",
+      "result": "1/(1-u_^2)",
+      "latex": "\\frac{1}{1-\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arcth u)' = 1/(1-u²)"
+    }
+  ],
+  "equivalents": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "u_",
+      "note": "sin({u}) ~ {u}"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "u_",
+      "note": "tan({u}) ~ {u}"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "u_",
+      "note": "arcsin({u}) ~ {u}"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_",
+      "note": "arctan({u}) ~ {u}"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "u_",
+      "note": "sh({u}) ~ {u}"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "u_",
+      "note": "th({u}) ~ {u}"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "u_",
+      "note": "arsh({u}) ~ {u}"
+    },
+    {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "u_",
+      "note": "arth({u}) ~ {u}"
+    },
+    {
+      "id": "ln1pu",
+      "match": "Log(1+u_)",
+      "result": "u_",
+      "note": "ln(1+{u}) ~ {u}"
+    },
+    {
+      "id": "expm1",
+      "match": "E^u_-1",
+      "result": "u_",
+      "note": "e^({u})-1 ~ {u}"
+    },
+    {
+      "id": "oneminuscos",
+      "match": "1-Cos(u_)",
+      "result": "u_^2/2",
+      "note": "1-cos({u}) ~ ({u})²/2"
+    },
+    {
+      "id": "cosminus1",
+      "match": "Cos(u_)-1",
+      "result": "-u_^2/2",
+      "note": "cos({u})-1 ~ -({u})²/2"
+    },
+    {
+      "id": "xminussin",
+      "match": "u_-Sin(u_)",
+      "result": "u_^3/6",
+      "note": "{u}-sin({u}) ~ ({u})³/6"
+    },
+    {
+      "id": "tanminusx",
+      "match": "Tan(u_)-u_",
+      "result": "u_^3/3",
+      "note": "tan({u})-{u} ~ ({u})³/3"
+    },
+    {
+      "id": "tanminussin",
+      "match": "Tan(u_)-Sin(u_)",
+      "result": "u_^3/2",
+      "note": "tan({u})-sin({u}) ~ ({u})³/2"
+    },
+    {
+      "id": "xminusln1p",
+      "match": "u_-Log(1+u_)",
+      "result": "u_^2/2",
+      "note": "{u}-ln(1+{u}) ~ ({u})²/2"
+    }
+  ],
+  "polynomials": [
+    {
+      "id": "cube",
+      "label": "立方和差公式",
+      "formula": "a³±b³=(a±b)(a²∓ab+b²)",
+      "degree": 3,
+      "match": "(u_-v_)*(u_^2+u_*v_+v_^2)"
+    },
+    {
+      "id": "square-diff",
+      "label": "平方差公式",
+      "formula": "a²-b²=(a+b)(a-b)",
+      "degree": 2,
+      "match": "(u_-v_)*(u_+v_)"
+    },
+    {
+      "id": "complete-square",
+      "label": "完全平方公式",
+      "formula": "a²±2ab+b²=(a±b)²",
+      "degree": 2,
+      "match": "(u_+v_)^2"
+    },
+    {
+      "id": "cross",
+      "label": "十字相乘",
+      "formula": "x²+(p+q)x+pq=(x+p)(x+q)",
+      "degree": 2,
+      "factorable": true
+    },
+    {
+      "id": "generic",
+      "label": "因式分解"
+    }
+  ]
+}

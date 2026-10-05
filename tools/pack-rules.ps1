@@ -4,7 +4,7 @@
 #     pwsh tools/pack-rules.ps1 -Version 2
 #
 # 做三件事：
-#   1. 把 engine/src/main/resources/rules/ 下的三张表合成 updates/rules-v<N>.json；
+#   1. 把 engine/src/main/resources/rules/ 下的四张表合成 updates/rules-v<N>.json；
 #   2. 用私有子模块里的私钥签名（ECDSA P-256 / SHA-256，DER），写 updates/rules-v<N>.json.sig；
 #   3. 顺手把 updates/manifest.json 的 rules 段指到新版本（文件不存在就建一个只有 rules 段的）。
 #
@@ -30,7 +30,14 @@ $rulesDir = Join-Path $repo "engine\src\main\resources\rules"
 function Read-Section([string]$name) {
     $path = Join-Path $rulesDir $name
     $doc = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8) | ConvertFrom-Json
-    return @($doc.rules)
+    # needsParser>1 的规则依赖新版解析（常数校验、负数绑定、positive 档），
+    # 老版本 App 读到会忽略这些新语义、可能标错公式——发布包里先不放，随新 App 内置分发。
+    $rules = @($doc.rules)
+    $skipped = @($rules | Where-Object { $_.PSObject.Properties.Name -contains "needsParser" -and $_.needsParser -gt 1 })
+    if ($skipped.Count -gt 0) {
+        Write-Host "  $name：跳过 $($skipped.Count) 条需要新版解析的规则（$($skipped.id -join ', ')）"
+    }
+    return @($rules | Where-Object { -not ($_.PSObject.Properties.Name -contains "needsParser" -and $_.needsParser -gt 1) })
 }
 
 $pack = [ordered]@{
@@ -38,6 +45,7 @@ $pack = [ordered]@{
     generated   = (Get-Date -Format "yyyy-MM-dd")
     comment     = "由 tools/pack-rules.ps1 从 engine/src/main/resources/rules/ 生成；验签通过才会被 App 安装。"
     integrals   = Read-Section "integrals.json"
+    derivatives = Read-Section "derivatives.json"
     equivalents = Read-Section "equivalents.json"
     polynomials = Read-Section "polynomials.json"
 }

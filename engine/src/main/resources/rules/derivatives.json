@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "comment": "基本求导公式表（单层，不含链式/四则）：match 整串匹配，u 是内层函数，其余占位符必须是常数；result 是外层导数，latex 是写进步骤的公式模板（{u} 换成实际表达式）。加公式不用改 Kotlin。",
+  "rules": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "Cos(u_)",
+      "latex": "\\cos\\left({u}\\right)",
+      "note": "基本求导公式：(sin u)' = cos u"
+    },
+    {
+      "id": "cos",
+      "match": "Cos(u_)",
+      "result": "-Sin(u_)",
+      "latex": "-\\sin\\left({u}\\right)",
+      "note": "基本求导公式：(cos u)' = -sin u"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "Sec(u_)^2",
+      "latex": "\\sec^{2}\\left({u}\\right)",
+      "note": "基本求导公式：(tan u)' = sec²u"
+    },
+    {
+      "id": "cot",
+      "match": "Cot(u_)",
+      "result": "-Csc(u_)^2",
+      "latex": "-\\csc^{2}\\left({u}\\right)",
+      "note": "基本求导公式：(cot u)' = -csc²u"
+    },
+    {
+      "id": "sec",
+      "match": "Sec(u_)",
+      "result": "Sec(u_)*Tan(u_)",
+      "latex": "\\sec\\left({u}\\right)\\tan\\left({u}\\right)",
+      "note": "基本求导公式：(sec u)' = sec u·tan u"
+    },
+    {
+      "id": "csc",
+      "match": "Csc(u_)",
+      "result": "-Cot(u_)*Csc(u_)",
+      "latex": "-\\cot\\left({u}\\right)\\csc\\left({u}\\right)",
+      "note": "基本求导公式：(csc u)' = -csc u·cot u"
+    },
+    {
+      "id": "log",
+      "match": "Log(u_)",
+      "result": "1/u_",
+      "latex": "\\frac{1}{{u}}",
+      "note": "基本求导公式：(ln u)' = 1/u"
+    },
+    {
+      "id": "logbase",
+      "match": "Log(a_,u_)",
+      "result": "1/(u_*Log(a_))",
+      "latex": "\\frac{1}{{u}\\,\\ln {a}}",
+      "note": "换底公式求导：(log_a u)' = 1/(u·ln a)"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "1/Sqrt(1-u_^2)",
+      "latex": "\\frac{1}{\\sqrt{1-\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arcsin u)' = 1/√(1-u²)"
+    },
+    {
+      "id": "arccos",
+      "match": "ArcCos(u_)",
+      "result": "-1/Sqrt(1-u_^2)",
+      "latex": "-\\frac{1}{\\sqrt{1-\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arccos u)' = -1/√(1-u²)"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "1/(1+u_^2)",
+      "latex": "\\frac{1}{1+\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arctan u)' = 1/(1+u²)"
+    },
+    {
+      "id": "arccot",
+      "match": "ArcCot(u_)",
+      "result": "-1/(1+u_^2)",
+      "latex": "-\\frac{1}{1+\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arccot u)' = -1/(1+u²)"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "Cosh(u_)",
+      "latex": "\\cosh\\left({u}\\right)",
+      "note": "基本求导公式：(sh u)' = ch u"
+    },
+    {
+      "id": "cosh",
+      "match": "Cosh(u_)",
+      "result": "Sinh(u_)",
+      "latex": "\\sinh\\left({u}\\right)",
+      "note": "基本求导公式：(ch u)' = sh u"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "1/Cosh(u_)^2",
+      "latex": "\\frac{1}{\\cosh^{2}\\left({u}\\right)}",
+      "note": "基本求导公式：(th u)' = 1/ch²u"
+    },
+    {
+      "id": "coth",
+      "match": "Coth(u_)",
+      "result": "-1/Sinh(u_)^2",
+      "latex": "-\\frac{1}{\\sinh^{2}\\left({u}\\right)}",
+      "note": "基本求导公式：(cth u)' = -1/sh²u"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "1/Sqrt(1+u_^2)",
+      "latex": "\\frac{1}{\\sqrt{1+\\left({u}\\right)^{2}}}",
+      "note": "基本求导公式：(arsh u)' = 1/√(1+u²)"
+    },
+    {
+      "id": "arccosh",
+      "match": "ArcCosh(u_)",
+      "result": "1/Sqrt(u_^2-1)",
+      "latex": "\\frac{1}{\\sqrt{\\left({u}\\right)^{2}-1}}",
+      "note": "基本求导公式：(arch u)' = 1/√(u²-1)"
+    },
+    {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "1/(1-u_^2)",
+      "latex": "\\frac{1}{1-\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arth u)' = 1/(1-u²)"
+    },
+    {
+      "id": "arccoth",
+      "match": "ArcCoth(u_)",
+      "result": "1/(1-u_^2)",
+      "latex": "\\frac{1}{1-\\left({u}\\right)^{2}}",
+      "note": "基本求导公式：(arcth u)' = 1/(1-u²)"
+    }
+  ]
+}

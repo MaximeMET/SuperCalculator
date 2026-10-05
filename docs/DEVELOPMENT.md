@@ -582,20 +582,28 @@ frame 数量随方程变化，尾部下标对不上。
   否则后面 `F.eval` 算出来的精确值会变成 `5.0`、`2.5`，步骤里就出现 `x^{2.0}`。
   现在 `evaluateOrNull` 在 finally 里还原，`toExactLatex` 再加一道保险。
 
-### 知识规则包：基本积分表、等价无穷小表
+### 知识规则包：积分表、求导表、等价无穷小表、多项式表
 
 「把题库放 GitHub、求解时联网拉」这条思路不成立：解题不是查表，是 CAS 在算
 （Symja + 上面几份过程引擎），把"题目"当数据存下来帮不了引擎。真正能数据化的
-只有**表驱动的知识**，于是把两张表从代码里抽出来，做成随包分发的 JSON 规则包：
+只有**表驱动的知识**，于是把几张表从代码里抽出来，做成随包分发的 JSON 规则包：
 
-- `engine/src/main/resources/rules/integrals.json` —— 基本积分表 10 条
-  （sin/cos/tan/sec/csc、双曲 sh/ch、ln、arctan、√(1+x²)）；
-- `engine/src/main/resources/rules/equivalents.json` —— 等价无穷小表 8 条
-  （sin/tan/arcsin/arctan/sh/th/arsh(u) ~ u、ln(1+u) ~ u）；
+- `engine/src/main/resources/rules/integrals.json` —— 基本积分表 34 条：
+  六个三角函数与四个双曲函数、五个反三角/反双曲函数的原函数，以及参数化的一批
+  （`1/(x²+c)`、`1/(c-x²)`、`√(c-x²)`、`1/√(c-x²)`、`√(x²+c)`、`1/√(x²+c)`、
+  `1/(x²-c)`、`aˣ`）。参数化的那几条把常数项绑到 `a_` 上，公式里用 √a 写，
+  用户敲 `1/(x²+4)` 时 a=4，结果自然就是 `(1/2)arctan(x/2)`；
+- `engine/src/main/resources/rules/derivatives.json` —— 基本求导公式 20 条：
+  三角/反三角、双曲/反双曲各一套，加上换底公式 `(log_a u)' = 1/(u·ln a)`；
+  `latex` 字段是写进步骤的公式模板，逐字符沿用原来手写的样式（换数据不改观感）；
+- `engine/src/main/resources/rules/equivalents.json` —— 等价无穷小表 19 条：
+  sin/tan/arcsin/arctan/sh/th/arsh/arth(u) ~ u、`ln(1+u)`、`log_a(1+u)`、
+  `e^u-1`、`a^u-1`、`(1+u)^α-1`、`1-cos u`、`cos u-1`、`u-sin u`、`tan u-u`、
+  `tan u-sin u`、`u-ln(1+u)`；
 - 配套代码：`MiniJson`（纯 JVM 的小解析器，不引依赖）、`RulePatterns`（整串匹配 +
-  模板代入）、`IntegralRulePack` / `LimitRulePack`（加载与套用），各有单元测试。
-  接线上 `IntegrateSteps.basicNote` 和 `LimitSteps.replacementFor` 都先查规则包；
-  等价无穷小里 `1-cos u`、`e^u-1` 带加减号、结构匹配太脆，仍留在代码里。
+  模板代入）、`IntegralRulePack` / `DerivativeRulePack` / `LimitRulePack`（加载与套用），
+  各有单元测试。接线上 `IntegrateSteps.basicNote`、`DerivativeSteps.functionNode`、
+  `LimitSteps.replacementFor` 都先查规则包。
 
 一条规则长这样：
 
@@ -609,10 +617,21 @@ frame 数量随方程变化，尾部下标对不上。
 - `u_` 是通配符，**整串匹配**：不用引擎自带的 `ReplaceAll`，它会连子表达式一起换，
   `Sin(u_) -> -Cos(u_)` 套到 `Sin(x)*Cos(x)` 上会把里面的 `Sin` 也换掉——"认错题"。
   2016 版的 `u_` 解析出来是 `Pattern`（`IPattern`）不是 `IAST`，匹配时得认类型；
+- `Plus` / `Times` 的参数**按项匹配、不看顺序**（带回溯）：`1/(x²+4)` 和 `1/(4+x²)`
+  是同一条规则；比较"原子"时还要先各自求值再比字符串——`Limit(...)` 的参数会被
+  引擎求值，模式里的 `(-1)*1` 到那边已经收成 `-1`，只比字符串就会漏掉；
+- `u` 之外的占位符（`a_` 这类参数）**必须是常数**：`a^u-1 ~ u·ln a` 只在底数与 x
+  无关时成立，`(1+x)^x-1` 这种底数/指数带 x 的形状直接不认。积分表里还有
+  `"positive": ["a"]` 这一档：`√c`、`ln c` 型公式要求常数项为正，`1/(x²-4)`
+  不能套 `1/(x²+c)` 的 arctan 式子（它有自己的 `1/(x²-c)` 条目）；
 - 积分规则绑定的表达式必须就是积分变量本身、或与它无关的常量：直接套公式的题才走
   规则包，复合形状（`f(kx+b)` 这类）留给换元 / 分部，免得基本表抢先把过程变浅；
 - 规则里的公式**不是信就完了**：拿到 `result` 后照样做数值求导回验，验不过跳过整条，
   仓库里写错一条公式不会污染所有人的结果页；
+- 回验的采样点要覆盖两边：既有 1.4 / 2.3 / 3.7 这种"大数"（给 `1/(x²-4)` 这类
+  只在 |x|>1 上有实值的公式），也要有 0.3 / 0.6 这种落在 (-1,1) 里的点——
+  arcsin / arccos / artanh 型公式只在 (-1,1) 上有实数值，点全取大了它们一条都验不过。
+  求导那边同理，样本轮数是按点表长度走的；
 - 加载失败（资源缺失、JSON 坏了）返回空表：宁可不标注，也不崩。
 
 **求解时不联网；规则包走「设置页手动检查更新」**（方案 C，2026-10 定案）。
@@ -628,7 +647,7 @@ GitHub 就永远不知道规则包有新版，而规则包的迭代节奏不该�
 - 应用本体有新版本：只提示 + 开浏览器到 Releases，不在应用内下载安装。
 
 私钥在私有子模块 `work/keys/rules-signing-private.pem`，公钥写死在 `RulePacks.kt`；
-发布流程是 `pwsh tools/pack-rules.ps1 -Version N`——它读三张表合成合并包、签名、
+发布流程是 `pwsh tools/pack-rules.ps1 -Version N`——它读四张表合成合并包、签名、
 更新清单，并从 `RulePacks.kt` 抠出内置公钥、对着**写盘后的文件字节**重验一遍再收工
 （签名对象统一成 LF，配 `.gitattributes` 的 `eol=lf`，免得"签了 CRLF、CDN 发 LF"）。
 push 之后还要跑 `pwsh tools/purge-cdn.ps1 -Version N`：jsDelivr 对分支引用缓存 12 小时，

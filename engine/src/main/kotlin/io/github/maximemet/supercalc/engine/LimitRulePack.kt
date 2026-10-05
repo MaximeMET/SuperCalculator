@@ -62,12 +62,27 @@ object LimitRulePack {
             )
         }
 
-    /** 命中一条规则：返回 (绑定的 u, 替换后的表达式, 文案)，没命中返回 null。 */
-    fun apply(engine: SymjaEngine, expr: IExpr, rule: Rule): Triple<IExpr, IExpr, String>? {
+    /**
+     * 命中一条规则：返回 (绑定的 u, 替换后的表达式, 文案)，没命中返回 null。
+     *
+     * `u` 之外的占位符（`a_`、`b_` 这类参数）必须与极限变量无关：`a^u-1 ~ u·ln a`
+     * 只在 `a` 是常数时成立，`(1+x)^x-1` 这种底数也带 x 的形状直接不认。
+     */
+    fun apply(
+        engine: SymjaEngine,
+        expr: IExpr,
+        rule: Rule,
+        variable: String,
+    ): Triple<IExpr, IExpr, String>? {
         val pattern = engine.parseOrNull(rule.match) ?: return null
         val bindings = LinkedHashMap<String, IExpr>()
         if (!RulePatterns.matchWhole(pattern, expr, bindings)) return null
         val bound = bindings["u"] ?: return null
+        val x = engine.symbol(variable)
+        for ((name, value) in bindings) {
+            if (name == "u") continue
+            if (!value.isFree(x)) return null
+        }
         val replacementCode = RulePatterns.instantiate(rule.result, bindings)
         val replacement = engine.parseOrNull(replacementCode) ?: return null
         return Triple(bound, replacement, RulePatterns.fillNote(rule.note, bindings))

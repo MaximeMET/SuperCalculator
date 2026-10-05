@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "comment": "基本积分表（直接套公式）。match 里的 u_ 是通配符，整串匹配；result 是原函数模板，加载后仍要数值求导回验。加规则不用改 Kotlin。",
+  "version": 2,
+  "comment": "基本积分表（直接套公式）。match 里的 u_ 是通配符，整串匹配；a_ 这类参数必须是常数（与积分变量无关，见 IntegralRulePack.apply）。result 是原函数模板，加载后仍要数值求导回验。加规则不用改 Kotlin。参数化的几条把常数项绑在 a_ 上，所以式子里用 √a——用户写的 1/(x²+4) 绑到 a=4，结果就是 (1/2)arctan(x/2)。",
   "rules": [
     {
       "id": "sin",
@@ -21,6 +21,12 @@
       "note": "基本积分公式：∫tan x dx = -ln|cos x|"
     },
     {
+      "id": "cot",
+      "match": "Cot(u_)",
+      "result": "Log(Sin(u_))",
+      "note": "基本积分公式：∫cot x dx = ln|sin x|"
+    },
+    {
       "id": "sec",
       "match": "Sec(u_)",
       "result": "Log(Sec(u_)+Tan(u_))",
@@ -31,6 +37,30 @@
       "match": "Csc(u_)",
       "result": "-Log(Csc(u_)+Cot(u_))",
       "note": "基本积分公式：∫csc x dx = -ln|csc x + cot x|"
+    },
+    {
+      "id": "sec2",
+      "match": "Sec(u_)^2",
+      "result": "Tan(u_)",
+      "note": "基本积分公式：∫sec²x dx = tan x"
+    },
+    {
+      "id": "csc2",
+      "match": "Csc(u_)^2",
+      "result": "-Cot(u_)",
+      "note": "基本积分公式：∫csc²x dx = -cot x"
+    },
+    {
+      "id": "sectan",
+      "match": "Sec(u_)*Tan(u_)",
+      "result": "Sec(u_)",
+      "note": "基本积分公式：∫sec x·tan x dx = sec x"
+    },
+    {
+      "id": "csccot",
+      "match": "Csc(u_)*Cot(u_)",
+      "result": "-Csc(u_)",
+      "note": "基本积分公式：∫csc x·cot x dx = -csc x"
     },
     {
       "id": "sinh",
@@ -45,6 +75,18 @@
       "note": "基本积分公式：∫ch x dx = sh x"
     },
     {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "Log(Cosh(u_))",
+      "note": "基本积分公式：∫th x dx = ln ch x"
+    },
+    {
+      "id": "coth",
+      "match": "Coth(u_)",
+      "result": "Log(Sinh(u_))",
+      "note": "基本积分公式：∫cth x dx = ln|sh x|"
+    },
+    {
       "id": "log",
       "match": "Log(u_)",
       "result": "u_*Log(u_)-u_",
@@ -57,10 +99,120 @@
       "note": "基本积分公式：∫arctan x dx = x·arctan x - ½ln(1+x²)"
     },
     {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "u_*ArcSin(u_)+Sqrt(1-u_^2)",
+      "note": "基本积分公式：∫arcsin x dx = x·arcsin x + √(1-x²)"
+    },
+    {
+      "id": "arccos",
+      "match": "ArcCos(u_)",
+      "result": "u_*ArcCos(u_)-Sqrt(1-u_^2)",
+      "note": "基本积分公式：∫arccos x dx = x·arccos x - √(1-x²)"
+    },
+    {
+      "id": "arccot",
+      "match": "ArcCot(u_)",
+      "result": "u_*ArcCot(u_)+Log(1+u_^2)/2",
+      "note": "基本积分公式：∫arccot x dx = x·arccot x + ½ln(1+x²)"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "u_*ArcSinh(u_)-Sqrt(1+u_^2)",
+      "note": "基本积分公式：∫arsh x dx = x·arsh x - √(1+x²)"
+    },
+    {
+      "id": "arctanh",
+      "match": "ArcTanh(u_)",
+      "result": "u_*ArcTanh(u_)+Log(1-u_^2)/2",
+      "note": "基本积分公式：∫arth x dx = x·arth x + ½ln(1-x²)"
+    },
+    {
       "id": "sqrt1px2",
       "match": "Sqrt(1+u_^2)",
       "result": "(u_*Sqrt(1+u_^2)+Log(u_+Sqrt(1+u_^2)))/2",
       "note": "基本积分公式：∫√(1+x²)dx = ½[x√(1+x²)+ln(x+√(1+x²))]"
+    },
+    {
+      "id": "sqrt1mx2",
+      "match": "Sqrt(1-u_^2)",
+      "result": "(u_*Sqrt(1-u_^2)+ArcSin(u_))/2",
+      "note": "基本积分公式：∫√(1-x²)dx = ½[x√(1-x²)+arcsin x]"
+    },
+    {
+      "id": "recip1px2",
+      "match": "1/(1+u_^2)",
+      "result": "ArcTan(u_)",
+      "note": "基本积分公式：∫dx/(1+x²) = arctan x"
+    },
+    {
+      "id": "recip1mx2sqrt",
+      "match": "1/Sqrt(1-u_^2)",
+      "result": "ArcSin(u_)",
+      "note": "基本积分公式：∫dx/√(1-x²) = arcsin x"
+    },
+    {
+      "id": "expbase",
+      "match": "E^u_",
+      "result": "E^u_",
+      "note": "基本积分公式：∫eˣdx = eˣ"
+    },
+    {
+      "id": "ax",
+      "match": "a_^u_",
+      "result": "a_^u_/Log(a_)",
+      "note": "基本积分公式：∫aˣdx = aˣ/ln a（a>0）"
+    },
+    {
+      "id": "recipx2ma2",
+      "match": "1/(u_^2-a_)",
+      "result": "Log((u_-Sqrt(a_))/(u_+Sqrt(a_)))/(2*Sqrt(a_))",
+      "positive": ["a"],
+      "note": "基本积分公式：∫dx/(x²-c) = (1/2√c)·ln|(x-√c)/(x+√c)|"
+    },
+    {
+      "id": "recipx2pa2",
+      "match": "1/(u_^2+a_)",
+      "result": "ArcTan(u_/Sqrt(a_))/Sqrt(a_)",
+      "positive": ["a"],
+      "needsParser": 2,
+      "note": "基本积分公式：∫dx/(x²+c) = (1/√c)·arctan(x/√c)（c>0）"
+    },
+    {
+      "id": "sqrtx2pa2",
+      "match": "Sqrt(u_^2+a_)",
+      "result": "(u_*Sqrt(u_^2+a_)+a_*Log(u_+Sqrt(u_^2+a_)))/2",
+      "positive": ["a"],
+      "note": "基本积分公式：∫√(x²+c)dx = ½[x√(x²+c)+c·ln(x+√(x²+c))]"
+    },
+    {
+      "id": "recipSqrtx2pa2",
+      "match": "1/Sqrt(u_^2+a_)",
+      "result": "Log(u_+Sqrt(u_^2+a_))",
+      "positive": ["a"],
+      "note": "基本积分公式：∫dx/√(x²+c) = ln(x+√(x²+c))"
+    },
+    {
+      "id": "sqrta2mx2",
+      "match": "Sqrt(a_-u_^2)",
+      "result": "(u_*Sqrt(a_-u_^2)+a_*ArcSin(u_/Sqrt(a_)))/2",
+      "positive": ["a"],
+      "note": "基本积分公式：∫√(c-x²)dx = ½[x√(c-x²)+c·arcsin(x/√c)]"
+    },
+    {
+      "id": "recipSqrta2mx2",
+      "match": "1/Sqrt(a_-u_^2)",
+      "result": "ArcSin(u_/Sqrt(a_))",
+      "positive": ["a"],
+      "note": "基本积分公式：∫dx/√(c-x²) = arcsin(x/√c)"
+    },
+    {
+      "id": "recipa2mx2",
+      "match": "1/(a_-u_^2)",
+      "result": "ArcTanh(u_/Sqrt(a_))/Sqrt(a_)",
+      "positive": ["a"],
+      "note": "基本积分公式：∫dx/(c-x²) = (1/√c)·arth(x/√c) = (1/2√c)·ln|(√c+x)/(√c-x)|"
     }
   ]
 }

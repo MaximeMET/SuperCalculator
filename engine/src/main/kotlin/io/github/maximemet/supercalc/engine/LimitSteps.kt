@@ -215,7 +215,7 @@ object LimitSteps {
         // 规则包：sin/tan/arcsin/arctan/sh/th/arsh(u) ~ u、ln(1+u) ~ u 这类直接替换
         // （内层 u 仍要确实趋于 0，否则不动）
         for (rule in LimitRulePack.rules) {
-            val hit = LimitRulePack.apply(engine, ast, rule) ?: continue
+            val hit = LimitRulePack.apply(engine, ast, rule, input.variable) ?: continue
             val (bound, replacement, text) = hit
             if (tendsToZero(engine, input, bound)) {
                 return replacement to note(input, text)

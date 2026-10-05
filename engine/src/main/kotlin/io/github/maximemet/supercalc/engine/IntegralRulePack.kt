@@ -33,6 +33,8 @@ object IntegralRulePack {
         val match: String,
         val result: String,
         val note: String,
+        /** 这些占位符绑定到的常数必须为正（√a、ln 形式的公式用）。缺省为空。 */
+        val positive: List<String> = emptyList(),
     )
 
     private var cached: List<Rule>? = null
@@ -77,6 +79,8 @@ object IntegralRulePack {
                 match = MiniJson.asString(item["match"], "match"),
                 result = MiniJson.asString(item["result"], "result"),
                 note = MiniJson.asString(item["note"], "note"),
+                positive = (item["positive"] as? List<*>)
+                    ?.mapNotNull { it as? String } ?: emptyList(),
             )
         }
 
@@ -93,6 +97,12 @@ object IntegralRulePack {
         val x = engine.symbol(variable)
         for (bound in bindings.values) {
             if (!bound.equals(x) && !bound.isFree(x)) return null
+        }
+        // 「√c / ln c」型公式要求常数项为正：1/(x²-4) 不能套 1/(x²+c) 的 arctan 式子
+        for (name in rule.positive) {
+            val value = bindings[name] ?: return null
+            val number = engine.numericValueOf(value.toString()) ?: continue // 符号常数不拦
+            if (number <= 0) return null
         }
         val code = instantiate(rule.result, bindings)
         return engine.parseOrNull(code)

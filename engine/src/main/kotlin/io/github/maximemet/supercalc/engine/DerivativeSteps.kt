@@ -21,8 +21,12 @@ object DerivativeSteps {
     private const val MAX_DEPTH = 14
     private const val MAX_NODES = 80
 
-    /** 对拍采样点：大多是正数，避开 ln / sqrt 的定义域问题；末尾一个负数兜符号错误。 */
-    private val SAMPLE_POINTS = doubleArrayOf(0.6, 1.4, 2.3, 3.7, -0.7)
+    /**
+     * 对拍采样点：避开 0、±1、±2 这些常见奇点，同时又要有落在 (-1,1) 里的点——
+     * arcsin / arccos / artanh 这类函数的定义域只在 (-1,1)，点全取大了就一个都对不上。
+     * 代不进去的点会被跳过（数值求值失败），所以宽一点没坏处。
+     */
+    private val SAMPLE_POINTS = doubleArrayOf(0.6, 0.3, 1.4, 2.3, 3.7, -0.7)
 
     /**
      * 生成步骤；引擎求不出来、或对拍不过时返回 null（结果页据此不显示过程区）。
@@ -117,7 +121,7 @@ object DerivativeSteps {
                 ast.isAST(F.Plus) -> plusNode(ast, expr, depth)
                 ast.isAST(F.Times) -> timesNode(ast, expr, depth)
                 ast.isAST(F.Power) && ast.size == 3 -> powerNode(ast, expr, depth)
-                ast.size == 2 -> functionNode(ast, expr, depth)
+                ast.size >= 2 -> functionNode(expr, depth)
                 else -> null
             }
         }
@@ -136,7 +140,7 @@ object DerivativeSteps {
             if (symbols.isEmpty()) return true
 
             var checked = 0
-            for (round in 0 until 3) {
+            for (round in SAMPLE_POINTS.indices) {
                 val substitutions = symbols.mapIndexed { index, symbol ->
                     "($symbol -> ${SAMPLE_POINTS[(index + round) % SAMPLE_POINTS.size]})"
                 }
@@ -455,14 +459,14 @@ object DerivativeSteps {
 
         // ---------- 基本函数 / 链式 ----------
 
-        private fun functionNode(ast: IAST, expr: IExpr, depth: Int): Node? {
-            val rule = basicRuleOf(ast) ?: return null
-            val inner = ast.arg1()
+        private fun functionNode(expr: IExpr, depth: Int): Node? {
+            val hit = DerivativeRulePack.apply(engine, expr, x) ?: return null
+            val inner = hit.inner
             val innerIsX = inner.equals(x)
             val child = if (innerIsX) null else walk(inner, depth + 1) ?: return null
             val innerTex = tex(inner) ?: return null
-            val fPrimeExpr = rule.derivative(inner)
-            val fPrimeTex = rule.latex(innerTex)
+            val fPrimeExpr = hit.derivative
+            val fPrimeTex = hit.latex
             val derivative = if (innerIsX) fPrimeExpr else F.Times(fPrimeExpr, child!!.derivative)
             val lhs = primeOf(expr) ?: return null
             val line = if (innerIsX) {
@@ -478,75 +482,6 @@ object DerivativeSteps {
                 if (child == null) emptyList() else listOf(child),
                 derivative,
             )
-        }
-
-        private class BasicRule(
-            val derivative: (IExpr) -> IExpr,
-            val latex: (String) -> String,
-        )
-
-        private fun basicRuleOf(ast: IAST): BasicRule? = when {
-            ast.isAST(F.Sin) -> BasicRule(
-                { u -> F.Cos(u) },
-                { u -> "\\cos\\left($u\\right)" },
-            )
-            ast.isAST(F.Cos) -> BasicRule(
-                { u -> F.Negate(F.Sin(u)) },
-                { u -> "-\\sin\\left($u\\right)" },
-            )
-            ast.isAST(F.Tan) -> BasicRule(
-                { u -> F.Power(F.Sec(u), F.C2) },
-                { u -> "\\sec^{2}\\left($u\\right)" },
-            )
-            ast.isAST(F.Cot) -> BasicRule(
-                { u -> F.Negate(F.Power(F.Csc(u), F.C2)) },
-                { u -> "-\\csc^{2}\\left($u\\right)" },
-            )
-            ast.isAST(F.Sec) -> BasicRule(
-                { u -> F.Times(F.Sec(u), F.Tan(u)) },
-                { u -> "\\sec\\left($u\\right)\\tan\\left($u\\right)" },
-            )
-            ast.isAST(F.Csc) -> BasicRule(
-                { u -> F.Negate(F.Times(F.Cot(u), F.Csc(u))) },
-                { u -> "-\\cot\\left($u\\right)\\csc\\left($u\\right)" },
-            )
-            ast.isAST(F.Log) -> BasicRule(
-                { u -> F.Power(u, F.CN1) },
-                { u -> "\\frac{1}{$u}" },
-            )
-            ast.isAST(F.ArcSin) -> BasicRule(
-                { u -> F.Power(F.Subtract(F.C1, F.Power(u, F.C2)), F.CN1D2) },
-                { u -> "\\frac{1}{\\sqrt{1-\\left($u\\right)^{2}}}" },
-            )
-            ast.isAST(F.ArcCos) -> BasicRule(
-                { u -> F.Negate(F.Power(F.Subtract(F.C1, F.Power(u, F.C2)), F.CN1D2)) },
-                { u -> "-\\frac{1}{\\sqrt{1-\\left($u\\right)^{2}}}" },
-            )
-            ast.isAST(F.ArcTan) -> BasicRule(
-                { u -> F.Power(F.Plus(F.C1, F.Power(u, F.C2)), F.CN1) },
-                { u -> "\\frac{1}{1+\\left($u\\right)^{2}}" },
-            )
-            ast.isAST(F.ArcCot) -> BasicRule(
-                { u -> F.Negate(F.Power(F.Plus(F.C1, F.Power(u, F.C2)), F.CN1)) },
-                { u -> "-\\frac{1}{1+\\left($u\\right)^{2}}" },
-            )
-            ast.isAST(F.Sinh) -> BasicRule(
-                { u -> F.Cosh(u) },
-                { u -> "\\cosh\\left($u\\right)" },
-            )
-            ast.isAST(F.Cosh) -> BasicRule(
-                { u -> F.Sinh(u) },
-                { u -> "\\sinh\\left($u\\right)" },
-            )
-            ast.isAST(F.Tanh) -> BasicRule(
-                { u -> F.Power(F.Cosh(u), F.CN2) },
-                { u -> "\\frac{1}{\\cosh^{2}\\left($u\\right)}" },
-            )
-            ast.isAST(F.Coth) -> BasicRule(
-                { u -> F.Negate(F.Power(F.Sinh(u), F.CN2)) },
-                { u -> "-\\frac{1}{\\sinh^{2}\\left($u\\right)}" },
-            )
-            else -> null
         }
 
         // ---------- 工具 ----------

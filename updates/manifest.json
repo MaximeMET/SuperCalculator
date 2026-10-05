@@ -7,8 +7,8 @@
     "notes": "根号横线、键盘第四页分隔线、结果页长公式可拖动、提示圆点裁切、键盘高度兜底等一批细节修复；详见 Release 说明。"
   },
   "rules": {
-    "version": 2,
-    "json": "https://cdn.jsdelivr.net/gh/MaximeMET/SuperCalculator@main/updates/rules-v2.json",
-    "sig": "https://cdn.jsdelivr.net/gh/MaximeMET/SuperCalculator@main/updates/rules-v2.json.sig"
+    "version": 3,
+    "json": "https://cdn.jsdelivr.net/gh/MaximeMET/SuperCalculator@main/updates/rules-v3.json",
+    "sig": "https://cdn.jsdelivr.net/gh/MaximeMET/SuperCalculator@main/updates/rules-v3.json.sig"
   }
 }

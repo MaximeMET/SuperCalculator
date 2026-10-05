@@ -69,10 +69,21 @@ class LimitStepsTest {
     }
 
     @Test
-    fun cubicOverXUsesLHopital() {
+    fun cubicOverXUsesEquivalentInfinitesimal() {
+        // 三阶等价无穷小 x-sin x ~ x³/6 进了规则包，这条不再只能走洛必达
         val keys = keysOf("Limit((x-Sin(x))/x^3,x->0)")
+        assertTrue("equivalentInfinitesimal" in keys, "缺少等价无穷小：$keys")
+        assertTrue("result" in keys, "缺少结果：$keys")
+    }
+
+    @Test
+    fun quadraticOverXUsesLHopital() {
+        // 表里没有 "√(1+x)-1-x/2" 这条二阶差，部分替换又对不上最终值，应该退回洛必达（两次）
+        val formula = "Limit((Sqrt(1+x)-1-x/2)/x^2,x->0)"
+        val keys = keysOf(formula)
         assertTrue("lhopital" in keys, "缺少洛必达：$keys")
         assertTrue("result" in keys, "缺少结果：$keys")
+        assertTrue(textOf(formula).contains("\\frac{-1}{8}"), "结果不是 -1/8")
     }
 
     @Test
