@@ -619,6 +619,10 @@ push 之后还要跑 `pwsh tools/purge-cdn.ps1 -Version N`：jsDelivr 对分支�
 "只有 `INTERNET` 一条、只用于手动检查更新"；"有没有新版"的通知仍然可以交给外部
 渠道（GitHub Watch / releases.atom / Obtainium），两条路不冲突。
 
+清单的 app 段是**发应用版本时人工改**的（`pack-rules.ps1` 只动 rules 段）：
+versionCode / versionName 跟新 Release 对齐，url 固定指 `releases/latest`，
+notes 抄一句 Release 摘要；改完同样要 purge 一次。
+
 **多项式分解的公式表也进了规则包**（`rules/polynomials.json`）：立方和差、平方差、
 完全平方、十字相乘，加一条兜底「因式分解」。匹配思路和上面两个包不同——公式法认的
 是"乘积长什么样"，而 Symja 的 `Factor` 输出本身就是标准形：先把数值内容因子提出来
