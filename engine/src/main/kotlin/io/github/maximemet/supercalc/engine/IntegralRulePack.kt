@@ -35,12 +35,28 @@ object IntegralRulePack {
         val note: String,
     )
 
-    /** 读取失败（资源缺失/JSON 坏了）时返回空表：宁可不标注，也不能崩。 */
-    val rules: List<Rule> by lazy {
-        try {
+    private var cached: List<Rule>? = null
+
+    /**
+     * 规则表：手动更新包里有就用更新包，否则用内置资源。
+     * 读取失败返回空表：宁可不标注，也不能崩。
+     */
+    val rules: List<Rule>
+        get() = cached ?: load().also { cached = it }
+
+    /** 更新包变化后让缓存失效（见 [RulePacks]）。 */
+    internal fun invalidate() {
+        cached = null
+    }
+
+    private fun load(): List<Rule> {
+        RulePacks.section("integrals")?.let { items ->
+            runCatching { parseRules(items) }.getOrNull()?.let { return it }
+        }
+        return try {
             val text = IntegralRulePack::class.java.getResourceAsStream(RESOURCE)
                 ?.use { it.readBytes().toString(Charsets.UTF_8) }
-                ?: return@lazy emptyList()
+                ?: return emptyList()
             parse(text)
         } catch (e: Exception) {
             emptyList()
@@ -50,7 +66,11 @@ object IntegralRulePack {
     internal fun parse(text: String): List<Rule> {
         val root = MiniJson.asObject(MiniJson.parse(text))
         val array = MiniJson.asArray(root["rules"] ?: emptyList<Any?>())
-        return array.map { node ->
+        return parseRules(array)
+    }
+
+    private fun parseRules(array: List<Any?>): List<Rule> =
+        array.map { node ->
             val item = MiniJson.asObject(node)
             Rule(
                 id = MiniJson.asString(item["id"], "id"),
@@ -59,7 +79,6 @@ object IntegralRulePack {
                 note = MiniJson.asString(item["note"], "note"),
             )
         }
-    }
 
     /**
      * 把规则套到 [expr] 上；整串匹配不上返回 null。

@@ -8,6 +8,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import io.github.maximemet.supercalc.databinding.ActivityAboutBinding
+import io.github.maximemet.supercalc.engine.RulePacks
 
 /**
  * 关于我们。参考实现里这是个独立 Activity（`AboutActivity`），
@@ -26,6 +27,7 @@ class AboutActivity : AppCompatActivity() {
         binding.aboutToolbar.pageTitle.setText(R.string.about_us)
         binding.aboutToolbar.btnPageBack.setOnClickListener { finish() }
         binding.tvAboutVersion.text = getString(R.string.about_version, BuildConfig.VERSION_NAME)
+        binding.tvAboutRules.text = getString(R.string.about_rules_version, RulePacks.activeVersion)
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())

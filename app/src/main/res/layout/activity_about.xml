@@ -80,6 +80,18 @@
                     android:gravity="center"
                     android:textColor="@color/about_version_text"
                     android:textSize="@dimen/text_15sp" />
+
+                <!-- 规则包版本：「检查更新」更新的是它，显示出来便于核对 -->
+                <TextView
+                    android:id="@+id/tv_about_rules"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/tv_about_version"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="@dimen/space_small"
+                    android:gravity="center"
+                    android:textColor="@color/about_version_text"
+                    android:textSize="@dimen/text_15sp" />
             </RelativeLayout>
         </RelativeLayout>
     </LinearLayout>

@@ -1,0 +1,4 @@
+# 规则包的签名对象是 JSON 的原始字节，行尾必须在任何机器上都一样（LF），
+# 否则本地验签和 CDN 上的文件对不上。
+updates/*.json text eol=lf
+updates/*.sig -text

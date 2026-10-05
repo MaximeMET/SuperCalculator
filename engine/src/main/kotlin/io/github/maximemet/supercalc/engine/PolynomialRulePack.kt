@@ -35,11 +35,25 @@ object PolynomialRulePack {
         val factorable: Boolean,
     )
 
-    val rules: List<Rule> by lazy {
-        try {
+    private var cached: List<Rule>? = null
+
+    /** 规则表：手动更新包里有就用更新包，否则用内置资源。 */
+    val rules: List<Rule>
+        get() = cached ?: load().also { cached = it }
+
+    /** 更新包变化后让缓存失效（见 [RulePacks]）。 */
+    internal fun invalidate() {
+        cached = null
+    }
+
+    private fun load(): List<Rule> {
+        RulePacks.section("polynomials")?.let { items ->
+            runCatching { parseRules(items) }.getOrNull()?.let { return it }
+        }
+        return try {
             val text = PolynomialRulePack::class.java.getResourceAsStream(RESOURCE)
                 ?.use { it.readBytes().toString(Charsets.UTF_8) }
-                ?: return@lazy emptyList()
+                ?: return emptyList()
             parse(text)
         } catch (e: Exception) {
             emptyList()
@@ -49,7 +63,11 @@ object PolynomialRulePack {
     internal fun parse(text: String): List<Rule> {
         val root = MiniJson.asObject(MiniJson.parse(text))
         val array = MiniJson.asArray(root["rules"] ?: emptyList<Any?>())
-        return array.map { node ->
+        return parseRules(array)
+    }
+
+    private fun parseRules(array: List<Any?>): List<Rule> =
+        array.map { node ->
             val item = MiniJson.asObject(node)
             Rule(
                 id = MiniJson.asString(item["id"], "id"),
@@ -60,7 +78,6 @@ object PolynomialRulePack {
                 factorable = item["factorable"] == true,
             )
         }
-    }
 
     /**
      * 找出 [expr] 的分解用的是哪条公式；都没命中返回 null（调用方回落到"因式分解"）。

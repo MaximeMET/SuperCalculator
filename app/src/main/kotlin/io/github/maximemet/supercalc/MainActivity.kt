@@ -25,6 +25,7 @@ import io.github.maximemet.supercalc.fragment.HistoryFragment
 import io.github.maximemet.supercalc.fragment.SettingsFragment
 import io.github.maximemet.supercalc.fragment.TutorialFragment
 import io.github.maximemet.supercalc.settings.AppSettings
+import io.github.maximemet.supercalc.update.RuleStore
 
 /**
  * 主界面外壳。
@@ -75,6 +76,8 @@ class MainActivity : AppCompatActivity() {
         // 不处理的话工具条会钻到状态栏底下、键盘会被导航栏盖住。
         WindowCompat.setDecorFitsSystemWindows(window, false)
         AppSettings.init(this)
+        // 上次手动更新过的规则包先装上（验签不过就当没有），再让引擎开工
+        RuleStore.installFromDisk(this)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

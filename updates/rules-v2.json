@@ -1,0 +1,151 @@
+{
+  "version": 2,
+  "generated": "2026-10-05",
+  "comment": "由 tools/pack-rules.ps1 从 engine/src/main/resources/rules/ 生成；验签通过才会被 App 安装。",
+  "integrals": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "-Cos(u_)",
+      "note": "基本积分公式：∫sin x dx = -cos x"
+    },
+    {
+      "id": "cos",
+      "match": "Cos(u_)",
+      "result": "Sin(u_)",
+      "note": "基本积分公式：∫cos x dx = sin x"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "-Log(Cos(u_))",
+      "note": "基本积分公式：∫tan x dx = -ln|cos x|"
+    },
+    {
+      "id": "sec",
+      "match": "Sec(u_)",
+      "result": "Log(Sec(u_)+Tan(u_))",
+      "note": "基本积分公式：∫sec x dx = ln|sec x + tan x|"
+    },
+    {
+      "id": "csc",
+      "match": "Csc(u_)",
+      "result": "-Log(Csc(u_)+Cot(u_))",
+      "note": "基本积分公式：∫csc x dx = -ln|csc x + cot x|"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "Cosh(u_)",
+      "note": "基本积分公式：∫sh x dx = ch x"
+    },
+    {
+      "id": "cosh",
+      "match": "Cosh(u_)",
+      "result": "Sinh(u_)",
+      "note": "基本积分公式：∫ch x dx = sh x"
+    },
+    {
+      "id": "log",
+      "match": "Log(u_)",
+      "result": "u_*Log(u_)-u_",
+      "note": "基本积分公式：∫ln x dx = x·ln x - x"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_*ArcTan(u_)-Log(1+u_^2)/2",
+      "note": "基本积分公式：∫arctan x dx = x·arctan x - ½ln(1+x²)"
+    },
+    {
+      "id": "sqrt1px2",
+      "match": "Sqrt(1+u_^2)",
+      "result": "(u_*Sqrt(1+u_^2)+Log(u_+Sqrt(1+u_^2)))/2",
+      "note": "基本积分公式：∫√(1+x²)dx = ½[x√(1+x²)+ln(x+√(1+x²))]"
+    }
+  ],
+  "equivalents": [
+    {
+      "id": "sin",
+      "match": "Sin(u_)",
+      "result": "u_",
+      "note": "sin({u}) ~ {u}"
+    },
+    {
+      "id": "tan",
+      "match": "Tan(u_)",
+      "result": "u_",
+      "note": "tan({u}) ~ {u}"
+    },
+    {
+      "id": "arcsin",
+      "match": "ArcSin(u_)",
+      "result": "u_",
+      "note": "arcsin({u}) ~ {u}"
+    },
+    {
+      "id": "arctan",
+      "match": "ArcTan(u_)",
+      "result": "u_",
+      "note": "arctan({u}) ~ {u}"
+    },
+    {
+      "id": "sinh",
+      "match": "Sinh(u_)",
+      "result": "u_",
+      "note": "sh({u}) ~ {u}"
+    },
+    {
+      "id": "tanh",
+      "match": "Tanh(u_)",
+      "result": "u_",
+      "note": "th({u}) ~ {u}"
+    },
+    {
+      "id": "arcsinh",
+      "match": "ArcSinh(u_)",
+      "result": "u_",
+      "note": "arsh({u}) ~ {u}"
+    },
+    {
+      "id": "ln1pu",
+      "match": "Log(1+u_)",
+      "result": "u_",
+      "note": "ln(1+{u}) ~ {u}"
+    }
+  ],
+  "polynomials": [
+    {
+      "id": "cube",
+      "label": "立方和差公式",
+      "formula": "a³±b³=(a±b)(a²∓ab+b²)",
+      "degree": 3,
+      "match": "(u_-v_)*(u_^2+u_*v_+v_^2)"
+    },
+    {
+      "id": "square-diff",
+      "label": "平方差公式",
+      "formula": "a²-b²=(a+b)(a-b)",
+      "degree": 2,
+      "match": "(u_-v_)*(u_+v_)"
+    },
+    {
+      "id": "complete-square",
+      "label": "完全平方公式",
+      "formula": "a²±2ab+b²=(a±b)²",
+      "degree": 2,
+      "match": "(u_+v_)^2"
+    },
+    {
+      "id": "cross",
+      "label": "十字相乘",
+      "formula": "x²+(p+q)x+pq=(x+p)(x+q)",
+      "degree": 2,
+      "factorable": true
+    },
+    {
+      "id": "generic",
+      "label": "因式分解"
+    }
+  ]
+}
