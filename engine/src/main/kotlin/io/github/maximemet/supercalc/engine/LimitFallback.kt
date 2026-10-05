@@ -113,6 +113,9 @@ object LimitFallback {
                 exactDouble != null && (numeric == null || agrees(exactDouble, numeric)) -> exactLatex
                 // 有限精确值但和数值对不上：引擎算错了，以数值为准
                 exactDouble != null && numeric != null -> LatexText.fromDouble(numeric)
+                // 含自由参数的符号结果（`lim (1+ax)^(1/x) = e^a`）：数值通道代不进参数，
+                // 但结果已经不含未求值的 Limit，就是引擎给出来的精确答案，直接用。
+                isSymbolicAnswer(engine, exact, limit) -> exactLatex
                 // 未求值 / 不定式：先试取对数改写，再退纯数值
                 else -> {
                     val rewritten = powerRewrite(engine, limit)
@@ -120,6 +123,9 @@ object LimitFallback {
                     if (rewritten != null && rewrittenValue != null &&
                         (numeric == null || agrees(rewrittenValue, numeric))
                     ) {
+                        engine.toLatex(rewritten) ?: exactLatex
+                    } else if (rewritten != null && isSymbolicAnswer(engine, rewritten, limit)) {
+                        // 取对数改写得到含参数的符号答案（`e^a`）：直接排版
                         engine.toLatex(rewritten) ?: exactLatex
                     } else {
                         numeric?.let { LatexText.fromDouble(it) } ?: exactLatex
@@ -142,6 +148,9 @@ object LimitFallback {
     fun resultNumber(engine: SymjaEngine, formula: String, exact: IExpr?): Double? {
         val limit = parse(engine, formula) ?: return finiteDouble(exact)
         if (isInfiniteValue(exact)) return null
+        // 结果是含参数的符号答案（`e^a`）：数值通道代不进参数，交给调用方
+        // 走符号对拍通道，不能拿"数值拿不到"当有限值用。
+        if (isSymbolicAnswer(engine, exact, limit)) return null
         val numeric = numericValueAt(engine, limit.body, limit.variable, limit.point, limit.direction)
         val exactDouble = finiteDouble(exact)
         return when {
@@ -232,21 +241,70 @@ object LimitFallback {
             .append(limit.variable).append(" -> ").append(pointText(limit.point))
         if (limit.direction != null) code.append(", Direction -> ").append(limit.direction)
         code.append(")")
-        val value = engine.evaluateOrNull(engine.parseOrNull(code.toString())) ?: return null
-        if (!value.isNumber) return null
-        return engine.evaluateOrNull(engine.parseOrNull("E^($value)"))
+        val value = engine.evaluateOrNull(engine.parseOrNull(code.toString()))
+        if (value != null && value.isNumber) {
+            return engine.evaluateOrNull(engine.parseOrNull("E^($value)"))
+        }
+        // 结果含自由参数（`lim (1/x)·ln(1+ax) = a`）：把参数留着，取 e 的幂再判。
+        // 只认「不含数字、不含未求值 Limit」的纯符号式子，避免把半成品当真。
+        if (value != null && value.isFree(engine.symbol(limit.variable)) &&
+            value.toString().none { it.isDigit() } &&
+            !value.toString().contains("Limit(")
+        ) {
+            val powered = engine.evaluateOrNull(engine.parseOrNull("E^($value)"))
+            if (powered != null && powered.isFree(engine.symbol(limit.variable))) {
+                return powered
+            }
+        }
+        return null
     }
 
-    /** 底数在极限点两侧里至少有一侧是正的（单侧极限只要那一侧）。 */
+    /**
+     * 底数在极限点两侧里至少有一侧是正的（单侧极限只要那一侧）。
+     *
+     * 带自由参数时先把参数代掉再判号——`lim (1+ax)^(1/x)` 里 `1+a·0⁺ = 1 > 0`
+     * 恒成立，不代参数就永远判不出正负、改写整条走不下去。
+     */
     private fun hasPositiveSide(engine: SymjaEngine, base: String, limit: Unevaluated): Boolean {
+        val baseExpr = engine.parseOrNull("($base)") ?: return false
+        val freeSymbols = mutableListOf<String>()
+        freeSymbolsOf(baseExpr, freeSymbols)
         val step = STEP * maxOf(1.0, Math.abs(limit.point))
-        val plus = engine.numericValueOf(substituted(base, limit.variable, limit.point + step))
-        val minus = engine.numericValueOf(substituted(base, limit.variable, limit.point - step))
-        return when (limit.direction) {
-            null -> (plus != null && plus > 0) || (minus != null && minus > 0)
-            else -> if (limit.direction > 0) minus != null && minus > 0 else plus != null && plus > 0
+        for (round in SAMPLE_VALUES.indices) {
+            val rules = freeSymbols.mapIndexed { index, name ->
+                " /. $name -> ${SAMPLE_VALUES[(index + round) % SAMPLE_VALUES.size]}"
+            }.joinToString("")
+            val plus = engine.numericValueOf(
+                substituted("($base)$rules", limit.variable, limit.point + step),
+            )
+            val minus = engine.numericValueOf(
+                substituted("($base)$rules", limit.variable, limit.point - step),
+            )
+            val positive = when (limit.direction) {
+                null -> (plus != null && plus > 0) || (minus != null && minus > 0)
+                else -> if (limit.direction > 0) {
+                    minus != null && minus > 0
+                } else {
+                    plus != null && plus > 0
+                }
+            }
+            if (positive) return true
         }
+        return false
     }
+
+    /** 收集表达式里的自由符号名（用于给参数代采样值）。 */
+    private fun freeSymbolsOf(expr: IExpr, out: MutableList<String>) {
+        if (expr.isSymbol) {
+            out += expr.toString()
+            return
+        }
+        val ast = expr as? IAST ?: return
+        for (i in 1 until ast.size) freeSymbolsOf(ast.get(i), out)
+    }
+
+    /** 给自由参数用的采样值（尽量避开 0/±1 这些常见奇点）。 */
+    private val SAMPLE_VALUES = listOf(0.6, 1.4, 2.3, 3.7)
 
     /** `(body) /. x -> value`，统一走数值引擎。 */
     private fun substituted(body: String, variable: String, value: Double): String =
@@ -280,6 +338,31 @@ object LimitFallback {
     private fun agrees(a: Double, b: Double): Boolean =
         Math.abs(a - b) <= AGREEMENT * maxOf(1.0, Math.abs(a), Math.abs(b))
 
+    /**
+     * 引擎给出的精确结果是含自由符号的有限答案，而不是原样回显的未求值极限。
+     *
+     * 典型场景：`Limit((1+a*x)^(1/x), x->0)` 的 `a` 是参数（固定常数的写法），
+     * 数值逼近代不进去，但引擎精确通道能给出 `e^a`——这份结果要照用，不能被
+     * 「数值拿不到」拖回未求值的原式。
+     */
+    private fun isSymbolicAnswer(engine: SymjaEngine, exact: IExpr?, limit: Unevaluated): Boolean {
+        if (exact == null) return false
+        // Indeterminate 是"没求值"的标记，不是符号答案
+        if (exact.isIndeterminate) return false
+        // 还含极限变量的表达式（未求值的 Limit 等）不算答案
+        if (!exact.isFree(engine.symbol(limit.variable))) return false
+        val text = exact.toString()
+        if (text.contains("Limit(")) return false
+        if (text.contains("Integrate(")) return false
+        return text.any { it.isLetter() }
+    }
+
+    /** 给 [LimitSteps] 用的同口径判断：精确结果是含自由参数的符号答案。 */
+    internal fun symbolicAnswer(engine: SymjaEngine, formula: String, exact: IExpr?): Boolean {
+        val limit = parse(engine, formula) ?: return false
+        return isSymbolicAnswer(engine, exact, limit)
+    }
+
     /** 引擎给的 ±∞ / 复无穷：这是"发散"的答案，不能用数值结果顶掉。 */
     private fun isInfiniteValue(expr: IExpr?): Boolean =
         expr != null && (expr.isInfinity || expr.isNegativeInfinity || expr.isDirectedInfinity)
@@ -293,9 +376,12 @@ object LimitFallback {
      */
     private fun finiteDouble(expr: IExpr?): Double? {
         if (expr == null) return null
+        if (expr.isIndeterminate) return null
         val value = try {
             expr.evalDouble()
         } catch (e: Exception) {
+            return null
+        } catch (e: StackOverflowError) {
             return null
         }
         return if (value.isFinite()) value else null

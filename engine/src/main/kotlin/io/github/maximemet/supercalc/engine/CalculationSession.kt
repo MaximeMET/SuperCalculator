@@ -224,11 +224,21 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
 
     // ---------- 内部工具 ----------
 
-    private fun isConstantExpression(expr: IExpr): Boolean {
-        val symbols = listOf(
-            EngineSettings.unknown, "x", "y", "z", "a", "b", "c", "h", "k", "p"
-        )
-        return symbols.all { engine.isFreeOf(expr, it) }
+    /**
+     * 表达式的自动结果预览：只有**不含任何字母变量**的常量式子才预览。
+     *
+     * 以前这里写死了一份字母清单（x/y/z 加 a b c h k p），键盘第 3 页补上
+     * s/u/v 和希腊字母后，清单就得跟着改——干脆把 a-z 和希腊符号全当变量：
+     * 少一个字母都会让「a*x²」这种式子一边打字一边弹半成品结果。
+     */
+    private fun isConstantExpression(expr: IExpr): Boolean =
+        LETTER_VARIABLES.all { engine.isFreeOf(expr, it) }
+
+    private companion object {
+        /** 键盘上可能出现的变量名（拉丁 a-z 与第 3 页的希腊字母）。 */
+        val LETTER_VARIABLES: List<String> =
+            ('a'..'z').map(Char::toString) +
+                listOf("theta", "phi", "lambda", "mu", "sigma", "omega")
     }
 
     /**

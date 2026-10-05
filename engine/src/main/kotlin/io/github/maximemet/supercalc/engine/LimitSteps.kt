@@ -57,9 +57,17 @@ object LimitSteps {
         val input = parseLimit(engine, formula) ?: return null
         val finalExpr = engine.evaluateOrNull(engine.parseOrNull(formula))
         val finalLatex = finalLatexOf(engine, formula) ?: return null
-        // 最终值同样要过一遍数值对拍：Symja 对 `x/sin x` 这类会给出一个错的有限值
-        val finalDouble = LimitFallback.resultNumber(engine, formula, finalExpr) ?: return null
-        if (!finalDouble.isFinite()) return null
+        // 最终值同样要过一遍数值对拍：Symja 对 `x/sin x` 这类会给出一个错的有限值。
+        // 带字母参数时数值通道给不出数（`a` 是自由的），但精确结果可能是含参数的
+        // 表达式（`lim (1+ax)^(1/x) = e^a`），这时改用符号对拍通道逐项验证。
+        if (finalExpr == null || isInfinite(finalExpr)) return null
+        val finalDouble = LimitFallback.resultNumber(engine, formula, finalExpr)
+        val resolvedSymbolicAnswer =
+            LimitFallback.symbolicAnswer(engine, formula, finalExpr) ||
+                !finalLatex.contains("\\lim_")
+        if (finalDouble == null && !resolvedSymbolicAnswer) {
+            return null
+        }
 
         val bodyTex = engine.toExactLatex(input.body) ?: return null
         val variableTex = engine.toExactLatex(engine.symbol(input.variable)) ?: input.variable
@@ -74,7 +82,8 @@ object LimitSteps {
         val substituted = engine.evaluateOrNull(
             engine.parseOrNull("(${input.body}) /. ${input.variable} -> (${input.pointText})")
         )
-        if (substituted != null && evalDouble(substituted)?.isFinite() == true) {
+        val substitutedValue = evalDouble(substituted)
+        if (substitutedValue != null && substitutedValue.isFinite()) {
             val valueTex = engine.toExactLatex(substituted) ?: return null
             steps += ProcessStep(
                 "substitute",
@@ -98,9 +107,10 @@ object LimitSteps {
 
         // 3. 技巧：1^∞ 取对数；其余先等价无穷小，再洛必达
         val technique = when (form) {
-            Form.ONE_POWER_INF -> powerLogSteps(engine, input, finalDouble, finalLatex)
-            else -> equivalenceSteps(engine, input, finalDouble)
-                ?: lHopitalSteps(engine, input, finalDouble)
+            Form.ONE_POWER_INF -> powerLogSteps(engine, input, finalExpr, finalDouble, finalLatex)
+            else -> symbolicEvaluatedStep(engine, input, finalExpr)
+                ?: equivalenceSteps(engine, input, finalExpr, finalDouble)
+                ?: lHopitalSteps(engine, input, finalExpr, finalDouble)
         }
         if (technique != null) steps += technique
 
@@ -153,14 +163,130 @@ object LimitSteps {
 
     // ---------- 等价无穷小 ----------
 
+    /**
+     * 带参数的题：0/0 或 ∞/∞ 且引擎直接给出了含参数的精确结果
+     * （`lim sin(ax)/x = a`、`lim x/(x+a) = 0` 这类）。
+     *
+     * 这类题走不了数值对拍通道（参数是自由的），但分子分母分别求导后的比式
+     * 能用符号对拍验到同一个结果，就展示一步洛必达——学生看到的是
+     * `cos(ax)·a` 这种能心算的中间式，而不只是答案。
+     */
+    private fun symbolicEvaluatedStep(
+        engine: SymjaEngine,
+        input: LimitInput,
+        finalExpr: IExpr,
+    ): List<ProcessStep>? {
+        val finalDouble = evalDouble(finalExpr)
+        if (finalDouble != null && finalDouble.isFinite()) return null
+        if (!finalExpr.isFree(engine.symbol(input.variable))) return null
+        val parts = splitQuotient(input.body) ?: return null
+        val numLimit = limitOf(engine, parts.first, input) ?: return null
+        val denLimit = limitOf(engine, parts.second, input) ?: return null
+        val form = when {
+            numLimit.isZero && denLimit.isZero -> Form.ZERO_OVER_ZERO
+            isInfinite(numLimit) && isInfinite(denLimit) -> Form.INF_OVER_INF
+            else -> return null
+        }
+        val numPrime = derivativeOf(engine, parts.first, input.variable) ?: return null
+        val denPrime = derivativeOf(engine, parts.second, input.variable) ?: return null
+        val nextBody = F.eval(F.Divide(numPrime, denPrime))
+        // 换元/求导后的比值式还要在极限点上取极限，才能和最终结果比；
+        // 直接对表达式做数值对拍会把"函数值"当成"极限值"（`sin(ax)/x` 对不上 `a`）。
+        if (!nextBodyLimitAgrees(engine, input, nextBody, finalExpr)) return null
+        val currentTex = engine.toExactLatex(input.body) ?: return null
+        val nextTex = engine.toExactLatex(nextBody) ?: return null
+        return listOf(
+            ProcessStep(
+                "lhopital",
+                "洛必达法则",
+                listOf(
+                    "T:${form.label}，分子分母分别求导",
+                    "${limitTex(engine, input, currentTex)}=${limitTex(engine, input, nextTex)}",
+                ),
+            ),
+        )
+    }
+
+    /**
+     * 洛必达比值式在极限点的极限，和引擎给出的（含参数）精确结果是不是一回事。
+     * 参数是自由的，数值通道代不进去——先给参数代采样值、再对 `x` 取极限，
+     * 逐轮比较两边算出来的数。
+     */
+    private fun nextBodyLimitAgrees(
+        engine: SymjaEngine,
+        input: LimitInput,
+        nextBody: IExpr,
+        finalExpr: IExpr,
+    ): Boolean {
+        val variable = engine.symbol(input.variable)
+        val symbols = linkedSetOf<IExpr>()
+        NumericCheck.collectSymbols(nextBody, symbols)
+        NumericCheck.collectSymbols(finalExpr, symbols)
+        symbols.remove(variable)
+        var checked = 0
+        for (round in SYMBOL_POINTS.indices) {
+            val nextCode = symbolSubstituted(
+                nextBody.toString(), symbols.toList(), round,
+            ) ?: continue
+            val finalCode = symbolSubstituted(
+                finalExpr.toString(), symbols.toList(), round,
+            ) ?: continue
+            val point = pointForLimit(engine, input) ?: continue
+            val left = LimitFallback.valueAt(engine, nextCode, input.variable, point)
+            val right = engine.numericValueOf(finalCode)
+            if (left == null || right == null) continue
+            checked++
+            val scale = maxOf(1.0, kotlin.math.abs(left), kotlin.math.abs(right))
+            if (kotlin.math.abs(left - right) > 1e-6 * scale) return false
+        }
+        return checked > 0
+    }
+
+    /**
+     * 极限点的数值：实数点直接用；±∞ 用远远超出其余参数的大数近似
+     * （对 `x→∞` 的有理式足够，且 [NumericCheck] 的采样点都在 (0, 4) 内）。
+     */
+    private fun pointForLimit(engine: SymjaEngine, input: LimitInput): Double? {
+        val point = evalDouble(input.point)
+        if (point != null && point.isFinite()) return point
+        return when {
+            input.point.isInfinity -> 1e6
+            input.point.isNegativeInfinity -> -1e6
+            else -> null
+        }
+    }
+
+    /** [LimitFallback] 数值兜底也要用同一个极限点口径（±∞ 用大数近似）。 */
+    internal fun pointForLimit(engine: SymjaEngine, limit: LimitFallback.Unevaluated): Double? = when {
+        limit.point.isFinite() -> limit.point
+        limit.point > 0 -> 1e6
+        else -> -1e6
+    }
+
+    /** 给符号按轮次代采样值；拿不到轮次（点不够）返回 null。 */
+    private fun symbolSubstituted(
+        code: String,
+        symbols: List<IExpr>,
+        round: Int,
+    ): String? {
+        if (symbols.isEmpty()) return code
+        var out = code
+        for ((index, symbol) in symbols.withIndex()) {
+            val point = SYMBOL_POINTS[(index + round) % SYMBOL_POINTS.size]
+            out = "($out) /. $symbol -> $point"
+        }
+        return out
+    }
+
     private fun equivalenceSteps(
         engine: SymjaEngine,
         input: LimitInput,
-        finalDouble: Double,
+        finalExpr: IExpr,
+        finalDouble: Double?,
     ): List<ProcessStep>? {
         val rewritten = rewriteEquivalents(engine, input) ?: return null
         val value = limitOf(engine, rewritten.first, input) ?: return null
-        if (!matchesFinal(engine, value, finalDouble)) return null
+        if (!matchesFinal(engine, input, value, finalExpr, finalDouble)) return null
         val rewrittenTex = engine.toExactLatex(rewritten.first) ?: return null
         val valueTex = engine.toExactLatex(value) ?: return null
         val bodyTex = engine.toExactLatex(input.body) ?: return null
@@ -347,7 +473,8 @@ object LimitSteps {
     private fun lHopitalSteps(
         engine: SymjaEngine,
         input: LimitInput,
-        finalDouble: Double,
+        finalExpr: IExpr,
+        finalDouble: Double?,
     ): List<ProcessStep>? {
         val steps = mutableListOf<ProcessStep>()
         var current = input.body
@@ -365,7 +492,7 @@ object LimitSteps {
             val denPrime = derivativeOf(engine, parts.second, input.variable) ?: break
             val nextBody = F.Divide(numPrime, denPrime)
             val value = limitOf(engine, nextBody, input) ?: break
-            if (!matchesFinal(engine, value, finalDouble)) break
+            if (!matchesFinal(engine, input, value, finalExpr, finalDouble)) break
             applications++
             val currentTex = engine.toExactLatex(current) ?: break
             val nextTex = engine.toExactLatex(nextBody) ?: break
@@ -398,7 +525,8 @@ object LimitSteps {
     private fun powerLogSteps(
         engine: SymjaEngine,
         input: LimitInput,
-        finalDouble: Double,
+        finalExpr: IExpr,
+        finalDouble: Double?,
         finalLatex: String,
     ): List<ProcessStep>? {
         val ast = input.body as? IAST ?: return null
@@ -414,7 +542,7 @@ object LimitSteps {
         val loggedLimit = limitOf(engine, logged, input)
         if (loggedLimit != null) {
             val value = engine.evaluateOrNull(F.eval(F.Power(F.E, loggedLimit))) ?: return null
-            if (!matchesFinal(engine, value, finalDouble)) return null
+            if (!matchesFinal(engine, input, value, finalExpr, finalDouble)) return null
             val loggedLimitTex = engine.toExactLatex(loggedLimit) ?: return null
             val valueTex = engine.toExactLatex(value) ?: return null
             return listOf(
@@ -453,12 +581,35 @@ object LimitSteps {
         return value
     }
 
-    private fun matchesFinal(engine: SymjaEngine, value: IExpr, finalDouble: Double): Boolean {
-        val v = evalDouble(value) ?: return false
-        if (!v.isFinite()) return false
-        val scale = maxOf(1.0, kotlin.math.abs(v), kotlin.math.abs(finalDouble))
-        return kotlin.math.abs(v - finalDouble) <= 1e-8 * scale
+    /**
+     * 中间结论和最终结果是不是同一个东西。
+     *
+     * 纯数值时走原来的浮点对拍；结果含自由参数（`a`、`k` 这类）时改走
+     * [NumericCheck] 的符号对拍——逐轮给所有自由符号代采样值，两边算出来对得上
+     * 才放行。`limit (1+ax)^(1/x) = e^a` 这种题目的等价无穷小/洛必达分支
+     * 以前在数值通道拿不到数就整段放弃，现在能验得过。
+     */
+    private fun matchesFinal(
+        engine: SymjaEngine,
+        input: LimitInput,
+        value: IExpr,
+        finalExpr: IExpr,
+        finalDouble: Double?,
+    ): Boolean {
+        val v = evalDouble(value)
+        if (v != null && v.isFinite() && finalDouble != null) {
+            val scale = maxOf(1.0, kotlin.math.abs(v), kotlin.math.abs(finalDouble))
+            return kotlin.math.abs(v - finalDouble) <= 1e-8 * scale
+        }
+        if (finalDouble != null) return false
+        // 两边都还有极限变量时不能代值硬比（比的是函数值、不是极限值）——
+        // 交给 [symbolicEvaluatedStep] 那条通道处理。
+        if (!value.isFree(engine.symbol(input.variable))) return false
+        return NumericCheck.agrees(engine, value, finalExpr, SYMBOL_POINTS)
     }
+
+    /** 符号对拍的采样点：避开 0/±1 这些常见奇点。 */
+    private val SYMBOL_POINTS = doubleArrayOf(0.6, 0.3, 1.4, 2.3, 3.7)
 
     private fun numericValue(engine: SymjaEngine, input: LimitInput): Double? {
         val point = evalDouble(input.point) ?: return null
@@ -526,8 +677,9 @@ object LimitSteps {
     private fun evalDouble(expr: IExpr?): Double? {
         if (expr == null) return null
         return try {
-            expr.evalDouble()
-        } catch (e: Exception) {
+            val value = expr.evalDouble()
+            if (value.isFinite()) value else null
+        } catch (e: Throwable) {
             null
         }
     }

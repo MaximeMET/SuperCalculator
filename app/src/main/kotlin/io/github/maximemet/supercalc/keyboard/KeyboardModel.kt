@@ -59,6 +59,10 @@ object KeyboardModel {
     private fun op(symbol: String, icon: String, label: String, code: String, cursorBack: Int = 0) =
         KeyItem(symbol, icon, label, KeyCommand(OP, code, cursorBack = cursorBack))
 
+    /** 希腊字母：插入 `\theta` 这类命令（Symja 认这些符号名当变量）。 */
+    private fun greek(name: String, icon: String) =
+        KeyItem(name, icon, name, KeyCommand(OP, "\\$name"))
+
     private fun block(symbol: String, icon: String, label: String, code: String, cursorBack: Int = 0) =
         KeyItem(symbol, icon, label, KeyCommand(BLOCK, code, cursorBack = cursorBack))
 
@@ -147,7 +151,13 @@ object KeyboardModel {
         empty(),
     )
 
-    /** 第 3 页：变量。 */
+    /**
+     * 第 3 页：变量。
+     *
+     * 除 a b c h k p 外补上常用的拉丁字母（s、u、v）与希腊字母（θ φ λ μ σ ω）——
+     * 两排空着不好看，物理/高数里这些字母也常用。全部走 Symja 的符号名，
+     * 可以当参数参与求导、积分、极限。
+     */
     val page3: List<KeyItem> = listOf(
         text("a", "ic_keyboard_a"),
         text("b", "ic_keyboard_b"),
@@ -155,7 +165,15 @@ object KeyboardModel {
         text("h", "ic_keyboard_h"),
         text("k", "ic_keyboard_k"),
         text("p", "ic_keyboard_p"),
-        empty(), empty(), empty(), empty(),
+        text("s", "ic_keyboard_s"),
+        text("u", "ic_keyboard_u"),
+        text("v", "ic_keyboard_v"),
+        greek("theta", "ic_keyboard_theta"),
+        greek("phi", "ic_keyboard_phi"),
+        greek("lambda", "ic_keyboard_lambda"),
+        greek("mu", "ic_keyboard_mu"),
+        greek("sigma", "ic_keyboard_sigma"),
+        greek("omega", "ic_keyboard_omega"),
     )
 
     /** 第 4 页：函数模板。图标是公式文字，由 tools/make_keyboard_icons.py 生成。 */

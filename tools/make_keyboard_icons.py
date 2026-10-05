@@ -345,6 +345,19 @@ def fit_to_box(cmds, box, mode="height"):
     return transform_group(cmds, s, cx, cy)
 
 
+def place_exact(cmds, box):
+    """把已经按统一字号排好的字形搬进 box：只平移、不缩放，墨迹照原样。
+
+    同一族图标（字母、函数名）用同一个 box 和同一个基准字号时，字形之间的
+    大小比例、基线、上下伸部都和排版学里的一致——尺子就是这条基线，不是每个
+    字形各自的墨迹盒。这就是「每个字母一个字号、一条基线」的做法。
+    """
+    b = union_bbox(cmds)
+    dx = box[0] - b[0]
+    dy = box[1] - b[1]
+    return transform_group(cmds, 1.0, dx, dy)
+
+
 def center_in_box(cmds, box):
     """**不缩放**，只把墨迹居中放进 box（原地大小）。"""
     b = union_bbox(cmds)
@@ -420,14 +433,8 @@ ICONS = {
     "7": dict(canvas=(22, 34), glyph=[G(T("7"), (1, 0, 21, 34))]),
     "8": dict(canvas=(23, 35), glyph=[G(T("8"), (0, 0, 23, 34))]),
     "9": dict(canvas=(23, 35), glyph=[G(T("9"), (0, 0, 23, 34))]),
-    "a": dict(canvas=(20, 27), glyph=[G(T("a"), (0, 0, 20, 27))]),
-    "b": dict(canvas=(22, 37), glyph=[G(T("b"), (0, 0, 22, 37))]),
-    "c": dict(canvas=(19, 27), glyph=[G(T("c"), (0, 0, 19, 27))]),
     "e": dict(canvas=(100, 80), glyph=[G(T("e"), (35, 23, 59, 54))]),
-    "h": dict(canvas=(20, 36), glyph=[G(T("h"), (0, 0, 20, 36))]),
     "i": dict(canvas=(14, 36), glyph=[G(T("i"), (0, 0, 14, 36))]),
-    "k": dict(canvas=(20, 36), glyph=[G(T("k"), (0, 0, 20, 36))]),
-    "p": dict(canvas=(22, 37), glyph=[G(T("p"), (0, 0, 22, 37))]),
     "x": dict(canvas=(26, 27), glyph=[G(T("x"), (0, 0, 26, 27))]),
     "y": dict(canvas=(24, 35), glyph=[G(T("y"), (0, 0, 24, 35))]),
     "z": dict(canvas=(21, 26), glyph=[G(T("z"), (0, 0, 21, 26))]),
@@ -437,12 +444,6 @@ ICONS = {
     "divide": dict(canvas=(28, 28), glyph=[G(T("÷"), (0, 0, 28, 28))]),
     "equal": dict(canvas=(30, 15), glyph=[G(T("="), (0, 0, 30, 15))]),
     "dot": dict(canvas=(8, 46), glyph=[G(T("."), (1, 39, 7, 45))]),
-    "left_paren": dict(canvas=(11, 42), glyph=[G(T("("), (0, 0, 11, 42))]),
-    "right_paren": dict(canvas=(11, 42), glyph=[G(T(")"), (0, 0, 11, 42))]),
-    "less": dict(canvas=(26, 27), glyph=[G(T("<"), (0, 0, 26, 27))]),
-    "le": dict(canvas=(27, 29), glyph=[G(T("≤"), (0, 0, 27, 28))]),
-    "greater": dict(canvas=(26, 27), glyph=[G(T(">"), (0, 0, 26, 27))]),
-    "ge": dict(canvas=(27, 29), glyph=[G(T("≥"), (0, 0, 27, 28))]),
     "inf": dict(canvas=(47, 22), glyph=[G(T("∞"), (0, 0, 47, 22))]),
     "pi": dict(canvas=(31, 30), glyph=[G(T("π"), (0, 0, 31, 30))]),
     "degree": dict(canvas=(46, 46), glyph=[G(T("°"), (32, 0, 45, 14))]),
@@ -464,24 +465,9 @@ ICONS = {
                  ]),
     "int": dict(canvas=(42, 53), slots=[(24, 4, 18, 20), (24, 27, 18, 20)],
                 glyph=[G(T("∫"), (0, 0, 16, 53))]),
-    "log": dict(canvas=(85, 38), slots=[(49, 14, 12, 14), (65, 3, 20, 25)],
-                glyph=[G(T("log"), (0, 1, 44, 38))]),
-    "log2": dict(canvas=(85, 38), slots=[(65, 4, 20, 25)],
-                 glyph=[G(SEQ(T("log"), SUB("2")), (0, 1, 58, 38))]),
-    "log10": dict(canvas=(87, 38), slots=[(67, 4, 20, 25)],
-                  glyph=[G(SEQ(T("log"), SUB("10")), (0, 1, 64, 38))]),
-    "ln": dict(canvas=(55, 36), slots=[(35, 10, 20, 25)],
-               glyph=[G(T("ln"), (0, 0, 30, 34))]),
     "abs": dict(canvas=(46, 40), slots=[(11, 6, 24, 28)],
                 paths=[(rrect_cmds(0.5, 2, 3, 36, 1.5), KEY),
                        (rrect_cmds(42.5, 2, 3, 36, 1.5), KEY)]),
-    # ---- 第 2 页：函数与高级运算 ----
-    "sin": dict(canvas=(47, 33), glyph=[G(T("sin"), (0, 1, 47, 32))]),
-    "cos": dict(canvas=(59, 24), glyph=[G(T("cos"), (0, 0, 59, 24))]),
-    "tan": dict(canvas=(58, 30), glyph=[G(T("tan"), (0, 0, 58, 30))]),
-    "arcsin": dict(canvas=(80, 26), glyph=[G(T("arcsin"), (0, 1, 79, 28))]),
-    "arccos": dict(canvas=(89, 19), glyph=[G(T("arccos"), (0, 0, 89, 21))]),
-    "arctan": dict(canvas=(87, 24), glyph=[G(T("arctan"), (0, 1, 86, 26))]),
     "gcd": dict(canvas=(59, 28), glyph=[G(T("公约"), (1, 0, 58, 29))]),
     "lcm": dict(canvas=(59, 29), glyph=[G(T("公倍"), (1, 0, 58, 29))]),
     "lim": dict(canvas=(53, 51), slots=[(0, 35, 14, 16), (39, 35, 14, 16)],
@@ -565,6 +551,131 @@ def tool_icons():
 
 
 ICONS.update(tool_icons())
+
+
+# --------------------------------------------------------------------------
+# 同族字形：数学字母 / 函数名 / 比较号 / 括号
+#
+# 这四组原来各自「按墨迹高度填满自己的小框」：a 的墨迹矮就放大、p 有降部就
+# 缩小，sin 和 cos 的 x 高度不一样，结果同屏大小不一、基线错位（用户逐条报过）。
+# 现在按字体排版的本来规则来：**一族共用一个字号和一条基线**，只平移不缩放。
+# --------------------------------------------------------------------------
+
+#: 数学字母族（a-z 与希腊字母）：统一字号。
+LETTER_SIZE = 62.0
+#: 函数名族（sin/cos/tan、log/ln）：统一字号，与字母族同口径。
+FUNCTION_SIZE = 46.5
+#: 比较号（< > ≤ ≥）：自绘，笔画宽度与数字主干一致。
+COMPARE_STROKE = 5.0
+
+
+def _family_specs(size, texts, fill=None):
+    """同一字号的若干图标：先量出共同的墨迹盒，再逐个只平移放到盒里。
+
+    [fill] 是 (text, 排版节点) 的额外项（比如 log₂ 的下标 2）。
+    """
+    boxes = {}
+    for name, node in texts.items():
+        cmds, _, _ = node_layout(Shaper__shared, node, size)
+        boxes[name] = union_bbox(cmds)
+    x0 = min(b[0] for b in boxes.values())
+    y0 = min(b[1] for b in boxes.values())
+    x1 = max(b[2] for b in boxes.values())
+    y1 = max(b[3] for b in boxes.values())
+    specs = {}
+    for name, node in texts.items():
+        b = boxes[name]
+        specs[name] = dict(
+            canvas=(x1 - x0, y1 - y0), uniform_size=size,
+            glyph=[G(node, (b[0] - x0, b[1] - y0, b[0] - x0 + (x1 - x0), b[1] - y0 + (y1 - y0)),
+                      fill or KEY)],
+        )
+    return specs
+
+
+def _build_compare_paths(kind):
+    """比较号：折线 + 横杠，统一笔画宽度（字形版的 ≤/≥ 横线天生偏细）。"""
+    def chevron(left):
+        if left:
+            return [("M", [19.5, 10.5]), ("L", [5.5, 20.0]), ("L", [19.5, 29.5])]
+        return [("M", [5.5, 10.5]), ("L", [19.5, 20.0]), ("L", [5.5, 29.5])]
+
+    def bar():
+        return [("M", [5.5, 33.5]), ("L", [19.5, 33.5])]
+
+    if kind == "less":
+        return [chevron(True)]
+    if kind == "greater":
+        return [chevron(False)]
+    if kind == "le":
+        return [chevron(True), bar()]
+    return [chevron(False), bar()]
+
+
+def compare_icons():
+    canvas = (25, 41)
+    specs = {}
+    for kind in ("less", "greater", "le", "ge"):
+        strokes = [
+            (path, KEY, COMPARE_STROKE, "round", "round")
+            for path in _build_compare_paths(kind)
+        ]
+        specs[kind] = dict(canvas=canvas, extra_strokes=strokes, stroke_pad=True)
+    return specs
+
+
+def paren_icons():
+    """左右括号：字形版竖画太细，改自绘曲线 + 统一笔画。"""
+    def left():
+        return [("M", [27.0, 1.5]), ("Q", [8.0, 12.0, 8.0, 22.0]),
+                ("Q", [8.0, 32.0, 27.0, 42.5])]
+
+    def right():
+        return [("M", [3.0, 1.5]), ("Q", [22.0, 12.0, 22.0, 22.0]),
+                ("Q", [22.0, 32.0, 3.0, 42.5])]
+
+    return {
+        "left_paren": dict(canvas=(28, 44), stroke_pad=True,
+                           extra_strokes=[(left(), KEY, 5.0, "round", "round")]),
+        "right_paren": dict(canvas=(28, 44), stroke_pad=True,
+                            extra_strokes=[(right(), KEY, 5.0, "round", "round")]),
+    }
+
+
+# 数学字母族：拉丁小写 + 希腊字母。每个都是「同字号、同基线」。
+LETTER_TEXTS = {
+    "a": T("a"), "b": T("b"), "c": T("c"), "h": T("h"), "k": T("k"),
+    "p": T("p"), "s": T("s"), "u": T("u"), "v": T("v"),
+    "theta": T("θ"), "phi": T("φ"), "lambda": T("λ"),
+    "mu": T("μ"), "sigma": T("σ"), "omega": T("ω"),
+}
+
+# 函数名族：三角 / 反三角 / 指数对数。统一字号、统一基线。
+FUNCTION_TEXTS = {
+    "sin": T("sin"), "cos": T("cos"), "tan": T("tan"),
+    "arcsin": T("arcsin"), "arccos": T("arccos"), "arctan": T("arctan"),
+    "log": T("log"), "ln": T("ln"),
+}
+
+
+def family_icons():
+    global Shaper__shared
+    if "Shaper__shared" not in globals():
+        if not os.path.exists(FONT_PATH):
+            raise SystemExit(
+                f"缺字体 {FONT_PATH}；先跑 python tools/make_keyboard_icons.py --fetch"
+            )
+        Shaper__shared = Shaper(FONT_PATH)
+    icons = {}
+    icons.update(_family_specs(LETTER_SIZE, LETTER_TEXTS, fill=KEY))
+    icons.update(_family_specs(FUNCTION_SIZE, FUNCTION_TEXTS, fill=KEY))
+    icons.update(compare_icons())
+    icons.update(paren_icons())
+    return icons
+
+
+ICONS.update(family_icons())
+
 
 
 # 书签（左栏四个圆底按钮）：圆 + 字形
@@ -664,15 +775,31 @@ def build_icon(sha, name, spec, color_override=None):
             cmds, _, _ = node_layout(sha, node, FORMULA_SIZE, profile)
             solids.append((center_in_box(cmds, box), color))
         else:
-            cmds, _, _ = node_layout(sha, node, 100.0)
-            solids.append((fit_to_box(cmds, box, "contain" if contain else "height"), color))
+            # 同族图标（数学字母、函数名）走统一字号：spec 指定统一 box，排版后
+            # 只平移、不缩放，字形之间的基线、x 高度、上下伸部都保持字体本来的关系。
+            uniform = spec.get("uniform_size")
+            if uniform is not None:
+                cmds, _, _ = node_layout(sha, node, uniform)
+                bb = union_bbox(cmds)
+                box = (box[0], box[1],
+                       box[0] + (bb[2] - bb[0]), box[1] + (bb[3] - bb[1]))
+                solids.append((place_exact(cmds, box), color))
+            else:
+                cmds, _, _ = node_layout(sha, node, 100.0)
+                solids.append((fit_to_box(cmds, box, "contain" if contain else "height"), color))
     # 画布至少包住 canvas 矩形；内容超出就往两边长
     hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
     for group, _ in solids:
         hull = union_bbox(group, hull)
     for stroke in strokes:
         hull = union_bbox(stroke[0], hull)
+    # 描边是以中心线画的，边缘要留出半个笔宽，否则圆头会被画布裁掉。
+    # 只有新加的比较号/括号打开这个开关，老图标的尺寸保持不变。
     pad = 0.75
+    if spec.get("stroke_pad"):
+        for stroke in strokes:
+            if len(stroke) > 2:
+                pad = max(pad, float(stroke[2]) / 2.0 + 0.5)
     x0, y0 = hull[0] - pad, hull[1] - pad
     new_w = int(round(hull[2] - hull[0] + pad * 2))
     new_h = int(round(hull[3] - hull[1] + pad * 2))

@@ -523,23 +523,20 @@ object IntegrateSteps {
         return value
     }
 
-    /** 求导回验：F' 与被积函数在采样点上一致。 */
+    /**
+     * 求导回验：F' 与被积函数在采样点上一致。
+     *
+     * 采样必须把所有自由符号（不光是积分变量）都代上值——`∫a·x²dx` 里的 `a`
+     * 是参数，只代 `x` 的话表达式仍然含符号、求不出数，整条步骤会被误杀。
+     */
     private fun verifies(
         engine: SymjaEngine,
         integrand: IExpr,
         antiderivative: IExpr,
         variable: String,
-    ): Boolean {
-        val derivative = derivativeOf(engine, antiderivative, variable) ?: return false
-        var checked = 0
-        for (point in SAMPLE_POINTS) {
-            val a = engine.signAt(integrand.toString(), variable, point) ?: continue
-            val b = engine.signAt(derivative.toString(), variable, point) ?: continue
-            checked++
-            val tolerance = 1e-6 * (1.0 + kotlin.math.abs(a) + kotlin.math.abs(b))
-            if (kotlin.math.abs(a - b) > tolerance) return false
-        }
-        return checked >= 2
-    }
+    ): Boolean =
+        derivativeOf(engine, antiderivative, variable)?.let { derivative ->
+            NumericCheck.agrees(engine, integrand, derivative, SAMPLE_POINTS)
+        } ?: false
 
 }

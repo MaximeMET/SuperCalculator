@@ -71,6 +71,14 @@
     '\\slash': '/',
     '\\ge': '>=',
     '\\le': '<=',
+    // 希腊字母：编辑区里是 \theta 这类命令，送引擎时换成 Symja 的符号名
+    //（实测 Symja 2016 认 theta/lambda 这类名字，不认 Unicode 字符）
+    '\\theta': 'theta',
+    '\\phi': 'phi',
+    '\\lambda': 'lambda',
+    '\\mu': 'mu',
+    '\\sigma': 'sigma',
+    '\\omega': 'omega',
   };
 
   Symbol.prototype.symja = function () {
@@ -1015,6 +1023,27 @@
     });
   }
 
+  /**
+   * 引擎结果里的希腊符号名换回字形：`theta` → `\theta`。
+   *
+   * 键盘第 3 页的 θ φ λ μ σ ω 送进引擎时用的是 Symja 符号名（theta…），
+   * 结果串里也会以这个名字回来。直接交给 MathQuill 会渲染成一串斜体字母，
+   * 所以在渲染结果前换回 LaTeX 命令。只替换独立的标识符，避免误伤
+   * `thetabc` 这类用户自己起的连写名字。
+   */
+  var GREEK_LATEX = {
+    theta: '\\theta', phi: '\\phi', lambda: '\\lambda',
+    mu: '\\mu', sigma: '\\sigma', omega: '\\omega',
+  };
+  var GREEK_NAME_PATTERN = /\b(theta|phi|lambda|mu|sigma|omega)\b/g;
+
+  function greekToLatex(text) {
+    if (!text) return text;
+    return String(text).replace(GREEK_NAME_PATTERN, function (name) {
+      return GREEK_LATEX[name] || name;
+    });
+  }
+
   function setLatexInternal(latex) {
     restoring = true;
     formulaField.latex(normalizeLatex(latex) || '');
@@ -1133,8 +1162,8 @@
     resultDiv.style.display = exact ? '' : 'none';
     numericResultDiv.style.display = numeric ? '' : 'none';
     if (opIcon) opIcon.style.display = isValid(numeric) ? '' : 'none';
-    resultField.latex(exact);
-    numericField.latex(numeric);
+    resultField.latex(greekToLatex(exact));
+    numericField.latex(greekToLatex(numeric));
   }
 
   /** 原版 trimLatexEqImply：去掉首尾空白和开头的 `=` / `\Rightarrow`。 */
