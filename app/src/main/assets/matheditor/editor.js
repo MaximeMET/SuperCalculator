@@ -31,6 +31,8 @@
   var MathCommand = MathQuill.MathCommand;
   var MathBlock = MathQuill.MathBlock;
   var Symbol = MathQuill.Symbol;
+  var BinaryOperator = MathQuill.BinaryOperator;
+  var SupSub = MathQuill.SupSub;
   var Parser = MathQuill.Parser;
   var latexMathParser = MathQuill.latexMathParser;
 
@@ -81,12 +83,50 @@
     '\\omega': 'omega',
   };
 
+  /**
+   * 变量节点（拉丁字母与第 3 页的希腊字母）判定。
+   *
+   * 原版 MathQuill 分支里带隐式乘法的是 `$` 类（`<var>`），希腊字母是普通符号类；
+   * 我们这两种都走 [Symbol]，所以按 ctrlSeq 认。
+   */
+  var VARIABLE_CTRL = /^(?:[a-zA-Z]|\\theta|\\phi|\\lambda|\\mu|\\sigma|\\omega)$/;
+
+  function isVariableNode(node) {
+    return !!node && typeof node.ctrlSeq === 'string' &&
+      VARIABLE_CTRL.test(node.ctrlSeq.replace(/\s+$/, ''));
+  }
+
+  /**
+   * 单字符节点的 symja。
+   *
+   * 变量（字母）要按原版补**隐式乘号**：`ax` → `a*x`、`2x` → `2*x`、
+   * `x(2+3)` → `x*(2+3)`，而 `23` 保持 `23`、`x^2` 保持 `x^(2)`。判定和
+   * vanilla MathQuill 的 `Variable.text()` 同一套邻居规则（原版就是从它改的），
+   * 我们只是把结果接到 symja 上。少了它，`ax` 会被 Symja 当成一个叫 `ax`
+   * 的符号——积分/求导按钮不会出现，自动结果只会回显 `ax`。
+   */
   Symbol.prototype.symja = function () {
     var ctrl = String(this.ctrlSeq || '').replace(/\s+$/, '');
-    if (SYMJA_TEXT[ctrl] !== undefined) return SYMJA_TEXT[ctrl];
-    var t = this.textTemplate;
-    var text = (t && t[0]) || ctrl;
-    return SYMJA_TEXT[text] !== undefined ? SYMJA_TEXT[text] : text;
+    var out;
+    if (SYMJA_TEXT[ctrl] !== undefined) {
+      out = SYMJA_TEXT[ctrl];
+    } else {
+      var t = this.textTemplate;
+      var text = (t && t[0]) || ctrl;
+      out = SYMJA_TEXT[text] !== undefined ? SYMJA_TEXT[text] : text;
+    }
+    if (!isVariableNode(this)) return out;
+
+    var left = this[MathQuill.L];
+    var right = this[MathQuill.R];
+    if (left && !isVariableNode(left) && !(left instanceof BinaryOperator) &&
+        left.ctrlSeq !== '\\ ') {
+      out = '*' + out;
+    }
+    if (right && !(right instanceof BinaryOperator) && !(right instanceof SupSub)) {
+      out = out + '*';
+    }
+    return out;
   };
 
   // 分式：((分子)/(分母))
