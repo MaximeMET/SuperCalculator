@@ -2,16 +2,12 @@
 <!-- 由 tools/make_keyboard_icons.py 生成：字形取自 Noto Sans SC Regular（SIL OFL-1.1），
      几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="15.5dp"
-    android:height="23.5dp"
-    android:viewportWidth="31"
-    android:viewportHeight="47">
+    android:width="13dp"
+    android:height="18dp"
+    android:viewportWidth="26"
+    android:viewportHeight="36">
 
   <path
-      android:fillColor="@android:color/transparent"
-      android:strokeColor="#FF505050"
-      android:strokeWidth="5"
-      android:strokeLineCap="round"
-      android:strokeLineJoin="round"
-      android:pathData="M22.5 13.5L8.5 23L22.5 32.5" />
+      android:fillColor="#FF505050"
+      android:pathData="M19.07 9.05L3.75 18.75L19.07 28.45L21.43 24.05L8.75 18.75L21.43 13.45Z" />
 </vector>

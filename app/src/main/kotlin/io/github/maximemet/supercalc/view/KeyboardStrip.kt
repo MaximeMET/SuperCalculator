@@ -188,7 +188,8 @@ class KeyboardStrip @JvmOverloads constructor(
                     gravity = Gravity.CENTER
                     setBackgroundColor(ContextCompat.getColor(context, R.color.keyboard_grid_bg))
                     setTextColor(ContextCompat.getColor(context, R.color.key_text))
-                    textSize = 13f
+                    // 中文标签（公倍/公约/一元一次函数…）比正文小一号会显瘦，13→15sp
+                    textSize = 15f
                 },
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,

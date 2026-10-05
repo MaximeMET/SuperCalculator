@@ -468,8 +468,10 @@ ICONS = {
     "abs": dict(canvas=(46, 40), slots=[(11, 6, 24, 28)],
                 paths=[(rrect_cmds(0.5, 2, 3, 36, 1.5), KEY),
                        (rrect_cmds(42.5, 2, 3, 36, 1.5), KEY)]),
-    "gcd": dict(canvas=(59, 28), glyph=[G(T("公约"), (1, 0, 58, 29))]),
-    "lcm": dict(canvas=(59, 29), glyph=[G(T("公倍"), (1, 0, 58, 29))]),
+    # 中文标签键比原版位图放大一号（用户要求「所有中文字符大一号」）：
+    # 原版是 59×29、墨迹 28；现在是 64×32、墨迹 ≈30。
+    "gcd": dict(canvas=(64, 32), glyph=[G(T("公约"), (1, 0, 63, 32))]),
+    "lcm": dict(canvas=(64, 32), glyph=[G(T("公倍"), (1, 0, 63, 32))]),
     "lim": dict(canvas=(53, 51), slots=[(0, 35, 14, 16), (39, 35, 14, 16)],
                 glyph=[G(T("lim"), (4, 0, 50, 34)), G(T("→"), (14, 35, 39, 51))]),
     "ap": dict(canvas=(52, 43), slots=[(34, 0, 18, 20), (34, 23, 18, 20)],
@@ -556,89 +558,133 @@ ICONS.update(tool_icons())
 # --------------------------------------------------------------------------
 # 同族字形：数学字母 / 函数名 / 比较号 / 括号
 #
-# 这四组原来各自「按墨迹高度填满自己的小框」：a 的墨迹矮就放大、p 有降部就
-# 缩小，sin 和 cos 的 x 高度不一样，结果同屏大小不一、基线错位（用户逐条报过）。
-# 现在按字体排版的本来规则来：**一族共用一个字号和一条基线**，只平移不缩放。
+# 原版每个键的位图都是「紧贴墨迹裁出来」的：a 是 20×27、b 是 22×37、
+# sin 47×33、公倍 59×29……字号由族统一，升降部随字形自然高低。照着做：
+# 同族共用一个字号，每个键按自己的墨迹紧裁、居中。早期实现用「并集画布」，
+# 短字形被挤到画布一边（sin 偏左、cos / ln 偏上）；按墨迹填满小框则会让
+# 同屏字号不一。两种都试过，用户逐条报过，这里回到原版的裁切方式。
 # --------------------------------------------------------------------------
 
-#: 数学字母族（a-z 与希腊字母）：统一字号。
-LETTER_SIZE = 62.0
-#: 函数名族（sin/cos/tan、log/ln）：统一字号，与字母族同口径。
-FUNCTION_SIZE = 46.5
+#: 数学字母族（a-z 与希腊字母）：字号跟第一页数字同一个 em。
+#: 数字图标是「size=100 排版、墨迹装进 34px 高的框」，等效 em≈45.6；
+#: 取 46 后 a 的墨迹 26px、b 37px，和原版位图量的 26 / 36 一致。
+LETTER_SIZE = 46.0
+#: 三角函数族（sin/cos/tan）：原版位图墨迹高 33/24/30 → em≈42，
+#: 和同排中文（公倍/公约，em≈30）观感相当，比数字（em≈46）轻一点。
+FUNCTION_SIZE = 42.0
+#: 反三角（arcsin/arccos/arctan）：原版是 sin 一族的 76%（墨迹 25 → em≈32）。
+ARC_SIZE = 32.0
+#: 对数族（log/log2/log10/ln）：四个键和 sin 一族同字号（原版 log 位图偏小，
+#: 是因为它把 g 的降部也算进了画布；用户要求四键字号统一，就按 sin 来）。
+LOG_SIZE = 42.0
+#: 对数键的灰色占位方块（原版位图里的槽位）：底数槽 12×13、自变量槽 20×25。
+#: 原版 log 位图：基线 y≈27，两块分别是 14..26 和 4..28，即都坐在基线上方。
+LOG_BASE_SLOT = (12.0, 13.0)
+LOG_ARG_SLOT = (20.0, 25.0)
 #: 比较号（< > ≤ ≥）：自绘，笔画宽度与数字主干一致。
 COMPARE_STROKE = 5.0
 
 
-def _family_specs(size, texts, fill=None):
-    """同一字号的若干图标：先量出共同的墨迹盒，再逐个只平移放到盒里。
+def _tight_specs(size, texts, fill=None, extra_slots=None):
+    """同族同字号：每个图标都按自己的墨迹紧裁（原版的切图方式）。
 
-    [fill] 是 (text, 排版节点) 的额外项（比如 log₂ 的下标 2）。
+    [texts] 是 name -> 排版节点；[extra_slots] 是 name -> [(x,y,w,h), ...]，
+    坐标写在「基线 y=0、起点 x=0」的系统里（和 node_layout 的输出同一坐标系）。
     """
-    boxes = {}
-    for name, node in texts.items():
-        cmds, _, _ = node_layout(Shaper__shared, node, size)
-        boxes[name] = union_bbox(cmds)
-    x0 = min(b[0] for b in boxes.values())
-    y0 = min(b[1] for b in boxes.values())
-    x1 = max(b[2] for b in boxes.values())
-    y1 = max(b[3] for b in boxes.values())
     specs = {}
     for name, node in texts.items():
-        b = boxes[name]
-        specs[name] = dict(
-            canvas=(x1 - x0, y1 - y0), uniform_size=size,
-            glyph=[G(node, (b[0] - x0, b[1] - y0, b[0] - x0 + (x1 - x0), b[1] - y0 + (y1 - y0)),
-                      fill or KEY)],
+        cmds, _, _ = node_layout(Shaper__shared, node, size)
+        b = union_bbox(cmds)
+        spec = dict(
+            canvas=(0.0, 0.0), uniform_size=size,
+            glyph=[G(node, (0.0, 0.0, b[2] - b[0], b[3] - b[1]), fill or KEY)],
         )
+        slots = (extra_slots or {}).get(name)
+        if slots:
+            # build_icon 会把墨迹平移到 (0,0)，槽位跟着做同样的平移
+            dx, dy = -b[0], -b[1]
+            spec["slots"] = [(x + dx, y + dy, w, h) for x, y, w, h in slots]
+        specs[name] = spec
     return specs
+
+
+def _log_slots():
+    """对数四键的灰色方块：贴在各自墨迹的右缘，间隔 5（原版的排法）。
+
+    普通 log 多一个底数槽（原版就是 text → 底数槽 → 自变量槽 依次排开，
+    所以 log 和 log2 的自变量槽落在同一个 x 上）。
+    """
+    slots = {}
+    for name, node in LOG_TEXTS.items():
+        cmds, _, _ = node_layout(Shaper__shared, node, LOG_SIZE)
+        b = union_bbox(cmds)
+        boxes = []
+        cursor = b[2]
+        if name == "log":
+            w, h = LOG_BASE_SLOT
+            boxes.append((cursor + 5.0, -h - 1.0, w, h))
+            cursor += 5.0 + w
+        w, h = LOG_ARG_SLOT
+        boxes.append((cursor + 5.0, 1.0 - h, w, h))
+        slots[name] = boxes
+    return slots
+
+
+def _thick_polyline(points, width):
+    """把折线画成有厚度的多边形（比描边稳：光栅化时不会出现断头）。"""
+    halves = []
+    for i, (x, y) in enumerate(points):
+        if i == 0:
+            dx, dy = points[1][0] - x, points[1][1] - y
+        elif i == len(points) - 1:
+            dx, dy = x - points[i - 1][0], y - points[i - 1][1]
+        else:
+            dx = points[i + 1][0] - points[i - 1][0]
+            dy = points[i + 1][1] - points[i - 1][1]
+        length = (dx * dx + dy * dy) ** 0.5 or 1.0
+        nx, ny = -dy / length * width / 2, dx / length * width / 2
+        halves.append(((x + nx, y + ny), (x - nx, y - ny)))
+    right = [h[0] for h in halves]
+    left = [h[1] for h in halves][::-1]
+    return poly_cmds(right + left)
 
 
 def _build_compare_paths(kind):
     """比较号：折线 + 横杠，统一笔画宽度（字形版的 ≤/≥ 横线天生偏细）。"""
-    def chevron(left):
-        if left:
-            return [("M", [19.5, 10.5]), ("L", [5.5, 20.0]), ("L", [19.5, 29.5])]
-        return [("M", [5.5, 10.5]), ("L", [19.5, 20.0]), ("L", [5.5, 29.5])]
-
-    def bar():
-        return [("M", [5.5, 33.5]), ("L", [19.5, 33.5])]
-
-    if kind == "less":
-        return [chevron(True)]
-    if kind == "greater":
-        return [chevron(False)]
-    if kind == "le":
-        return [chevron(True), bar()]
-    return [chevron(False), bar()]
+    left = kind in ("less", "le")
+    top = (19.5, 10.5) if left else (5.5, 10.5)
+    mid = (5.5, 18.0) if left else (19.5, 18.0)
+    bottom = (19.5, 25.5) if left else (5.5, 25.5)
+    paths = [_thick_polyline([top, mid, bottom], COMPARE_STROKE)]
+    if kind in ("le", "ge"):
+        paths.append(_thick_polyline([(5.5, 30.0), (19.5, 30.0)], COMPARE_STROKE))
+    return paths
 
 
 def compare_icons():
-    canvas = (25, 41)
+    canvas = (25, 34)
     specs = {}
     for kind in ("less", "greater", "le", "ge"):
-        strokes = [
-            (path, KEY, COMPARE_STROKE, "round", "round")
-            for path in _build_compare_paths(kind)
-        ]
-        specs[kind] = dict(canvas=canvas, extra_strokes=strokes, stroke_pad=True)
+        # 自绘几何直接按填充多边形写（build_icon 里两条元素的项就是纯色填充）
+        specs[kind] = dict(
+            canvas=canvas,
+            paths=[(path, KEY) for path in _build_compare_paths(kind)],
+        )
     return specs
 
 
 def paren_icons():
-    """左右括号：字形版竖画太细，改自绘曲线 + 统一笔画。"""
-    def left():
-        return [("M", [27.0, 1.5]), ("Q", [8.0, 12.0, 8.0, 22.0]),
-                ("Q", [8.0, 32.0, 27.0, 42.5])]
+    """左右括号：用字体本来的轮廓（形状最像括号），只调整宽高到数字的量级。
 
-    def right():
-        return [("M", [3.0, 1.5]), ("Q", [22.0, 12.0, 22.0, 22.0]),
-                ("Q", [22.0, 32.0, 3.0, 42.5])]
-
+    以前把它当一条线去描边，曲线被拉成一根细月牙，反而失真。现在直接用
+    Noto 的括号字形：装进原版位图量出来的 11×42 画布（比数字略高，原版就是
+    这个比例），笔画粗细随轮廓自然变化。
+    """
     return {
-        "left_paren": dict(canvas=(28, 44), stroke_pad=True,
-                           extra_strokes=[(left(), KEY, 5.0, "round", "round")]),
-        "right_paren": dict(canvas=(28, 44), stroke_pad=True,
-                            extra_strokes=[(right(), KEY, 5.0, "round", "round")]),
+        "left_paren": dict(canvas=(11, 42),
+                           exact_glyph=[(T("("), 100.0, (0.0, 0.0, 11.0, 42.0), KEY)]),
+        "right_paren": dict(canvas=(11, 42),
+                            exact_glyph=[(T(")"), 100.0, (0.0, 0.0, 11.0, 42.0), KEY)]),
     }
 
 
@@ -653,8 +699,20 @@ LETTER_TEXTS = {
 # 函数名族：三角 / 反三角 / 指数对数。统一字号、统一基线。
 FUNCTION_TEXTS = {
     "sin": T("sin"), "cos": T("cos"), "tan": T("tan"),
+}
+
+# 反三角：比 sin/cos/tan 再小一档（字母多，原版也是缩小的）
+ARC_TEXTS = {
     "arcsin": T("arcsin"), "arccos": T("arccos"), "arctan": T("arctan"),
-    "log": T("log"), "ln": T("ln"),
+}
+
+# 对数族：四个键同字号，log2/log10 的底数用下标字形，普通 log 用灰色底数槽，
+# 四个键的自变量槽在 _log_slots() 里按各自墨迹右缘排。
+LOG_TEXTS = {
+    "log": T("log"),
+    "log2": SEQ(T("log"), SUB("2")),
+    "log10": SEQ(T("log"), SUB("10")),
+    "ln": T("ln"),
 }
 
 
@@ -667,8 +725,10 @@ def family_icons():
             )
         Shaper__shared = Shaper(FONT_PATH)
     icons = {}
-    icons.update(_family_specs(LETTER_SIZE, LETTER_TEXTS, fill=KEY))
-    icons.update(_family_specs(FUNCTION_SIZE, FUNCTION_TEXTS, fill=KEY))
+    icons.update(_tight_specs(LETTER_SIZE, LETTER_TEXTS, fill=KEY))
+    icons.update(_tight_specs(FUNCTION_SIZE, FUNCTION_TEXTS, fill=KEY))
+    icons.update(_tight_specs(ARC_SIZE, ARC_TEXTS, fill=KEY))
+    icons.update(_tight_specs(LOG_SIZE, LOG_TEXTS, fill=KEY, extra_slots=_log_slots()))
     icons.update(compare_icons())
     icons.update(paren_icons())
     return icons
@@ -787,6 +847,21 @@ def build_icon(sha, name, spec, color_override=None):
             else:
                 cmds, _, _ = node_layout(sha, node, 100.0)
                 solids.append((fit_to_box(cmds, box, "contain" if contain else "height"), color))
+    # 指定字号的字形，独立缩放 x/y 装进 box（括号需要比其它族更宽的横向压缩）
+    for node, size, box, color in spec.get("exact_glyph", []):
+        if color_override:
+            color = color_override
+        cmds, _, _ = node_layout(sha, node, size)
+        b = union_bbox(cmds)
+        sx = (box[2] - box[0]) / max(b[2] - b[0], 1e-6)
+        sy = (box[3] - box[1]) / max(b[3] - b[1], 1e-6)
+        transformed = transform_cmds(cmds, 1.0, 0.0, 0.0)
+        transformed = [
+            (c, [args[j] * sx - b[0] * sx + box[0] if j % 2 == 0
+                 else args[j] * sy - b[1] * sy + box[1] for j in range(len(args))])
+            for c, args in transformed
+        ]
+        solids.append((transformed, color))
     # 画布至少包住 canvas 矩形；内容超出就往两边长
     hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
     for group, _ in solids:
