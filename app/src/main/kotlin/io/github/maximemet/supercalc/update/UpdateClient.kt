@@ -2,6 +2,7 @@ package io.github.maximemet.supercalc.update
 
 import io.github.maximemet.supercalc.BuildConfig
 import io.github.maximemet.supercalc.engine.UpdateManifests
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -27,6 +28,84 @@ object UpdateClient {
 
     /** 下载规则包/签名文件：清单给的是 jsDelivr 地址，失败自动换 GitHub raw。 */
     fun fetchPackFile(url: String): String? = fetchText(url, mirrorOf(url))
+
+    /**
+     * 下载应用安装包到 [target]。返回 false 表示下载失败（部分写入的文件会删掉）。
+     *
+     * [onProgress] 在下载线程里回调（已下载字节, 总字节；总字节未知时给 -1）。
+     * 返回 false 时不区分"网络挂了"和"用户取消"——取消走 [DownloadHandle.cancel]。
+     */
+    fun download(
+        url: String,
+        target: File,
+        handle: DownloadHandle,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean {
+        for (candidate in arrayOf(url, mirrorOf(url))) {
+            if (candidate.isEmpty()) continue
+            if (handle.isCancelled) return false
+            try {
+                downloadOnce(candidate, target, handle, onProgress)
+                return true
+            } catch (e: Exception) {
+                target.delete()
+                if (handle.isCancelled) return false
+                // 换下一个源；全失败由调用方提示"下载失败"
+            }
+        }
+        return false
+    }
+
+    private fun downloadOnce(
+        url: String,
+        target: File,
+        handle: DownloadHandle,
+        onProgress: (Long, Long) -> Unit,
+    ) {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            requestMethod = "GET"
+            instanceFollowRedirects = true
+            useCaches = false
+            setRequestProperty("User-Agent", "SuperCalculator/${BuildConfig.VERSION_NAME}")
+            setRequestProperty("Accept", "application/octet-stream, */*")
+        }
+        try {
+            val code = connection.responseCode
+            if (code != HttpURLConnection.HTTP_OK) throw IllegalStateException("HTTP $code")
+            val total = connection.contentLengthLong
+            target.parentFile?.mkdirs()
+            var done = 0L
+            connection.inputStream.use { input ->
+                target.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        if (handle.isCancelled) throw IllegalStateException("cancelled")
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        output.write(buffer, 0, read)
+                        done += read
+                        onProgress(done, total)
+                    }
+                }
+            }
+            if (done == 0L) throw IllegalStateException("empty body")
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /** 下载的取消开关；界面关掉进度框时置位。 */
+    class DownloadHandle {
+        @Volatile
+        var isCancelled: Boolean = false
+            private set
+
+        fun cancel() {
+            isCancelled = true
+        }
+    }
 
     fun fetchText(vararg urls: String): String? {
         for (url in urls) {

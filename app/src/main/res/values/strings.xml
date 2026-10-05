@@ -88,6 +88,19 @@
     <string name="update_rules_done">规则包已更新到 v%1$d</string>
     <string name="update_rules_failed">规则包更新失败，请稍后重试</string>
     <string name="update_open_failed">打不开浏览器，请到 GitHub Releases 手动下载</string>
+    <!-- 应用内下载安装（点「去下载新版本」之后） -->
+    <string name="update_download_title">下载新版本 %1$s</string>
+    <string name="update_download_progress_unknown">正在下载…</string>
+    <string name="update_download_sizes">%1$s / %2$s</string>
+    <string name="update_download_cancel">取消</string>
+    <string name="update_download_failed">下载失败，请检查网络，或到 Releases 手动下载</string>
+    <string name="update_download_start">正在打开系统安装器…</string>
+    <string name="update_signature_mismatch_title">安装包签名不一致</string>
+    <string name="update_signature_mismatch_message">下载到的安装包和当前应用的签名不一致：可能不是官方包，或者你现在装的是自己编译的调试版。确认要继续安装吗？</string>
+    <string name="update_install_anyway">仍然安装</string>
+    <string name="update_install_permission_title">需要允许安装应用</string>
+    <string name="update_install_permission_message">首次在应用内更新需要系统授权：请在接下来的页面里允许「超级计算器」安装未知来源的应用，回来后会继续安装。</string>
+    <string name="update_install_permission_go">去设置</string>
     <string name="dialog_cancel">取消</string>
     <string name="dialog_confirm">确定</string>
     <string name="font_size_big">大</string>

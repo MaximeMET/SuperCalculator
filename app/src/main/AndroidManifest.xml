@@ -2,10 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      全 App 唯一一条权限，只给设置页里手动点的「检查更新」用：
-      拉一次更新清单、下载规则包。没有后台检查，也没有任何统计上报。
+      权限只有这两条，都只给设置页里手动点的「检查更新」用：
+      拉一次更新清单、下载规则包 / 安装包；后者是 Android 8 起应用内装 APK 的门槛，
+      首次会在系统里问一次，不点更新就完全用不到。没有后台检查，也没有统计上报。
     -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="true"

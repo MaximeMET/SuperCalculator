@@ -12,7 +12,10 @@ object UpdateManifests {
     data class AppUpdate(
         val versionCode: Int,
         val versionName: String,
+        /** 发布页地址：没有直链安装包时用它开浏览器。 */
         val url: String,
+        /** 安装包直链（GitHub Release 资产）。为空就退回浏览器下载。 */
+        val apkUrl: String?,
         val notes: String,
     )
 
@@ -37,6 +40,7 @@ object UpdateManifests {
                 versionCode = code,
                 versionName = item["versionName"] as? String ?: code.toString(),
                 url = url,
+                apkUrl = (item["apkUrl"] as? String)?.takeIf { it.isNotBlank() },
                 notes = item["notes"] as? String ?: "",
             )
         }

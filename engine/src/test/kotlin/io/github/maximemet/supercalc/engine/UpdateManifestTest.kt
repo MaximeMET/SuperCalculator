@@ -15,7 +15,8 @@ class UpdateManifestTest {
         val manifest = UpdateManifests.parse(
             """
             {
-              "app": {"versionCode": 3, "versionName": "0.1.2", "url": "https://example.com/dl", "notes": "修了些东西"},
+              "app": {"versionCode": 3, "versionName": "0.1.2", "url": "https://example.com/dl",
+                       "apkUrl": "https://example.com/app.apk", "notes": "修了些东西"},
               "rules": {"version": 5, "json": "https://example.com/r.json", "sig": "https://example.com/r.sig"}
             }
             """.trimIndent()
@@ -23,12 +24,23 @@ class UpdateManifestTest {
         assertNotNull(manifest)
         assertEquals(3, manifest.app?.versionCode)
         assertEquals("0.1.2", manifest.app?.versionName)
+        assertEquals("https://example.com/app.apk", manifest.app?.apkUrl, "应用段可以带安装包直链")
         assertEquals("修了些东西", manifest.app?.notes)
         assertEquals(5, manifest.rules?.version)
         assertTrue(UpdateManifests.appUpdateAvailable(2, manifest.app))
         assertFalse(UpdateManifests.appUpdateAvailable(3, manifest.app))
         assertTrue(UpdateManifests.rulesUpdateAvailable(4, manifest.rules))
         assertFalse(UpdateManifests.rulesUpdateAvailable(5, manifest.rules))
+    }
+
+    @Test
+    fun appSectionWithoutApkUrlStillParses() {
+        // 老清单只有发布页地址：应用内下载退回浏览器，解析不能因此失败
+        val manifest = UpdateManifests.parse(
+            """{"app": {"versionCode": 9, "url": "https://example.com/dl"}}"""
+        )
+        assertNotNull(manifest)
+        assertNull(manifest.app?.apkUrl)
     }
 
     @Test

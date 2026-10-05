@@ -3,9 +3,12 @@ package io.github.maximemet.supercalc.fragment
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -18,9 +21,11 @@ import io.github.maximemet.supercalc.databinding.FragmentSettingsBinding
 import io.github.maximemet.supercalc.engine.RulePacks
 import io.github.maximemet.supercalc.engine.UpdateManifests
 import io.github.maximemet.supercalc.settings.AppSettings
+import io.github.maximemet.supercalc.update.ApkInstaller
 import io.github.maximemet.supercalc.update.RuleStore
 import io.github.maximemet.supercalc.update.UpdateClient
 import io.github.maximemet.supercalc.widget.PreferenceDialog
+import java.io.File
 
 /**
  * 设置页。
@@ -59,6 +64,10 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshValues()
+        // 从「安装未知应用」授权页回来：权限给上了就接着装（见 requestInstall）
+        pendingApk?.let { apk ->
+            if (ApkInstaller.canRequestInstall(requireContext())) launchInstaller(apk)
+        }
     }
 
     override fun onDestroy() {
@@ -177,7 +186,7 @@ class SettingsFragment : Fragment() {
             dialog.setPositiveButton(R.string.update_rules_now) { _, _ -> updateRules(rulesUpdate) }
         }
         if (appUpdate != null) {
-            dialog.setNeutralButton(R.string.update_open_download) { _, _ -> openDownload(appUpdate.url) }
+            dialog.setNeutralButton(R.string.update_open_download) { _, _ -> openDownload(appUpdate) }
         }
         dialog.show()
     }
@@ -201,12 +210,152 @@ class SettingsFragment : Fragment() {
         }.start()
     }
 
-    private fun openDownload(url: String) {
+    // ---------- 应用内下载安装 ----------
+
+    /** 下好待安装的包；从「安装未知应用」设置页回来时接着装（见 [onResume]）。 */
+    private var pendingApk: File? = null
+
+    /**
+     * 清单里有安装包直链就走应用内下载；没有（老清单）就退回浏览器。
+     */
+    private fun openDownload(update: UpdateManifests.AppUpdate) {
+        val apkUrl = update.apkUrl
+        if (apkUrl.isNullOrBlank()) {
+            openInBrowser(update.url)
+            return
+        }
+        startApkDownload(update, apkUrl)
+    }
+
+    private fun openInBrowser(url: String) {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: Exception) {
             Toast.makeText(requireContext(), R.string.update_open_failed, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun startApkDownload(update: UpdateManifests.AppUpdate, apkUrl: String) {
+        val context = requireContext().applicationContext
+        val target = ApkInstaller.targetFile(context, update.versionName)
+        val handle = UpdateClient.DownloadHandle()
+
+        val density = resources.displayMetrics.density
+        val pad = (24 * density).toInt()
+        val progressText = TextView(context).apply {
+            text = getString(R.string.update_download_progress_unknown)
+            textSize = 14f
+        }
+        val bar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = true
+        }
+        val content = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(pad, (pad / 2), pad, 0)
+            addView(progressText)
+            addView(
+                bar,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = pad / 2 },
+            )
+        }
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.update_download_title, update.versionName))
+            .setView(content)
+            .setNegativeButton(R.string.update_download_cancel, null)
+            .setCancelable(false)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                handle.cancel()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+
+        Thread {
+            val ok = UpdateClient.download(apkUrl, target, handle) { done, total ->
+                activity?.runOnUiThread {
+                    if (total > 0) {
+                        bar.isIndeterminate = false
+                        bar.progress = ((done * 100) / total).toInt()
+                    }
+                    progressText.text = if (total > 0) {
+                        getString(R.string.update_download_sizes, formatBytes(done), formatBytes(total))
+                    } else {
+                        getString(R.string.update_download_progress_unknown)
+                    }
+                }
+            }
+            activity?.runOnUiThread {
+                if (!isAdded || _binding == null) return@runOnUiThread
+                dialog.dismiss()
+                if (!ok) {
+                    if (!handle.isCancelled) {
+                        Toast.makeText(
+                            requireContext(),
+                            R.string.update_download_failed,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    return@runOnUiThread
+                }
+                onApkDownloaded(target, update)
+            }
+        }.start()
+    }
+
+    /** 下载完成：先验签名，再（必要时）要安装权限，最后交给系统安装器。 */
+    private fun onApkDownloaded(apk: File, update: UpdateManifests.AppUpdate) {
+        val context = requireContext().applicationContext
+        if (ApkInstaller.sameSigner(context, apk)) {
+            requestInstall(apk)
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.update_signature_mismatch_title)
+            .setMessage(R.string.update_signature_mismatch_message)
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .setPositiveButton(R.string.update_install_anyway) { _, _ -> requestInstall(apk) }
+            .show()
+    }
+
+    private fun requestInstall(apk: File) {
+        pendingApk = apk
+        if (ApkInstaller.canRequestInstall(requireContext())) {
+            launchInstaller(apk)
+        } else {
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.update_install_permission_title)
+                .setMessage(R.string.update_install_permission_message)
+                .setNegativeButton(R.string.update_later, null)
+                .setPositiveButton(R.string.update_install_permission_go) { _, _ ->
+                    startActivity(ApkInstaller.unknownSourcesSettings(requireContext()))
+                }
+                .show()
+        }
+    }
+
+    private fun launchInstaller(apk: File) {
+        try {
+            ApkInstaller.install(requireContext(), apk)
+            pendingApk = null
+            Toast.makeText(requireContext(), R.string.update_download_start, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            // 系统安装器被裁掉（个别 ROM）时退回浏览器下载
+            Toast.makeText(requireContext(), R.string.update_open_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** 对字节数做人话格式化：用来在进度框里显示"已下 3.2 MB / 8.4 MB"。 */
+    private fun formatBytes(bytes: Long): String = when {
+        bytes >= 1_000_000 -> "%.1f MB".format(bytes / 1_000_000.0)
+        bytes >= 1_000 -> "%.0f KB".format(bytes / 1_000.0)
+        else -> "$bytes B"
     }
 
     private fun onSettingsChanged() {
