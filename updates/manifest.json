@@ -1,9 +1,9 @@
 {
   "app": {
-    "versionCode": 20,
-    "versionName": "0.1.2-dev18",
+    "versionCode": 21,
+    "versionName": "0.1.2-dev19",
     "url": "https://github.com/MaximeMET/SuperCalculator/releases/latest",
-    "apkUrl": "https://raw.githubusercontent.com/MaximeMET/SuperCalculator-update-test/master/SuperCalculator-0.1.2-dev18-local.apk",
+    "apkUrl": "https://raw.githubusercontent.com/MaximeMET/SuperCalculator-update-test/master/SuperCalculator-0.1.2-dev19-local.apk",
     "notes": "（临时清单，仅用于本机验证应用内下载安装，稍后即还原）"
   },
   "rules": {
