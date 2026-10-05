@@ -610,7 +610,10 @@ GitHub 就永远不知道规则包有新版，而规则包的迭代节奏不该�
 
 私钥在私有子模块 `work/keys/rules-signing-private.pem`，公钥写死在 `RulePacks.kt`；
 发布流程是 `pwsh tools/pack-rules.ps1 -Version N`——它读三张表合成合并包、签名、
-更新清单，并从 `RulePacks.kt` 抠出内置公钥把签名重验一遍再收工。改内置 `rules/`
+更新清单，并从 `RulePacks.kt` 抠出内置公钥、对着**写盘后的文件字节**重验一遍再收工
+（签名对象统一成 LF，配 `.gitattributes` 的 `eol=lf`，免得"签了 CRLF、CDN 发 LF"）。
+push 之后还要跑 `pwsh tools/purge-cdn.ps1 -Version N`：jsDelivr 对分支引用缓存 12 小时，
+不清的话新清单最多半天后才对用户可见。改内置 `rules/`
 下的 JSON 时要同步把 `RulePacks.BUNDLED_VERSION` +1，否则新包不会被覆盖（写在
 `RulePacks.kt` 的注释里）。副作用是 README 的"没有一条 `uses-permission`"改成
 "只有 `INTERNET` 一条、只用于手动检查更新"；"有没有新版"的通知仍然可以交给外部
