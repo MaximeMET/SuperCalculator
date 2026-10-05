@@ -208,6 +208,10 @@ SUB_DROP = 0.16
 SUP_RISE = 0.46
 FRAC_SCALE = 0.74
 
+# 「函数」页 13 个公式的统一字号（单位：画布里的 px，1px = 0.5dp）。
+# 27px ÷（首字母 y 在 size=100 时的墨迹高 77.7px）≈ 34.7。
+FORMULA_SIZE = 34.7
+
 
 def node_layout(sha, node, size):
     """把节点排版到“基线 y=0、起点 x=0”的坐标系，返回 (cmds 列表, advance, bbox)。"""
@@ -294,6 +298,14 @@ def fit_to_box(cmds, box, mode="height"):
     cx = box[0] + tw / 2 - (b[0] + (b[2] - b[0]) / 2) * s
     cy = box[1] + th / 2 - (b[1] + (b[3] - b[1]) / 2) * s
     return transform_group(cmds, s, cx, cy)
+
+
+def center_in_box(cmds, box):
+    """**不缩放**，只把墨迹居中放进 box（原地大小）。"""
+    b = union_bbox(cmds)
+    cx = box[0] + (box[2] - box[0]) / 2 - (b[0] + (b[2] - b[0]) / 2)
+    cy = box[1] + (box[3] - box[1]) / 2 - (b[1] + (b[3] - b[1]) / 2)
+    return transform_group(cmds, 1.0, cx, cy)
 
 
 def rect_cmds(x, y, w, h):
@@ -435,32 +447,42 @@ ICONS = {
                glyph=[G(T("C"), (1, 2, 25, 36))]),
     "exp": dict(canvas=(44, 46), slots=[(0, 14, 28, 32), (30, 0, 14, 14)]),
     # ---- 第 4 页：函数模板 ----
-    "f_linear": dict(canvas=(134, 35), glyph=[G(T("y = kx+b"), (0, 0, 134, 35), FORMULA)]),
-    "f_inverse": dict(canvas=(91, 59), glyph=[G(SEQ(T("y = "), FRAC("k", "x")), (0, 0, 91, 59), FORMULA)]),
-    "f_normalquadratic": dict(canvas=(197, 42),
+    # 这 13 个公式的画布尺寸照抄原版位图，但**字号必须统一**：原版虽然画布高矮不一
+    # （35~72px），正文却是一个字号——量下来每个公式的基准字形（首字母 y）都是 27px
+    # 高，分式只是把画布撑高。之前按"墨迹填满各自画布"缩放，反比例函数被放大到 48、
+    # 抛物线被压到 33，用户一眼看出大小不一。现在统一在 FORMULA_SIZE 下排版、不缩放，
+    # 只把墨迹居中放进原来的画布。
+    # （27px ÷ y 在 size=100 时的墨迹高 77.7px ≈ 34.7）
+    "f_linear": dict(canvas=(134, 35), noscale=True,
+                     glyph=[G(T("y = kx+b"), (0, 0, 134, 35), FORMULA)]),
+    "f_inverse": dict(canvas=(91, 59), noscale=True,
+                      glyph=[G(SEQ(T("y = "), FRAC("k", "x")), (0, 0, 91, 59), FORMULA)]),
+    "f_normalquadratic": dict(canvas=(197, 42), noscale=True,
                               glyph=[G(T("y = ax²+bx+c"), (0, 1, 197, 42), FORMULA)]),
-    "f_quadratic": dict(canvas=(198, 45),
+    "f_quadratic": dict(canvas=(198, 45), noscale=True,
                         glyph=[G(T("y = a(x−h)²+k"), (0, 1, 198, 45), FORMULA)]),
-    "f_exp": dict(canvas=(86, 36), glyph=[G(SEQ(T("y = a"), SUP("x")), (0, 0, 86, 36), FORMULA)]),
-    "f_log": dict(canvas=(139, 35),
+    "f_exp": dict(canvas=(86, 36), noscale=True,
+                  glyph=[G(SEQ(T("y = a"), SUP("x")), (0, 0, 86, 36), FORMULA)]),
+    "f_log": dict(canvas=(139, 35), noscale=True,
                   glyph=[G(SEQ(T("y = log"), SUB("a"), T("x")), (0, 0, 139, 35), FORMULA)]),
-    "f_std_cir": dict(canvas=(213, 44),
+    "f_std_cir": dict(canvas=(213, 44), noscale=True,
                       glyph=[G(T("(x−a)²+(y−b)²=r²"), (0, 0, 213, 44), FORMULA)]),
-    "f_circle": dict(canvas=(264, 40),
+    "f_circle": dict(canvas=(264, 40), noscale=True,
                      glyph=[G(T("x²+y²+ax+by+c=0"), (0, 0, 264, 40), FORMULA)]),
-    "f_std_ell": dict(canvas=(139, 72),
+    "f_std_ell": dict(canvas=(139, 72), noscale=True,
                       glyph=[G(SEQ(FRAC("x²", "a²"), T(" + "), FRAC("y²", "b²"), T(" = 1")),
                                 (0, 0, 139, 72), FORMULA)]),
-    "f_ellipse": dict(canvas=(230, 67),
+    "f_ellipse": dict(canvas=(230, 67), noscale=True,
                       glyph=[G(SEQ(FRAC("(x−k)²", "a²"), T(" + "), FRAC("(y−h)²", "b²"), T(" = 1")),
                                 (0, 0, 230, 67), FORMULA)]),
-    "f_std_hyper": dict(canvas=(139, 72),
+    "f_std_hyper": dict(canvas=(139, 72), noscale=True,
                         glyph=[G(SEQ(FRAC("x²", "a²"), T(" − "), FRAC("y²", "b²"), T(" = 1")),
                                   (0, 0, 139, 72), FORMULA)]),
-    "f_hyperbola": dict(canvas=(230, 67),
+    "f_hyperbola": dict(canvas=(230, 67), noscale=True,
                         glyph=[G(SEQ(FRAC("(x−k)²", "a²"), T(" − "), FRAC("(y−h)²", "b²"), T(" = 1")),
                                   (0, 0, 230, 67), FORMULA)]),
-    "f_parabola": dict(canvas=(113, 38), glyph=[G(T("y²=2px"), (0, 1, 113, 38), FORMULA)]),
+    "f_parabola": dict(canvas=(113, 38), noscale=True,
+                       glyph=[G(T("y²=2px"), (0, 1, 113, 38), FORMULA)]),
 }
 
 
@@ -586,11 +608,17 @@ def build_icon(sha, name, spec, color_override=None):
     # 不带槽位、只有一个文字元素时按高度适配（窄字形不会被压小）；其余保持 contain
     contain = (bool(spec.get("slots")) or bool(spec.get("paths"))
                or len(spec.get("glyph", [])) > 1)
+    noscale = bool(spec.get("noscale"))
     for node, box, color in spec.get("glyph", []):
         if color_override:
             color = color_override
-        cmds, _, _ = node_layout(sha, node, 100.0)
-        solids.append((fit_to_box(cmds, box, "contain" if contain else "height"), color))
+        if noscale:
+            # 统一字号：按 FORMULA_SIZE 排版，只居中不缩放
+            cmds, _, _ = node_layout(sha, node, FORMULA_SIZE)
+            solids.append((center_in_box(cmds, box), color))
+        else:
+            cmds, _, _ = node_layout(sha, node, 100.0)
+            solids.append((fit_to_box(cmds, box, "contain" if contain else "height"), color))
     # 画布至少包住 canvas 矩形；内容超出就往两边长
     hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
     for group, _ in solids:
