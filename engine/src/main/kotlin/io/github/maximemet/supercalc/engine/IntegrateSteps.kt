@@ -267,7 +267,6 @@ object IntegrateSteps {
     private fun rulePackNote(engine: SymjaEngine, variable: String, core: IExpr): String? {
         for (rule in IntegralRulePack.rules) {
             val claimed = IntegralRulePack.apply(engine, core, rule, variable) ?: continue
-            println("DBG pack ${rule.id} claimed=$claimed verified=${verifies(engine, core, claimed, variable)}")
             if (!verifies(engine, core, claimed, variable)) continue
             return rule.note
         }
