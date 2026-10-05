@@ -44,8 +44,11 @@ SEQ_CASES = [
     # 乘除把 ° 摘掉，但接着敲的数字又会补一个新的（原版就是这么一步步来的）
     ("sin5乘3", ["sin", "5", "*", "3"], r"\sin{5\times3^\circ}", "sin(5*3degree)"),
     ("sin5除3", ["sin", "5", "/", "3"], r"\sin{5\slash3^\circ}", "sin(5/3degree)"),
-    ("sin5x", ["sin", "5", "x"], r"\sin{5x}", "sin(5x)"),
-    ("sin5y", ["sin", "5", "y"], r"\sin{5y}", "sin(5y)"),
+    # 数字接变量要补隐式乘号（和「ax → a*x」同一条规则，见 editor.js 的
+    # Symbol.prototype.symja）：5x 送进引擎的必须是 5*x，否则 Symja 会把
+    # 「5x」当成一个符号名，三角函数就退化成不可计算。
+    ("sin5x", ["sin", "5", "x"], r"\sin{5x}", "sin(5*x)"),
+    ("sin5y", ["sin", "5", "y"], r"\sin{5y}", "sin(5*y)"),
     ("sin5pi", ["sin", "5", "pi"], r"\sin{5\pi}", "sin(5pi )"),
     # ° 键自己：左右已有 ° 就不再叠一个
     ("sin5再按度", ["sin", "5", "degree"], r"\sin{5^\circ}", "sin(5degree)"),

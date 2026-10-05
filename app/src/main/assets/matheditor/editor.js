@@ -145,11 +145,22 @@
     return '((' + this.blocks[1].symja() + ')^(1/(' + index + ')))';
   };
 
-  // 上下标：_() / ^()，原版两个槽位都写出来（空着也写）
+  /**
+   * 上下标：_() / ^()，原版两个槽位都写出来（空着也写）。
+   *
+   * 例外：空着的次数位按一次方算（x^| → x^(1)）。这是用户点名的行为：
+   * × ÷ = 从空上标里跳出去之后，槽位留在那儿是空的，进引擎的不能是
+   * 语法不完整的 x^()。没有底数的裸 ^（公式开头直接按 ^）保持原版的
+   * ^()，对照基准里就是这一条。
+   */
   MathQuill.SupSub.prototype.symja = function () {
     var out = '';
     if (this.sub) out += '_(' + this.sub.symja() + ')';
-    if (this.sup) out += '^(' + this.sup.symja() + ')';
+    if (this.sup) {
+      var sup = this.sup.symja();
+      if (sup === '' && this[-1]) sup = '1';
+      out += '^(' + sup + ')';
+    }
     return out;
   };
 
@@ -1340,11 +1351,54 @@
   }
 
   /**
+   * 光标所在的最小外层是不是 MathQuill 原生的上下标命令（^ / _）。
+   *
+   * 是就返回那个命令（SupSub 实例），否则 null。\int、\log 这些带槽命令的槽
+   * 不算：它们的槽位块不是 SupSub 实例，原版那支补丁也管不到它们。
+   */
+  function supSubAtCursor() {
+    var cursor = editorCursor();
+    if (!cursor || !cursor.parent || !cursor.parent.parent) return null;
+    var cmd = cursor.parent.parent;
+    if (!(cmd instanceof SupSub)) return null;
+    if (cursor.parent !== cmd.sup && cursor.parent !== cmd.sub) return null;
+    return cmd;
+  }
+
+  /** 把光标从上下标里挪到整项右边（跳出上标）。挪了返回 true。 */
+  function breakOutOfSupSub() {
+    var cmd = supSubAtCursor();
+    var cursor = editorCursor();
+    // 有选区时不跳：这一刻的输入是用来替换选区的
+    if (!cmd || !cursor || cursor.selection) return false;
+    cursor.insRightOf(cmd);
+    return true;
+  }
+
+  /**
+   * 原版 MathQuill 补丁的判定：光标在上下标槽里、左边有内容、右边没内容。
+   * 也就是「正要往上下标末尾追加」的那一刻，+ − = < > 会先跳出去。
+   */
+  function appendingToSupSub() {
+    var cursor = editorCursor();
+    return !!(supSubAtCursor() && cursor && cursor[-1] && !cursor[1] && !cursor.selection);
+  }
+
+  /**
+   * 用户点名的规则（优于原版）：空上标里的 × ÷ 跳出上标插到顶层。
+   * 「空」看的是光标左边有没有内容 —— x^| 这种空槽才跳，x^2| 不跳。
+   */
+  function emptySupSubAtCursor() {
+    var cursor = editorCursor();
+    return !!(supSubAtCursor() && cursor && !cursor[-1] && !cursor.selection);
+  }
+
+  /**
    * 按键过滤器。返回 true = 这一下已经被吃掉，不要再走默认插入。
    *
    * [symbol] 是参考实现里的按键标识（KeyItem.symbol），[code] 是插入内容。
-   * 逐条对照原版 `Matharea.filterCommand` 的分支，只少了两条与本轮无关的
-   * （°′″ 内部只允许数字的闸门、≥/≤ 在上标里的光标修正）。
+   * 逐条对照原版 `Matharea.filterCommand` 的分支，只少了一条与本轮无关的
+   * （°′″ 内部只允许数字的闸门）。
    */
   function filterCommand(symbol, code) {
     switch (symbol) {
@@ -1362,17 +1416,44 @@
         }
         return false;
 
-      // 加减号排在度数后面：sin(5°+2)
+      // 加减号排在度数后面：sin(5°+2)。
+      // 上标里：正往末尾追加（x^2|）时先跳出去，+ / − 加在整项后面；
+      // 空上标（x^|）留在上标里 —— 这里的 + / − 是正负号，不是运算符。
       case '+':
       case '-':
+        if (appendingToSupSub() && breakOutOfSupSub()) return false;
         if (isDegreeCtrl(postCtrl())) formulaField.keystroke('Right');
         return false;
 
-      // 乘除号：sin(5×2) 不是角度，先把 ° 摘掉
+      // 乘除号：sin(5×2) 不是角度，先把 ° 摘掉。
+      // 上标里：空槽（x^|）里的 × ÷ 不是乘方内容，跳出去插到顶层；
+      // 左边有内容（x^2|）时留在上标里（原版 × ÷ 走 LaTeX 写入，
+      // 压根不经过跳出补丁，这里照原版保留）。
       case '*':
       case '/':
+        if (emptySupSubAtCursor() && breakOutOfSupSub()) return false;
         if (isTrigonometric() && isDegreeCtrl(postCtrl())) deleteDegreeOnRight();
         return false;
+
+      // 等于号：不管上标里有没有内容，都先跳出上标插到顶层（用户要求，优于原版）
+      case '=':
+        breakOutOfSupSub();
+        return false;
+
+      // 比较号 < >：原版靠 MathQuill 的 charsThatBreakOutOfSupSub 补丁跳出上标，
+      // 我们这两个键是 write() 插入、不经过那条通道，所以在这里补同一个判定。
+      case 'less':
+      case 'greater':
+        if (appendingToSupSub() && breakOutOfSupSub()) return false;
+        return false;
+
+      // ≥ ≤：原版在上标里先右移一格再插入（光标就在末尾时，右移一格即跳出）
+      case 'ge':
+      case 'le': {
+        var supCmd = supSubAtCursor();
+        if (supCmd && editorCursor().parent === supCmd.sup) formulaField.keystroke('Right');
+        return false;
+      }
 
       // 变量和 π 同理：sin(5x) 里的 5 不是角度
       case 'x': case 'y': case 'z': case 'a': case 'b': case 'pi':
