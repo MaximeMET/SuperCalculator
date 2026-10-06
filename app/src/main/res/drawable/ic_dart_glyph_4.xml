@@ -9,26 +9,26 @@
 
   <path
       android:fillColor="#FFFFFFFF"
-      android:pathData="M8.73 29.97H12.21V52.01H16.49V29.97H21.89V26.49H16.49V22.45C16.49 19.16 17.66 17.42 20.1 17.42C21 17.42 22.03 17.65 22.97 18.12L23.91 14.79C22.74 14.32 21.23 13.99 19.63 13.99C14.56 13.99 12.21 17.23 12.21 22.4V26.49L8.73 26.73Z" />
+      android:pathData="M10.06 29.97H13.54V52.01H17.81V29.97H23.22V26.49H17.81V22.45C17.81 19.16 18.99 17.42 21.43 17.42C22.33 17.42 23.36 17.65 24.3 18.12L25.24 14.79C24.07 14.32 22.56 13.99 20.96 13.99C15.89 13.99 13.54 17.23 13.54 22.4V26.49L10.06 26.73Z" />
   <path
       android:fillColor="#FFFFFFFF"
       android:strokeColor="#FFFFFFFF"
-      android:strokeWidth="2.37"
+      android:strokeWidth="1.42"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M30.18 49.9L31.36 49.37C29.55 46.39 28.69 42.82 28.69 39.25C28.69 35.7 29.55 32.15 31.36 29.15L30.18 28.6C28.25 31.75 27.09 35.14 27.09 39.25C27.09 43.39 28.25 46.77 30.18 49.9Z" />
+      android:pathData="M31.04 49.9L32.21 49.37C30.41 46.39 29.55 42.82 29.55 39.25C29.55 35.7 30.41 32.15 32.21 29.15L31.04 28.6C29.1 31.75 27.95 35.14 27.95 39.25C27.95 43.39 29.1 46.77 31.04 49.9Z" />
   <path
       android:fillColor="#FFFFFFFF"
       android:strokeColor="#FFFFFFFF"
-      android:strokeWidth="1.91"
+      android:strokeWidth="1.15"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
       android:pathData="M35.5 46.31H37.99L39.89 43.01C40.38 42.15 40.83 41.29 41.32 40.49H41.45C42 41.29 42.52 42.15 42.98 43.01L45.06 46.31H47.66L43.01 39.19L47.3 32.19H44.83L43.09 35.29C42.65 36.09 42.26 36.85 41.84 37.65H41.71C41.24 36.85 40.75 36.09 40.33 35.29L38.43 32.19H35.86L40.15 38.95Z" />
   <path
       android:fillColor="#FFFFFFFF"
       android:strokeColor="#FFFFFFFF"
-      android:strokeWidth="2.37"
+      android:strokeWidth="1.42"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M53 49.9C54.93 46.77 56.09 43.39 56.09 39.25C56.09 35.14 54.93 31.75 53 28.6L51.8 29.15C53.61 32.15 54.51 35.7 54.51 39.25C54.51 42.82 53.61 46.39 51.8 49.37Z" />
+      android:pathData="M52.14 49.9C54.08 46.77 55.23 43.39 55.23 39.25C55.23 35.14 54.08 31.75 52.14 28.6L50.95 29.15C52.75 32.15 53.66 35.7 53.66 39.25C53.66 42.82 52.75 46.39 50.95 49.37Z" />
 </vector>

@@ -223,10 +223,17 @@ class Shaper:
 #
 # STROKE_PER_EM：Noto Sans SC Regular 在 size=100 时的竖干宽度（几何量，
 # l/f/i/t/1/7 都是 9.1～9.2 画布 px）。要补的宽度就是
-#     w = STROKE_PER_EM × (正文号 - 小字号)
+#     w = BOLD_FACTOR × STROKE_PER_EM × (正文号 - 小字号)
 # 描边的圆角接合（strokeLineJoin=round）让加粗后的笔端不出现尖刺。
+#
+# BOLD_FACTOR 是视觉补偿系数：0 = 不补（小字明显发虚），1 = 把小字的绝对笔画
+# 宽度补到和正文完全一样。补满以后小字反而显得比正文还重——小字号在视觉上
+# 本来就用不着那么粗的绝对笔画（光学尺寸的常规做法只补一部分）。0.6 是实机
+# 对照定的：补完笔画约为正文的 0.8，眼睛看过去两边一样重，DevTools 量的绝对
+# 像素值仍比正文细一点。
 # --------------------------------------------------------------------------
 STROKE_PER_EM = 0.091
+BOLD_FACTOR = 0.6
 
 #: 字体自带的上下标字符（设计字号约为正文的 0.6，见 LayoutProfile.script_scale）
 SUP_CHARS = set("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
@@ -241,7 +248,7 @@ def embolden(cmds, width):
 
 def bold_width(ref_size, small_size):
     """把 small_size 的字排得和 ref_size 一样粗，需要补的描边宽度。"""
-    return max(0.0, STROKE_PER_EM * (ref_size - small_size))
+    return max(0.0, BOLD_FACTOR * STROKE_PER_EM * (ref_size - small_size))
 
 
 class LayoutProfile:
