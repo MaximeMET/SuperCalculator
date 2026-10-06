@@ -887,8 +887,11 @@
    *
    * MathQuill 的 sqrt.reflow 每次都会把 .mq-sqrt-prefix 写成
    * `transform: scale(1, k)`（k = 被开方数高度 / 字号 - 0.1，√2 约 0.93、
-   * √(1/2) 约 2.1）。掩码按同一个 k 纵向拉伸（以墨迹顶为不动点），斜线跟着
-   * 被开方数变长、平顶和横线一起变粗，比例和之前的字形一模一样。
+   * √(1/2) 约 2.1）。但 STIX 的 √ 顶上带一截「平顶尾巴」，整块按 k 拉伸的话
+   * 尾巴会跟着变粗，横线为了贴合也得变粗 —— 被开方数一高就是一根胖横线，
+   * 不好看，也不像原版（原版字形没有这截尾巴）。所以拉伸只作用在斜线上：
+   * 沿 y 做分段线性映射，平顶下缘以上原样（厚度恒定 68/1000 em）、以下乘 k，
+   * 横线就接在这截固定厚度的平顶上。被开方数再高，顶部横线粗细都不变。
    *
    * 这里不碰 vendored 的 mathquill.min.js：只盯前缀上的 style 变化（MathQuill
    * 每次 reflow 都会重写 transform），按前缀 / stem 的盒位算掩码几何。
@@ -899,13 +902,23 @@
    * 放在 SuperCalcMQ 之前，历史页（SUPERCALC_MQ_EXT_ONLY）也装得上 ——
    * 历史记录里的公式一样有根号。
    */
-  var SQRT_PATH =
-    'M667 922H829V854H713L413 -265H371L138 319L34 279L18 307L177 417H197L395 -93H399Z';
+  /*
+   * 轮廓顶点（字体单位，y 向上），按绘制顺序。斜线以下的部分随 k 纵向拉伸，
+   * 「尾巴」（SQRT_TAIL_Y 以上那截平顶）不拉伸 —— 沿 y 做分段线性映射即可：
+   * 直线段映射后还是直线段，跨过分界的那两条边拆一个顶点。
+   */
+  var SQRT_OUTLINE = [
+    [667, 922], [829, 922], [829, 854], [713, 854], [413, -265], [371, -265],
+    [138, 319], [34, 279], [18, 307], [177, 417], [197, 417], [395, -93],
+    [399, -93],
+  ];
   var SQRT_UPEM = 1000;
   var SQRT_INK_TOP = 922;      // 字形墨迹顶（字体单位，y 向上）
   var SQRT_INK_BOTTOM = -265;  // 墨迹底
   var SQRT_BAR_L = 700;        // 横线从平顶里接出去的位置
   var SQRT_BAR_B = 854;        // 平顶下缘：横线厚度 = 922-854 = 68/1000 em
+  /* 平顶下缘：它以上（那截尾巴）不参与纵向拉伸，厚度恒定。 */
+  var SQRT_TAIL_Y = 854;
   /* 墨迹顶在前缀盒顶上方多少 em —— 只决定整块 √ 的落点（配合 CSS 的 0.216em）。 */
   var SQRT_INK_TOP_EM = 0.19;
   /* 掩码盒在斜线尖下面多留一点，免得抗锯齿把尖切平。 */
@@ -932,6 +945,45 @@
     return String(Math.round(value * 1e6) / 1e6);
   }
 
+  /**
+   * 把字形轮廓按「尾巴不拉伸」的分段线性映射转成 path。
+   *
+   *   y ≥ SQRT_TAIL_Y（平顶那截）：原样，厚度固定 68/1000 em；
+   *   y <  SQRT_TAIL_Y（斜线 + 左下起笔）：以平顶下缘为不动点纵向乘 k。
+   *
+   * 这样被开方数再高，顶部平顶和横线都不会变粗 —— 只有斜线变长变陡。
+   * 返回 { d, bottom }，bottom 是映射后墨迹最低点的 y（字体单位）。
+   */
+  function sqrtOutlinePath(k) {
+    var n = SQRT_OUTLINE.length;
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = SQRT_OUTLINE[i];
+      var b = SQRT_OUTLINE[(i + 1) % n];
+      pts.push(sqrtMapPoint(a, k));
+      if ((a[1] - SQRT_TAIL_Y) * (b[1] - SQRT_TAIL_Y) < 0) {
+        var t = (SQRT_TAIL_Y - a[1]) / (b[1] - a[1]);
+        pts.push([a[0] + (b[0] - a[0]) * t, SQRT_TAIL_Y]);
+      }
+    }
+    var d = '';
+    for (var j = 0; j < pts.length; j++) {
+      d += (j ? 'L' : 'M') + Math.round(pts[j][0]) + ' ' + Math.round(pts[j][1]);
+    }
+    return d + 'Z';
+  }
+
+  function sqrtMapPoint(p, k) {
+    var y = p[1];
+    if (y < SQRT_TAIL_Y) y = SQRT_TAIL_Y - (SQRT_TAIL_Y - y) * k;
+    return [p[0], y];
+  }
+
+  /** 映射后墨迹最低点的 y（字体单位）。 */
+  function sqrtOutlineBottom(k) {
+    return SQRT_TAIL_Y - (SQRT_TAIL_Y - SQRT_INK_BOTTOM) * k;
+  }
+
   function syncSqrtMask(prefix) {
     var stem = prefix.nextElementSibling;
     if (!stem || String(stem.className).indexOf('mq-sqrt-stem') < 0) return;
@@ -945,20 +997,20 @@
     var borderTop = parseFloat(stemStyle.borderTopWidth) || 0;
     var borderLeft = parseFloat(stemStyle.borderLeftWidth) || 0;
 
-    var scaleX = fontPx / SQRT_UPEM;
-    var scaleY = k * fontPx / SQRT_UPEM;
+    /* 纵向拉伸已经烘进轮廓坐标，掩码本身是等比缩放：1 字体单位 = fontPx/1000 px。 */
+    var scale = fontPx / SQRT_UPEM;
     var barTop = prefixRect.top - SQRT_INK_TOP_EM * k * fontPx;
     var width = stemRect.right - prefixRect.left;
-    var height = (SQRT_INK_TOP - SQRT_INK_BOTTOM) * scaleY + SQRT_MASK_SLACK_PX;
+    var height = (SQRT_INK_TOP - sqrtOutlineBottom(k)) * scale + SQRT_MASK_SLACK_PX;
     /* 掩码右边最多画到 stem 的右缘：横线矩形宽度按字体单位折算。 */
-    var barUnits = width / scaleX - SQRT_BAR_L;
+    var barUnits = width / scale - SQRT_BAR_L;
     if (barUnits < 0) barUnits = 0;
 
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + sqrtPx(width) + ' ' +
       sqrtPx(height) + '" preserveAspectRatio="none"><g transform="translate(0 ' +
-      sqrtPx(SQRT_INK_TOP * scaleY) + ') scale(' + sqrtScale(scaleX) + ' ' +
-      sqrtScale(-scaleY) + ')"><path d="' + SQRT_PATH + '"/><rect x="' + SQRT_BAR_L +
+      sqrtPx(SQRT_INK_TOP * scale) + ') scale(' + sqrtScale(scale) + ' ' +
+      sqrtScale(-scale) + ')"><path d="' + sqrtOutlinePath(k) + '"/><rect x="' + SQRT_BAR_L +
       '" y="' + SQRT_BAR_B + '" width="' + sqrtPx(barUnits) + '" height="' +
       (SQRT_INK_TOP - SQRT_BAR_B) + '"/></g></svg>';
     var mask = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
