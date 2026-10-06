@@ -84,12 +84,13 @@ def fmt(v):
 
 
 def serialize(cmds):
-    return "".join(c + " ".join(fmt(p) for p in pts) for c, pts in cmds)
+    return "".join(cmd[0] + " ".join(fmt(p) for p in cmd[1]) for cmd in cmds)
 
 
 def transform_cmds(cmds, s, dx, dy):
     out = []
-    for c, args in cmds:
+    for cmd in cmds:
+        c, args = cmd[0], cmd[1]
         if c == "H":
             pts = [args[0] * s + dx]
         elif c == "V":
@@ -97,7 +98,8 @@ def transform_cmds(cmds, s, dx, dy):
         else:
             pts = [args[j] * s + dx if j % 2 == 0 else args[j] * s + dy
                    for j in range(len(args))]
-        out.append((c, pts))
+        # 尾部是「笔画补偿」标签（宽度，px），变换时原样带着走
+        out.append((c, pts) + tuple(cmd[2:]))
     return out
 
 
@@ -108,7 +110,8 @@ def transform_group(group, s, dx, dy):
 
 def polylines(cmds, steps=16):
     polys, cur, pos, start = [], [], (0.0, 0.0), (0.0, 0.0)
-    for c, args in cmds:
+    for cmd in cmds:
+        c, args = cmd[0], cmd[1]
         if c == "M":
             if cur:
                 polys.append(cur)
@@ -175,8 +178,13 @@ class Shaper:
         self.hbfont = hb.Font(hb.Face(blob))
         self.hbfont.scale = (self.upem, self.upem)
 
-    def run(self, text, size, x=0.0, y=0.0, tracking=0.0):
-        """一段文字，基线在 (x,y)，返回 (cmds, advance)。"""
+    def run(self, text, size, x=0.0, y=0.0, tracking=0.0, sup_bold=0.0):
+        """一段文字，基线在 (x,y)，返回 (cmds, advance)。
+
+        sup_bold > 0 时，字体自带的上下标字符（²³ⁿ 这些）会带上同宽的
+        描边标签——它们的设计字号只有正文的约 0.6，笔画跟着细，光靠字号排
+        补不回来（见 STROKE_PER_EM）。
+        """
         buf = hb.Buffer()
         buf.add_str(text)
         buf.guess_segment_properties()
@@ -194,6 +202,8 @@ class Shaper:
             )
             self.glyphset[gname].draw(tpen)
             cmds = parse_path(spen.getCommands())
+            if sup_bold > 0 and info.cluster < len(text) and text[info.cluster] in SUP_CHARS:
+                cmds = embolden(cmds, sup_bold)
             if cmds:
                 out.extend(cmds)
             penx += pos.x_advance * scale + tracking
@@ -202,6 +212,36 @@ class Shaper:
 
 # 节点：("t", text) / ("sub", text) / ("sup", text) / ("seq", [节点...]) / ("frac", 上, 下)
 #       / ("grid", [[左上, 右上], [左下, 右下]])
+
+
+# --------------------------------------------------------------------------
+# 笔画补偿：被缩小的字形（上下标、书签里的小字组、字体自带的 ²³ⁿ）不应该是
+# 「整个字等比缩小」——字号一小，笔画跟着细，和旁边的正文放一起就显得轻、细。
+# 原版位图也是这么处理的：书签里 f（38 高）、a-z（15 高）、f(x) 的括号（23 高）
+# 笔画全都是 3px。这里的做法是给缩小的那组轮廓再加一圈同色描边（fill + stroke，
+# Android vector drawable 直接支持），等效于把轮廓往外扩 w/2，笔画加粗 w。
+#
+# STROKE_PER_EM：Noto Sans SC Regular 在 size=100 时的竖干宽度（几何量，
+# l/f/i/t/1/7 都是 9.1～9.2 画布 px）。要补的宽度就是
+#     w = STROKE_PER_EM × (正文号 - 小字号)
+# 描边的圆角接合（strokeLineJoin=round）让加粗后的笔端不出现尖刺。
+# --------------------------------------------------------------------------
+STROKE_PER_EM = 0.091
+
+#: 字体自带的上下标字符（设计字号约为正文的 0.6，见 LayoutProfile.script_scale）
+SUP_CHARS = set("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
+
+
+def embolden(cmds, width):
+    """给一组指令打描边标签（宽度单位：画布 px），序列化时按标签分组发。"""
+    if not width or width <= 0.05:
+        return cmds
+    return [(cmd[0], cmd[1], width) for cmd in cmds]
+
+
+def bold_width(ref_size, small_size):
+    """把 small_size 的字排得和 ref_size 一样粗，需要补的描边宽度。"""
+    return max(0.0, STROKE_PER_EM * (ref_size - small_size))
 
 
 class LayoutProfile:
@@ -261,13 +301,16 @@ def node_layout(sha, node, size, profile=SCRIPT_PROFILE, ctx=1.0):
     if kind == "t":
         em = size * ctx
         tracking = (node[2] if len(node) > 2 else 0.0) * em
-        cmds, adv = sha.run(node[1], em, tracking=tracking)
+        # 字体自带的 ²³ⁿ 只占约 0.6 em，按 em 的 40% 补笔画
+        cmds, adv = sha.run(node[1], em, tracking=tracking,
+                            sup_bold=bold_width(em, em * 0.6))
         return cmds, adv, None
     if kind in ("sub", "sup"):
         small = size * profile.script_scale
         dy = size * ctx * (profile.sub_drop if kind == "sub" else -profile.sup_rise)
         cmds, adv = sha.run(node[1], small, y=dy)
-        return cmds, adv, None
+        # 上下标的笔画按「所在层正文号」补齐，这样它和旁边的正文一样粗
+        return embolden(cmds, bold_width(size * ctx, small)), adv, None
     if kind == "seq":
         all_cmds, x = [], 0.0
         for part in node[1]:
@@ -760,12 +803,17 @@ ICONS.update(family_icons())
 #
 # 排法也照原版：书签 4 = 大 f + 小 "(x)"，(x) 组垂直居中在 f 的 x 高带上；
 # a-z 三个字形摊开 40 宽（原版 a 12..25、- 29..35、z 38..51），Noto 默认只有
-# 34，加 0.12em 字距补齐。
+# 34，加 0.12em 字距补齐。小字组的笔画按 f 的粗细补齐（原版位图里 f、a-z、
+# (x) 的笔画都是 3px）——只缩字号不加粗，笔画会明显偏细（用户报过）。
 # --------------------------------------------------------------------------
 BOOK_F_SIZE = 47.0
 BOOK_S_SIZE = 26.0
 BOOK_PAREN_SIZE = 21.0
 BOOK_AZ_TRACKING = 0.12
+
+#: 小字组要补的描边宽度（画布 px）
+BOLD_SMALL = bold_width(BOOK_F_SIZE, BOOK_S_SIZE)
+BOLD_PAREN = bold_width(BOOK_F_SIZE, BOOK_PAREN_SIZE)
 
 
 def _ink_of(sha, node, size):
@@ -803,7 +851,7 @@ def book_glyphs(sha, kind, dx=0.0, dy=0.0):
         out.append(_center_ink(cmds, b))
     elif kind == 3:
         cmds, b = _ink_of(sha, T("a-z", BOOK_AZ_TRACKING), BOOK_S_SIZE)
-        out.append(_center_ink(cmds, b))
+        out.append(_center_ink(embolden(cmds, BOLD_SMALL), b))
     else:
         # f(x)：大 f 的 x 高带（基线往上一整个 x 高）是小字组的对齐基准。
         f_cmds, f_b = _ink_of(sha, T("f"), BOOK_F_SIZE)
@@ -817,22 +865,33 @@ def book_glyphs(sha, kind, dx=0.0, dy=0.0):
         x_top = band_top + (band_h - (x_b[3] - x_b[1])) / 2
         paren_top = band_top + (band_h - (lp_b[3] - lp_b[1])) / 2
         gap = 2.0
-        # f 的墨迹左上角定在 (0,0)，其它三件按两两 gap=2 排开、贴着 x 高带。
+        # f 的墨迹左上角定在 (0,0)，其它三件贴着 x 高带排开。描边会让每件
+        # 各往外长 bold/2，间距按「视觉间隙 = gap」反推，免得 (x) 挤成一团。
         pieces = [
-            (f_cmds, f_b, 0.0, 0.0),
-            (lp_cmds, lp_b, f_b[2] - f_b[0] + gap, paren_top),
-            (x_cmds, x_b, f_b[2] - f_b[0] + gap + (lp_b[2] - lp_b[0]) + gap, x_top),
-            (rp_cmds, rp_b, f_b[2] - f_b[0] + gap + (lp_b[2] - lp_b[0]) + gap +
-                (x_b[2] - x_b[0]) + gap, paren_top),
+            (f_cmds, f_b, 0.0, 0.0, 0.0),
+            (lp_cmds, lp_b, None, paren_top, BOLD_PAREN),
+            (x_cmds, x_b, None, x_top, BOLD_SMALL),
+            (rp_cmds, rp_b, None, paren_top, BOLD_PAREN),
         ]
         out = []
         union = None
-        for cmds, b, px, py in pieces:
+        cursor, prev_bold = None, 0.0
+        for cmds, b, px, py, bold in pieces:
+            if cursor is None:
+                px = 0.0
+            else:
+                px = cursor + gap + (prev_bold + bold) / 2
             placed = transform_group(cmds, 1.0, px - b[0], py - b[1])
-            bb = (px, py, px + (b[2] - b[0]), py + (b[3] - b[1]))
+            if bold > 0:
+                placed = embolden(placed, bold)
+            # 参与居中的是「描边之后」的视觉外框
+            bb = (px - bold / 2, py - bold / 2,
+                  px + (b[2] - b[0]) + bold / 2, py + (b[3] - b[1]) + bold / 2)
             union = bb if union is None else (
                 min(union[0], bb[0]), min(union[1], bb[1]),
                 max(union[2], bb[2]), max(union[3], bb[3]))
+            cursor = px + (b[2] - b[0])
+            prev_bold = bold
             out.append(placed)
         sx = 32.0 - (union[0] + union[2]) / 2
         sy = 32.0 - (union[1] + union[3]) / 2
@@ -870,12 +929,36 @@ def fmt_dp(v):
     return s
 
 
+def split_bold(cmds):
+    """按笔画补偿标签把指令分组：[(None, 普通指令), (宽度, 加粗指令), ...]。"""
+    groups = []
+    index = {}
+    for cmd in cmds:
+        width = cmd[2] if len(cmd) > 2 else None
+        if width not in index:
+            index[width] = len(groups)
+            groups.append((width, []))
+        groups[index[width]][1].append(cmd)
+    return groups
+
+
 def emit_vector(name, canvas, solids, strokes):
     w, h = canvas
     out = [VECTOR_HEAD.format(w=fmt_dp(w), h=fmt_dp(h), vw=int(w), vh=int(h))]
     for cmds, color in solids:
-        out.append(f'  <path\n      android:fillColor="{color}"\n'
-                   f'      android:pathData="{serialize(cmds)}" />')
+        # 指令里带笔画补偿标签的分成单独一条 path：填充之外再描一圈同色边，
+        # 等效于把轮廓外扩 width/2（见 STROKE_PER_EM 那段说明）。
+        for width, part in split_bold(cmds):
+            if width is None:
+                out.append(f'  <path\n      android:fillColor="{color}"\n'
+                           f'      android:pathData="{serialize(part)}" />')
+            else:
+                out.append(f'  <path\n      android:fillColor="{color}"\n'
+                           f'      android:strokeColor="{color}"\n'
+                           f'      android:strokeWidth="{fmt(width)}"\n'
+                           f'      android:strokeLineCap="round"\n'
+                           f'      android:strokeLineJoin="round"\n'
+                           f'      android:pathData="{serialize(part)}" />')
     for stroke in strokes:
         cmds, color, width = stroke[0], stroke[1], stroke[2]
         cap = stroke[3] if len(stroke) > 3 else "round"
@@ -935,15 +1018,26 @@ def build_icon(sha, name, spec, color_override=None):
         sy = (box[3] - box[1]) / max(b[3] - b[1], 1e-6)
         transformed = transform_cmds(cmds, 1.0, 0.0, 0.0)
         transformed = [
-            (c, [args[j] * sx - b[0] * sx + box[0] if j % 2 == 0
-                 else args[j] * sy - b[1] * sy + box[1] for j in range(len(args))])
-            for c, args in transformed
+            (cmd[0], [cmd[1][j] * sx - b[0] * sx + box[0] if j % 2 == 0
+                      else cmd[1][j] * sy - b[1] * sy + box[1] for j in range(len(cmd[1]))])
+            + tuple(cmd[2:])
+            for cmd in transformed
         ]
         solids.append((transformed, color))
     # 画布至少包住 canvas 矩形；内容超出就往两边长
     hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
+
+    def merge(a, b):
+        return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
+
     for group, _ in solids:
-        hull = union_bbox(group, hull)
+        gb = cmds_bbox(group) if group else hull
+        # 带笔画补偿的字形，轮廓本身还会往外长半个描边宽
+        bold = max((cmd[2] for cmd in group if len(cmd) > 2), default=0.0)
+        if bold > 0:
+            gb = (gb[0] - bold / 2, gb[1] - bold / 2,
+                  gb[2] + bold / 2, gb[3] + bold / 2)
+        hull = merge(hull, gb)
     for stroke in strokes:
         hull = union_bbox(stroke[0], hull)
     # 描边是以中心线画的，边缘要留出半个笔宽，否则圆头会被画布裁掉。
