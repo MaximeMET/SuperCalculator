@@ -3,11 +3,11 @@
      几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="14dp"
-    android:height="14dp"
+    android:height="13.5dp"
     android:viewportWidth="28"
-    android:viewportHeight="28">
+    android:viewportHeight="27">
 
   <path
       android:fillColor="#FF505050"
-      android:pathData="M23.8 1.48L1.25 14.25L23.8 27.02L25.7 23.28L5.45 14.25L25.7 5.22Z" />
+      android:pathData="M25.82 0.75L0.75 13.52L25.82 26.29L27.73 22.55L10 13.52L27.73 4.49Z" />
 </vector>

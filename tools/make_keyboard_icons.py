@@ -704,23 +704,44 @@ def _log_slots():
     return slots
 
 
-def _thick_polyline(points, width):
-    """把折线画成有厚度的多边形（比描边稳：光栅化时不会出现断头）。"""
-    halves = []
-    for i, (x, y) in enumerate(points):
-        if i == 0:
-            dx, dy = points[1][0] - x, points[1][1] - y
-        elif i == len(points) - 1:
-            dx, dy = x - points[i - 1][0], y - points[i - 1][1]
-        else:
-            dx = points[i + 1][0] - points[i - 1][0]
-            dy = points[i + 1][1] - points[i - 1][1]
+def _line_intersect(p, d1, q, d2):
+    """参数直线 p+s·d1 与 q+t·d2 的交点；平行时退回两点中点。"""
+    den = d1[0] * d2[1] - d1[1] * d2[0]
+    if abs(den) < 1e-9:
+        return ((p[0] + q[0]) / 2, (p[1] + q[1]) / 2)
+    t = ((q[0] - p[0]) * d2[1] - (q[1] - p[1]) * d2[0]) / den
+    return (p[0] + d1[0] * t, p[1] + d1[1] * t)
+
+
+def _offset_side(points, width, sign):
+    """折线某一侧的偏移边界：端点按法向平移，中间顶点取两条偏移线的交点（真斜接）。
+
+    顶点若按角平分线平移（各点各偏半个笔宽），外侧拐角会少伸、内侧会少凹，
+    拐角附近比两条腿窄近一半——实机上就是「笔画粗细不匀、拐角发虚」。
+    """
+    dirs, off = [], []
+    for i in range(len(points) - 1):
+        dx = points[i + 1][0] - points[i][0]
+        dy = points[i + 1][1] - points[i][1]
         length = (dx * dx + dy * dy) ** 0.5 or 1.0
-        nx, ny = -dy / length * width / 2, dx / length * width / 2
-        halves.append(((x + nx, y + ny), (x - nx, y - ny)))
-    right = [h[0] for h in halves]
-    left = [h[1] for h in halves][::-1]
-    return poly_cmds(right + left)
+        dirs.append((dx / length, dy / length))
+        off.append((-dy / length * width / 2 * sign, dx / length * width / 2 * sign))
+    out = [(points[0][0] + off[0][0], points[0][1] + off[0][1])]
+    for i in range(1, len(points) - 1):
+        p = (points[i][0] + off[i - 1][0], points[i][1] + off[i - 1][1])
+        q = (points[i][0] + off[i][0], points[i][1] + off[i][1])
+        out.append(_line_intersect(p, dirs[i - 1], q, dirs[i]))
+    out.append((points[-1][0] + off[-1][0], points[-1][1] + off[-1][1]))
+    return out
+
+
+def _thick_polyline(points, width):
+    """把折线画成有厚度的多边形（比描边稳：光栅化时不会出现断头）。
+
+    拐角走真斜接：偏移边界在顶点处求交，整条折线处处等宽；端点保持平头。
+    """
+    return poly_cmds(_offset_side(points, width, 1.0)
+                     + _offset_side(points, width, -1.0)[::-1])
 
 
 def _build_compare_paths(kind):
@@ -737,9 +758,13 @@ def _build_compare_paths(kind):
         w, top, apex, bottom, bar_y = 27.0, (25.4, 1.85), (3.5, 11.0), (25.4, 20.15), 26.8
     if not left:
         top, apex, bottom = (w - top[0], top[1]), (w - apex[0], apex[1]), (w - bottom[0], bottom[1])
-    paths = [_thick_polyline([top, apex, bottom], COMPARE_STROKE)]
+    chevron = _thick_polyline([top, apex, bottom], COMPARE_STROKE)
+    paths = [chevron]
     if bar_y is not None:
-        paths.append(_thick_polyline([(0.6, bar_y), (w - 0.6, bar_y)], COMPARE_STROKE))
+        # 横杠和折线等宽（原版两段的墨迹盒左右都齐平）——特别是拐角改真斜接之后，
+        # 折线左端伸出去的那一截横杠也要跟着，不能还用旧的 0.6 内缩值
+        xs = [cmd[1][0] for cmd in chevron if cmd[0] != "Z"]
+        paths.append(_thick_polyline([(min(xs), bar_y), (max(xs), bar_y)], COMPARE_STROKE))
     return paths
 
 
@@ -750,6 +775,9 @@ def compare_icons():
         # 自绘几何直接按填充多边形写（build_icon 里两条元素的项就是纯色填充）
         specs[kind] = dict(
             canvas=canvas,
+            # 拐角改成真斜接之后墨迹比 canvas 宽，再和 canvas 并集就会偏心——
+            # 这四个键改成只按墨迹裁（原版位图也是紧贴墨迹的），居中由墨迹决定
+            tight_hull=True,
             paths=[(path, KEY) for path in _build_compare_paths(kind)],
         )
     return specs
@@ -1085,20 +1113,24 @@ def build_icon(sha, name, spec, color_override=None):
             for cmd in transformed
         ]
         solids.append((transformed, color))
-    # 画布至少包住 canvas 矩形；内容超出就往两边长
-    hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
+    # 画布至少包住 canvas 矩形；内容超出就往两边长（tight_hull 时只按内容裁）
+    hull = None if spec.get("tight_hull") else (0.0, 0.0, float(canvas[0]), float(canvas[1]))
 
     def merge(a, b):
         return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
 
     for group, _ in solids:
-        gb = cmds_bbox(group) if group else hull
+        if not group:
+            continue
+        gb = cmds_bbox(group)
         # 带笔画补偿的字形，轮廓本身还会往外长半个描边宽
         bold = max((cmd[2] for cmd in group if len(cmd) > 2), default=0.0)
         if bold > 0:
             gb = (gb[0] - bold / 2, gb[1] - bold / 2,
                   gb[2] + bold / 2, gb[3] + bold / 2)
-        hull = merge(hull, gb)
+        hull = gb if hull is None else merge(hull, gb)
+    if hull is None:
+        hull = (0.0, 0.0, float(canvas[0]), float(canvas[1]))
     for stroke in strokes:
         hull = union_bbox(stroke[0], hull)
     # 描边是以中心线画的，边缘要留出半个笔宽，否则圆头会被画布裁掉。
