@@ -746,38 +746,108 @@ ICONS.update(family_icons())
 
 
 
+# --------------------------------------------------------------------------
 # 书签（左栏四个圆底按钮）：圆 + 字形
-def book_glyphs(kind, box, dx=0.0, dy=0.0):
-    x0, y0, x1, y1 = box
-    b = (x0 + dx, y0 + dy, x1 + dx, y1 + dy)
+#
+# 字号只有两档，是用户报「左侧图标字体大小不一」之后按原版位图定下来的：
+#
+#   * BOOK_F_SIZE 给 f：书签 2 的单字 f 和书签 4 里 f(x) 的 f 是同一个字号 ——
+#     原版 ic_keyboard_book2/4.png 里这两个 f 都是 15×38（同一张字的两次使用）。
+#     之前 f(x) 整串按墨迹高度缩，f 被括号拖小到 23，和单字 f 的 33 差一档。
+#   * BOOK_S_SIZE 给 a、z、x：书签 3 的 a/z 和书签 4 里的 x 同高
+#     （原版量出来 a 15、z 14、x 14，画布 px）。小括号再小一档
+#     （BOOK_PAREN_SIZE）：原版括号 23 高，约是 x 的 1.6 倍。
+#
+# 排法也照原版：书签 4 = 大 f + 小 "(x)"，(x) 组垂直居中在 f 的 x 高带上；
+# a-z 三个字形摊开 40 宽（原版 a 12..25、- 29..35、z 38..51），Noto 默认只有
+# 34，加 0.12em 字距补齐。
+# --------------------------------------------------------------------------
+BOOK_F_SIZE = 47.0
+BOOK_S_SIZE = 26.0
+BOOK_PAREN_SIZE = 21.0
+BOOK_AZ_TRACKING = 0.12
+
+
+def _ink_of(sha, node, size):
+    """按 size 排版一段字，返回 (cmds, 墨迹 bbox)。"""
+    cmds, _, _ = node_layout(sha, node, size)
+    return cmds, union_bbox(cmds)
+
+
+def _center_ink(cmds, b, cx=32.0, cy=32.0):
+    """只平移：把墨迹中心搬到 (cx, cy)。"""
+    return transform_group(cmds, 1.0,
+                           cx - (b[0] + b[2]) / 2, cy - (b[1] + b[3]) / 2)
+
+
+def book_glyphs(sha, kind, dx=0.0, dy=0.0):
+    """书签里的字形路径（64×64 画布坐标；dx/dy 是按下态那 1px 的偏移）。"""
+    out = []
     if kind == 1:
-        row_h = (b[3] - b[1] - 3) / 2
-        mid = b[1] + row_h + 3
-        col_w = (b[2] - b[0] - 3) / 2
-        midx = b[0] + col_w + 3
-        return [
-            G(T("+"), (b[0], b[1], midx - 3, mid), KEY),
-            G(T("−"), (midx, b[1], b[2], mid), KEY),
-            G(T("×"), (b[0], mid + 3, midx - 3, b[3]), KEY),
-            G(T("÷"), (midx, mid + 3, b[2], b[3]), KEY),
+        # 四则运算符号：四宫格内等比放进各自小格（原版 ink 30×31，落 17..47）
+        x0, y0, x1, y1 = 17.0, 17.0, 47.0, 48.0
+        row_h = (y1 - y0 - 3) / 2
+        mid = y0 + row_h + 3
+        col_w = (x1 - x0 - 3) / 2
+        midx = x0 + col_w + 3
+        for node, box in (
+            (T("+"), (x0, y0, midx - 3, mid)),
+            (T("−"), (midx, y0, x1, mid)),
+            (T("×"), (x0, mid + 3, midx - 3, y1)),
+            (T("÷"), (midx, mid + 3, x1, y1)),
+        ):
+            cmds, _, _ = node_layout(sha, node, 100.0)
+            out.append(fit_to_box(cmds, box, "contain"))
+    elif kind == 2:
+        cmds, b = _ink_of(sha, T("f"), BOOK_F_SIZE)
+        out.append(_center_ink(cmds, b))
+    elif kind == 3:
+        cmds, b = _ink_of(sha, T("a-z", BOOK_AZ_TRACKING), BOOK_S_SIZE)
+        out.append(_center_ink(cmds, b))
+    else:
+        # f(x)：大 f 的 x 高带（基线往上一整个 x 高）是小字组的对齐基准。
+        f_cmds, f_b = _ink_of(sha, T("f"), BOOK_F_SIZE)
+        band_cmds, band_b = _ink_of(sha, T("x"), BOOK_F_SIZE)
+        lp_cmds, lp_b = _ink_of(sha, T("("), BOOK_PAREN_SIZE)
+        x_cmds, x_b = _ink_of(sha, T("x"), BOOK_S_SIZE)
+        rp_cmds, rp_b = _ink_of(sha, T(")"), BOOK_PAREN_SIZE)
+        f_h = f_b[3] - f_b[1]
+        band_h = band_b[3] - band_b[1]
+        band_top = f_h - band_h          # 相对 f 的墨迹顶
+        x_top = band_top + (band_h - (x_b[3] - x_b[1])) / 2
+        paren_top = band_top + (band_h - (lp_b[3] - lp_b[1])) / 2
+        gap = 2.0
+        # f 的墨迹左上角定在 (0,0)，其它三件按两两 gap=2 排开、贴着 x 高带。
+        pieces = [
+            (f_cmds, f_b, 0.0, 0.0),
+            (lp_cmds, lp_b, f_b[2] - f_b[0] + gap, paren_top),
+            (x_cmds, x_b, f_b[2] - f_b[0] + gap + (lp_b[2] - lp_b[0]) + gap, x_top),
+            (rp_cmds, rp_b, f_b[2] - f_b[0] + gap + (lp_b[2] - lp_b[0]) + gap +
+                (x_b[2] - x_b[0]) + gap, paren_top),
         ]
-    text = {2: "f", 3: "a-z", 4: "f(x)"}[kind]
-    return [G(T(text), b, KEY)]
+        out = []
+        union = None
+        for cmds, b, px, py in pieces:
+            placed = transform_group(cmds, 1.0, px - b[0], py - b[1])
+            bb = (px, py, px + (b[2] - b[0]), py + (b[3] - b[1]))
+            union = bb if union is None else (
+                min(union[0], bb[0]), min(union[1], bb[1]),
+                max(union[2], bb[2]), max(union[3], bb[3]))
+            out.append(placed)
+        sx = 32.0 - (union[0] + union[2]) / 2
+        sy = 32.0 - (union[1] + union[3]) / 2
+        out = [transform_group(c, 1.0, sx, sy) for c in out]
+    if dx or dy:
+        out = [transform_group(c, 1.0, dx, dy) for c in out]
+    return out
 
-
-# 书签字形的墨迹框，逐个按原版位图 ic_keyboard_book*.png 量的：
-# 「f」高 38px、「a-z」宽 40px、「f(x)」42×38 —— 之前一律用 (17,17,47,48)，
-# 比原版小一圈，用户反馈「圆圈里的字偏小」。
-BOOK_GLYPH_BOX = {
-    1: (17, 17, 47, 48),
-    2: (24, 14, 38, 51),
-    3: (12, 24, 51, 39),
-    4: (11, 13, 52, 50),
-}
 
 for i in range(1, 5):
-    ICONS[f"book{i}"] = dict(canvas=(64, 64), paths=[(circle_cmds(32, 32, 32), BOOK)],
-                             glyph=book_glyphs(i, BOOK_GLYPH_BOX[i]))
+    ICONS[f"book{i}"] = dict(
+        canvas=(64, 64),
+        paths=[(circle_cmds(32, 32, 32), BOOK)] +
+              [(cmds, KEY) for cmds in book_glyphs(Shaper__shared, i)],
+    )
 
 
 # --------------------------------------------------------------------------
@@ -923,13 +993,9 @@ def main():
         with open(os.path.join(args.out, f"ic_keyboard_{name}.xml"), "w", encoding="utf-8") as f:
             f.write(xml)
         n += 1
-    # 书签按下态的白色字形
+    # 书签按下态的白色字形（和常态同一份字形，整体右下 1px，照原版按下态）
     for i in range(1, 5):
-        glyphs = book_glyphs(i, BOOK_GLYPH_BOX[i], dx=1.0, dy=1.0)
-        solids = []
-        for node, box, _ in glyphs:
-            cmds, _, _ = node_layout(sha, node, 100.0)
-            solids.append((fit_to_box(cmds, box, "contain"), WHITE))
+        solids = [(cmds, WHITE) for cmds in book_glyphs(sha, i, dx=1.0, dy=1.0)]
         xml = emit_vector(f"dart{i}", (66, 66), solids, [])
         with open(os.path.join(args.out, f"ic_dart_glyph_{i}.xml"), "w", encoding="utf-8") as f:
             f.write(xml)

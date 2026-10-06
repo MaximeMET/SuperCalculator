@@ -1264,6 +1264,212 @@
   }
 
   /**
+   * 墨迹测量：给 alignExampleTip 用，量出一棵子树「真正落墨」的上下边。
+   *
+   * 为什么不能直接用元素盒子：行盒（inline 元素的高度）里上下带着字体自己的
+   * 半行距，中文标题和算式墨迹在行盒里的位置并不一样，按盒子居中就是用户报的
+   * 「举例 text 没有垂直居中」。原版九张位图量出来都是**墨迹**同心
+   * （ic_emptytip_3.png：中文墨迹 y14..39、算式墨迹 y1..52，中心都在 26.5）。
+   *
+   * 文字分两步量：
+   *   1. 基线：Range 量出这段文字的行盒，加上「字体上升」就是基线位置。
+   *      字体上升不能读 canvas 的 fontBoundingBox —— 那是 OS/2 度量，和排版用
+   *      的 hhea 度量对不上（中文实测差 0.9px，基线跟着差，墨迹就偏 2px）。
+   *      这里改成一次性标定：造一段同字体的文字 + 一个贴着基线的 inline-block
+   *      探针，量出「基线 - 行盒顶」，按字体缓存。
+   *   2. 墨迹上下沿：把字串按同一字体画到离屏 canvas 上扫 alpha —— 和页面走
+   *      同一个光栅化器，中文也准（canvas 的 actualBoundingBox 对中文字形会按
+   *      字体框报，比真正画出来的高约 2px）。
+   *
+   * 图形（分数横线是 denominator 的 border-top、根号/大括号是 SVG、抛物线挂在
+   * 伪元素上、空槽位是底色块）直接量元素盒子；transparent 的字形（根号前缀）
+   * 和 a11y 用的 .mq-selectable 都不算墨迹。
+   */
+  var inkMeasureCv = null;
+  var inkDrawCv = null;
+  var inkCalHost = null;
+  var inkFontCache = {};
+  var inkTextCache = {};
+
+  /** 颜色的 alpha；transparent 的笔画不算墨迹。 */
+  function inkAlpha(color) {
+    if (!color) return 1;
+    var m = /rgba?\(([^)]+)\)/.exec(color);
+    if (!m) return color === 'transparent' ? 0 : 1;
+    var p = m[1].split(',');
+    return p.length < 4 ? 1 : (parseFloat(p[3]) || 0);
+  }
+
+  /** computed style → canvas font 简写（scale 用来超采样，1 = 原尺寸）。 */
+  function inkFont(cs, scale) {
+    var f = '';
+    if (cs.fontStyle && cs.fontStyle !== 'normal') f += cs.fontStyle + ' ';
+    if (cs.fontWeight && cs.fontWeight !== 'normal' && cs.fontWeight !== '400') {
+      f += cs.fontWeight + ' ';
+    }
+    f += (parseFloat(cs.fontSize) * scale) + 'px ' + cs.fontFamily;
+    return f;
+  }
+
+  /** 字体标定：一段文字的行盒顶到基线的距离（每个字体算一次就够）。 */
+  function inkFontMetrics(cs) {
+    var key = cs.fontStyle + '|' + cs.fontWeight + '|' + cs.fontSize + '|' + cs.fontFamily;
+    var hit = inkFontCache[key];
+    if (hit) return hit;
+    if (!inkCalHost) {
+      inkCalHost = document.createElement('div');
+      inkCalHost.style.cssText =
+        'position:absolute;left:0;top:-20000px;white-space:nowrap;' +
+        'line-height:normal;visibility:hidden;pointer-events:none;';
+      document.body.appendChild(inkCalHost);
+    }
+    inkCalHost.style.font = inkFont(cs, 1);
+    /* 空 inline-block 的基线就是它自己的底边，拿它当尺子量文字基线。 */
+    inkCalHost.innerHTML = '<span>Hxg</span>' +
+      '<span style="display:inline-block;width:0;height:0"></span>';
+    var range = document.createRange();
+    range.selectNodeContents(inkCalHost.firstChild.firstChild);
+    var rect = range.getClientRects()[0];
+    var base = inkCalHost.lastChild.getBoundingClientRect().bottom;
+    var out = null;
+    if (rect && rect.height > 0 && isFinite(base)) {
+      out = { ascent: base - rect.top, height: rect.height };
+    }
+    inkFontCache[key] = out;
+    return out;
+  }
+
+  /** 一个字串相对基线的真实墨迹上下沿：离屏画一遍、扫 alpha。 */
+  function inkTextMetrics(text, cs) {
+    var key = inkFont(cs, 1) + '\u0000' + text;
+    var hit = inkTextCache[key];
+    if (hit) return hit;
+    var scale = 4;
+    if (!inkMeasureCv) inkMeasureCv = document.createElement('canvas');
+    var mc = inkMeasureCv.getContext('2d');
+    mc.font = inkFont(cs, scale);
+    var m = mc.measureText(text);
+    var asc = isFinite(m.fontBoundingBoxAscent)
+      ? m.fontBoundingBoxAscent : (m.actualBoundingBoxAscent || 0);
+    var desc = isFinite(m.fontBoundingBoxDescent)
+      ? m.fontBoundingBoxDescent : (m.actualBoundingBoxDescent || 0);
+    var pad = 16;
+    var w = Math.ceil(m.width) + pad * 2;
+    var h = Math.ceil(asc + desc) + pad * 2;
+    if (!inkDrawCv) inkDrawCv = document.createElement('canvas');
+    inkDrawCv.width = w;
+    inkDrawCv.height = h;
+    var ctx = inkDrawCv.getContext('2d');
+    ctx.font = inkFont(cs, scale);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#fff';
+    var base = pad + Math.ceil(asc);
+    ctx.fillText(text, pad, base);
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var first = -1;
+    var last = -1;
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > 8) {
+          if (first < 0) first = y;
+          last = y;
+          break;
+        }
+      }
+    }
+    var ink = first < 0
+      ? { up: m.actualBoundingBoxAscent || 0, down: m.actualBoundingBoxDescent || 0 }
+      : { up: (base - first) / scale, down: (last - base) / scale };
+    if (!(ink.up >= 0)) ink.up = 0;
+    if (!(ink.down >= 0)) ink.down = 0;
+    inkTextCache[key] = ink;
+    return ink;
+  }
+
+  /**
+   * 一棵子树（含自己）的墨迹上下边（页面坐标）。
+   *
+   * 抛物线 svg 的墨迹比盒子内缩 1/56（viewBox 44×56 里描边 2px 在 y1..55），
+   * 按常量扣掉；其余图形直接用盒子。
+   */
+  function inkRectOf(el) {
+    if (!el) return null;
+    var top = Infinity;
+    var bottom = -Infinity;
+    function add(t, b) {
+      if (t < top) top = t;
+      if (b > bottom) bottom = b;
+    }
+    var range = document.createRange();
+    var stack = [el];
+    while (stack.length) {
+      var node = stack.pop();
+      if (!node) continue;
+      if (node.nodeType === 3) {
+        if (!node.data || !node.data.trim()) continue;
+        var parent = node.parentElement;
+        if (!parent) continue;
+        if (String(parent.className || '').indexOf('mq-selectable') >= 0) continue;
+        var cs = getComputedStyle(parent);
+        if (inkAlpha(cs.color) <= 0) continue;
+        if (cs.webkitTextFillColor && inkAlpha(cs.webkitTextFillColor) <= 0) continue;
+        var fm = inkFontMetrics(cs);
+        var tm = inkTextMetrics(node.data, cs);
+        range.selectNodeContents(node);
+        var rects = range.getClientRects();
+        for (var i = 0; i < rects.length; i++) {
+          var r = rects[i];
+          if (!r.width || !r.height) continue;
+          /* 行盒和标定盒高度对不上时按比例缩放（zoom / 测量误差兜底）。 */
+          var ratio = fm && fm.height > 0 ? r.height / fm.height : 1;
+          var base = r.top + (fm ? fm.ascent * ratio : r.height * 0.8);
+          add(base - tm.up, base + tm.down);
+        }
+        continue;
+      }
+      if (node.nodeType !== 1) continue;
+      var cls = String(node.className || '');
+      if (cls.indexOf('mq-selectable') >= 0) continue;
+      var st = getComputedStyle(node);
+      if (st.display === 'none' || st.visibility === 'hidden') continue;
+      var rect = null;
+      if (cls.indexOf('mq-parabola') >= 0) {
+        rect = node.getBoundingClientRect();
+        var pb = st;
+        try { pb = getComputedStyle(node, '::before'); } catch (e2) { pb = st; }
+        var ph = parseFloat(pb.height) || 0;
+        if (ph > 0) add(rect.bottom - ph * 55 / 56, rect.bottom - ph / 56);
+        continue;
+      }
+      if (node.tagName && node.tagName.toLowerCase() === 'svg') {
+        rect = node.getBoundingClientRect();
+        if (rect.width && rect.height) add(rect.top, rect.bottom);
+        continue;
+      }
+      var bw = parseFloat(st.borderTopWidth) || 0;
+      if (bw > 0 && st.borderTopStyle !== 'none' && inkAlpha(st.borderTopColor) > 0) {
+        rect = node.getBoundingClientRect();
+        if (rect.width > 0) add(rect.top, rect.top + bw);
+      }
+      var bbw = parseFloat(st.borderBottomWidth) || 0;
+      if (bbw > 0 && st.borderBottomStyle !== 'none' && inkAlpha(st.borderBottomColor) > 0) {
+        rect = rect || node.getBoundingClientRect();
+        if (rect.width > 0) add(rect.bottom - bbw, rect.bottom);
+      }
+      if (cls.indexOf('mq-sys-brace-img') >= 0) {
+        rect = rect || node.getBoundingClientRect();
+        if (rect.width && rect.height) add(rect.top, rect.bottom);
+      }
+      if (cls.indexOf('mq-empty') >= 0 && inkAlpha(st.backgroundColor) > 0) {
+        rect = rect || node.getBoundingClientRect();
+        if (rect.width && rect.height) add(rect.top, rect.bottom);
+      }
+      for (var k = node.childNodes.length - 1; k >= 0; k--) stack.push(node.childNodes[k]);
+    }
+    return top <= bottom ? { top: top, bottom: bottom } : null;
+  }
+
+  /**
    * 把这一行摆正：标题和算式各自回到行盒中线上。
    *
    * MathQuill 的分数、积分、根号比一行高，而且是**按基线**排的：内容一高，行盒
@@ -1273,6 +1479,9 @@
    *
    * 用 transform 而不是改 margin：它不参与布局，宽度测量（要不要缩字号）不受影响，
    * 也不会因为行盒已经被撑高而互相牵扯。
+   *
+   * 「墨迹」由 inkRectOf 量（见上面那一段），实测和位图规格在同一像素级：
+   * 480dpi 真机上中文标题和算式的墨迹中心都落在示例行中线上，误差 < 1 设备像素。
    */
   function alignExampleTip() {
     if (!exampleTipBox || !exampleTipLabel || !exampleTipMath) return;
@@ -1281,15 +1490,17 @@
     var box = exampleTipBox.getBoundingClientRect();
     if (!box.height) return;
     var target = box.top + box.height / 2;
-    var labelRect = exampleTipLabel.getBoundingClientRect();
-    exampleTipLabel.style.transform =
-      'translateY(' + (target - (labelRect.top + labelRect.height / 2)) + 'px)';
+    var labelInk = inkRectOf(exampleTipLabel);
+    if (labelInk) {
+      exampleTipLabel.style.transform =
+        'translateY(' + (target - (labelInk.top + labelInk.bottom) / 2) + 'px)';
+    }
     var root = exampleTipMath.querySelector('.mq-root-block');
     if (!root) return;
-    var rootRect = root.getBoundingClientRect();
-    if (!rootRect.height) return;
+    var ink = inkRectOf(root);
+    if (!ink || ink.bottom <= ink.top) return;
     exampleTipMath.style.transform =
-      'translateY(' + (target - (rootRect.top + rootRect.height / 2)) + 'px)';
+      'translateY(' + (target - (ink.top + ink.bottom) / 2) + 'px)';
   }
 
   var resultDiv = document.getElementById('resultDiv');
