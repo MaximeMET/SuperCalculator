@@ -182,8 +182,8 @@ class Shaper:
         """一段文字，基线在 (x,y)，返回 (cmds, advance)。
 
         sup_bold > 0 时，字体自带的上下标字符（²³ⁿ 这些）会带上同宽的
-        描边标签——它们的设计字号只有正文的约 0.6，笔画跟着细，光靠字号排
-        补不回来（见 STROKE_PER_EM）。
+        描边标签——它们在字体里的设计字号只有正文的约 0.6，笔画跟着细，
+        补偿见 SUP_FONT_FACTOR。
         """
         buf = hb.Buffer()
         buf.add_str(text)
@@ -237,6 +237,14 @@ BOLD_FACTOR = 0.6
 
 #: 字体自带的上下标字符（设计字号约为正文的 0.6，见 LayoutProfile.script_scale）
 SUP_CHARS = set("⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ")
+
+#: 字体自带上下标字符的补偿系数（1.0 = 和 SUB/SUP 节点同一条公式）。
+#: 这些字形自带笔画比正文重（² 的竖干 7.37/em，³ 甚至 9.89/em），补满会
+#: 明显比 SUP 节点上的上标粗——用户对照 y = ax²+bx+c 和 y = aˣ 报过
+#: 「² 偏粗、x 刚好」。按画布平均笔宽量（work/tmp/sup2_measure.py，
+#: FORMULA_SIZE）：SUP 节点 x = 2.41，字体 ² 不补 = 2.19、0.3 档 = 2.37、
+#: 1.0 档 = 2.94。0.3 刚好贴住 SUP 节点，取整存档。
+SUP_FONT_FACTOR = 0.3
 
 
 def embolden(cmds, width):
@@ -308,9 +316,10 @@ def node_layout(sha, node, size, profile=SCRIPT_PROFILE, ctx=1.0):
     if kind == "t":
         em = size * ctx
         tracking = (node[2] if len(node) > 2 else 0.0) * em
-        # 字体自带的 ²³ⁿ 只占约 0.6 em，按 em 的 40% 补笔画
+        # 字体自带的 ²³ⁿ 只占约 0.6 em，按 em 的 40% 补笔画，再乘字体字符的
+        # 折扣系数（它们自带笔画比正文重，补满会比 SUP 节点上的上标粗）
         cmds, adv = sha.run(node[1], em, tracking=tracking,
-                            sup_bold=bold_width(em, em * 0.6))
+                            sup_bold=SUP_FONT_FACTOR * bold_width(em, em * 0.6))
         return cmds, adv, None
     if kind in ("sub", "sup"):
         small = size * profile.script_scale
