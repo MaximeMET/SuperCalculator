@@ -3,9 +3,9 @@
      几何图形为本项目自绘。改图标请改生成脚本，不要手改本文件。 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="11dp"
-    android:height="19.5dp"
+    android:height="24.5dp"
     android:viewportWidth="22"
-    android:viewportHeight="39">
+    android:viewportHeight="49">
 
   <path
       android:fillColor="#FF505050"

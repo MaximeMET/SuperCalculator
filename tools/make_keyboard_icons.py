@@ -531,8 +531,6 @@ ICONS = {
     # 原版是 59×29、墨迹 28；现在是 64×32、墨迹 ≈30。
     "gcd": dict(canvas=(64, 32), glyph=[G(T("公约"), (1, 0, 63, 32))]),
     "lcm": dict(canvas=(64, 32), glyph=[G(T("公倍"), (1, 0, 63, 32))]),
-    "lim": dict(canvas=(53, 51), slots=[(0, 35, 14, 16), (39, 35, 14, 16)],
-                glyph=[G(T("lim"), (4, 0, 50, 34)), G(T("→"), (14, 35, 39, 51))]),
     "ap": dict(canvas=(52, 43), slots=[(34, 0, 18, 20), (34, 23, 18, 20)],
                glyph=[G(T("A"), (1, 2, 27, 35))]),
     "cp": dict(canvas=(47, 43), slots=[(29, 0, 18, 20), (29, 23, 18, 20)],
@@ -633,9 +631,10 @@ LETTER_SIZE = 46.0
 FUNCTION_SIZE = 42.0
 #: 反三角（arcsin/arccos/arctan）：原版是 sin 一族的 76%（墨迹 25 → em≈32）。
 ARC_SIZE = 32.0
-#: 对数族（log/log2/log10/ln）：四个键和 sin 一族同字号（原版 log 位图偏小，
-#: 是因为它把 g 的降部也算进了画布；用户要求四键字号统一，就按 sin 来）。
-LOG_SIZE = 42.0
+#: 对数族（log/log2/log10/ln）：四个键同字号。原版按 42 排（和 sin 一族同号），
+#: 实机上 log/log2/log10 墨迹贴着格子、显得占满，用户要求「小一号」；
+#: lim 键的正文原本按框拟合裁出来是 em≈35.2，四键统一到 36 正好两边都接上。
+LOG_SIZE = 36.0
 #: 对数键的灰色占位方块（原版位图里的槽位）：底数槽 12×13、自变量槽 20×25。
 #: 原版 log 位图：基线 y≈27，两块分别是 14..26 和 4..28，即都坐在基线上方。
 LOG_BASE_SLOT = (12.0, 13.0)
@@ -644,26 +643,42 @@ LOG_ARG_SLOT = (20.0, 25.0)
 COMPARE_STROKE = 4.2
 
 
-def _tight_specs(size, texts, fill=None, extra_slots=None):
-    """同族同字号：每个图标都按自己的墨迹紧裁（原版的切图方式）。
+def _tight_specs(size, texts, fill=None, extra_slots=None, lock_baseline=False):
+    """同族同字号：横向按各自的墨迹紧裁（原版的切图方式）。
 
     [texts] 是 name -> 排版节点；[extra_slots] 是 name -> [(x,y,w,h), ...]，
     坐标写在「基线 y=0、起点 x=0」的系统里（和 node_layout 的输出同一坐标系）。
+
+    lock_baseline=True 时纵向不再各裁各的，而是整族共用一个高度、共一条基线：
+    每个图标都是「居中的一幅图」，各裁各的等于让基线跟着墨迹高度跑——
+    sin（i 的点最高）和 cos（只有 x 高）的基线能差 3dp，一排看过去 cos 像被
+    抬高了一截（原版也这样，用户对照报过）。锁了基线之后上下伸部照字形自然
+    高低，基线永远齐平，和一行文字一样。
     """
-    specs = {}
+    laid = {}
     for name, node in texts.items():
         cmds, _, _ = node_layout(Shaper__shared, node, size)
         b = union_bbox(cmds)
-        spec = dict(
-            canvas=(0.0, 0.0), uniform_size=size,
-            glyph=[G(node, (0.0, 0.0, b[2] - b[0], b[3] - b[1]), fill or KEY)],
+        # 笔画补偿会让墨迹再往外长 bold/2，画布外框要按补偿之后的视觉框算
+        bold = max((cmd[2] for cmd in cmds if len(cmd) > 2), default=0.0)
+        laid[name] = (cmds, b, bold)
+    top = min(b[1] - bold / 2 for _, b, bold in laid.values()) if lock_baseline else None
+    bottom = max(b[3] + bold / 2 for _, b, bold in laid.values()) if lock_baseline else None
+    specs = {}
+    for name, (cmds, b, _bold) in laid.items():
+        # 锁基线：整族用同一个上缘；否则按自己的墨迹裁
+        dy = -top if lock_baseline else -b[1]
+        dx = -b[0]
+        w = b[2] - b[0]
+        h = bottom - top if lock_baseline else b[3] - b[1]
+        specs[name] = dict(
+            canvas=(w, h),
+            paths=[(transform_group(cmds, 1.0, dx, dy), fill or KEY)],
         )
         slots = (extra_slots or {}).get(name)
         if slots:
-            # build_icon 会把墨迹平移到 (0,0)，槽位跟着做同样的平移
-            dx, dy = -b[0], -b[1]
-            spec["slots"] = [(x + dx, y + dy, w, h) for x, y, w, h in slots]
-        specs[name] = spec
+            # 墨迹平移了多少，槽位跟着平移多少
+            specs[name]["slots"] = [(x + dx, y + dy, sw, sh) for x, y, sw, sh in slots]
     return specs
 
 
@@ -782,8 +797,12 @@ LOG_TEXTS = {
     "ln": T("ln"),
 }
 
+#: lim 键里那个箭头的位置（写死在原版位图上量出来的框里，不跟正文字号走）。
+LIM_ARROW_BOX = (14.0, 35.0, 39.0, 51.0)
 
-def family_icons():
+
+def _shared_shaper():
+    """整个脚本共用一份 Shaper（每次重排字形都要用）。"""
     global Shaper__shared
     if "Shaper__shared" not in globals():
         if not os.path.exists(FONT_PATH):
@@ -791,17 +810,43 @@ def family_icons():
                 f"缺字体 {FONT_PATH}；先跑 python tools/make_keyboard_icons.py --fetch"
             )
         Shaper__shared = Shaper(FONT_PATH)
+    return Shaper__shared
+
+
+def lim_spec():
+    """lim 键：正文和 log 一族同字号，箭头和两侧灰方块照原版。
+
+    `glyph` 走的是 fit_to_box(contain)：缩放取「框宽/墨迹宽」和「框高/墨迹高」
+    里的小者。这里把框宽设成 墨迹宽 × LOG_SIZE/100，缩放松紧就正好钉在
+    LOG_SIZE 上（框高 34 比 80.9×0.36=29.1 宽松，不会抢）。
+    """
+    node = T("lim")
+    cmds, _, _ = node_layout(_shared_shaper(), node, 100.0)
+    b = union_bbox(cmds)
+    w = (b[2] - b[0]) * LOG_SIZE / 100.0
+    return dict(
+        canvas=(53, 51),
+        slots=[(0, 35, 14, 16), (39, 35, 14, 16)],
+        glyph=[G(node, (4.0, 0.0, 4.0 + w, 34.0)), G(T("→"), LIM_ARROW_BOX)],
+    )
+
+
+def family_icons():
+    _shared_shaper()
     icons = {}
-    icons.update(_tight_specs(LETTER_SIZE, LETTER_TEXTS, fill=KEY))
-    icons.update(_tight_specs(FUNCTION_SIZE, FUNCTION_TEXTS, fill=KEY))
-    icons.update(_tight_specs(ARC_SIZE, ARC_TEXTS, fill=KEY))
-    icons.update(_tight_specs(LOG_SIZE, LOG_TEXTS, fill=KEY, extra_slots=_log_slots()))
+    # 四个族都锁基线：同排的字（a/b、sin/cos/tan、log/ln）必须坐在同一条线上
+    icons.update(_tight_specs(LETTER_SIZE, LETTER_TEXTS, fill=KEY, lock_baseline=True))
+    icons.update(_tight_specs(FUNCTION_SIZE, FUNCTION_TEXTS, fill=KEY, lock_baseline=True))
+    icons.update(_tight_specs(ARC_SIZE, ARC_TEXTS, fill=KEY, lock_baseline=True))
+    icons.update(_tight_specs(LOG_SIZE, LOG_TEXTS, fill=KEY,
+                              extra_slots=_log_slots(), lock_baseline=True))
     icons.update(compare_icons())
     icons.update(paren_icons())
     return icons
 
 
 ICONS.update(family_icons())
+ICONS["lim"] = lim_spec()
 
 
 
