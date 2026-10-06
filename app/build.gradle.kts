@@ -30,8 +30,8 @@ android {
         targetSdk = 35
         // 本地真机测试包，没有对外发布。每出一版测试包就把 versionCode 加一，
         // 省得手机上装不上（同名同号只能覆盖安装，用户分不出新旧）。
-        versionCode = 32
-        versionName = "0.1.2-dev30"
+        versionCode = 34
+        versionName = "0.1.2-dev32"
     }
 
     signingConfigs {

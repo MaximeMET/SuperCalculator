@@ -195,8 +195,9 @@ html {
  * √ 的字形更高，0.1em 会让字形顶部从横线上方探出去（实机 480dpi 下约 10px），
  * 看起来就是「横线和根号错位」。
  *
- * 0.216em 是 480dpi 实机量出来的落点：字形顶自带的横尾巴正好和下面
- * .mq-sqrt-stem 的横线重合，接缝看不到。
+ * 0.216em 是 480dpi 实机量出来的落点。现在字形本身被 SVG 掩码替代（见下面
+ * 根号图形一节），这个偏移只影响前缀盒子的位置 —— 掩码的「墨迹顶」就是拿
+ * 前缀的盒位减 0.19em × k 算出来的，两个常数一起决定整块 √ 的落点。
  *
  * 用 em 而不是 px，字体大小跟着设置页的字号一起缩放。
  */
@@ -215,37 +216,51 @@ html {
 }
 
 /*
- * 根号横线：厚度 0.071em × k，字号和被开方数高度一起跟。
+ * 根号图形：整块（斜线 + 顶上的横线）用一块 SVG 掩码一次画出来。
  *
- * 上游是固定的 `border-top: 1px`，我们上一版改成固定 2px —— 都只能对上一种
- * 被开方数。MathQuill 会把根号前缀纵向 `scale(1, k)` 拉伸（k 由被开方数高度
- * 决定，见 editor.js 的 syncSqrtScale），字形顶上的小尾巴也跟着变粗：
+ * 上一版是「字体自带的 √ 字形 + stem 上单独画的横线」两块拼的：字形走字体
+ * 光栅化、横线走 CSS 背景，两套光栅化在接缝处对不齐 —— 480dpi 实测差 1～3
+ * 设备像素（字号、拉伸系数 k 一大就更明显），拉到 4 倍看就是一道台阶；
+ * 试过把横线挪进前缀的 transform、用 border、用亚像素 translate，
+ * Chrome 对盒子 / 背景的落点取整都会再引入 1 CSS px 级的抖动，调不干净。
  *
- *   √2      k≈0.93，28.16px 字号 → 尾巴 6 设备像素
- *   √2      k≈0.93，19.36px 字号（结果行）→ 尾巴 4 设备像素
- *   √(1/2)  k≈2.1  → 尾巴 8～12 设备像素
+ * 现在改成：STIX Two Math 的 √ 轮廓（纯多边形，见 editor.js 的 SQRT_PATH）
+ * 和横线画进同一块 SVG —— 横线就是字形顶上那截平顶（922→854，厚 68/1000 em）
+ * 的自然延长：同一条边、同一厚度，接缝从构造上就不存在。
  *
- * 固定 2px（= 6 设备像素）在结果行比尾巴粗一半、在分数里又细一半，接缝处
- * 都是一道台阶 —— 480dpi 实测：结果行 √2 横线 6px / 尾巴 3.75px，
- * √(1/2) 横线 6px / 尾巴 11.6px。
- *
- * 所以横线不再用 border 画：border-top 的 2px 留着、涂成透明（盒子高度、
- * 基线、落点都不动），横线改用贴着 border-box 顶边的线性渐变。Chrome 会把
- * 小数 border-width 取整成整数 CSS px，背景尺寸和渐变不做这种取整，
- * 0.071em × k 这种亚像素厚度才能画出来。0.071em 是 STIX Two Math 的 √
- * 顶笔画实测粗细（480dpi 截图 + 覆盖率加权校准）。
- *
- * --mq-sqrt-k 由 editor.js 从前缀的 transform 里读出来；读不到时按 1 走，
- * 也就是原来的 2px 观感。横线落点仍在 stem 盒顶（与被开方数、与原来的
- * 接缝算法一致），字形墨迹顶和它的零点几像素差是上一版就有的量级。
+ * 字形照旧参与排版（宽度、基线、被开方数位置都没动），只是涂成透明
+ * （editor.js 负责），整块图形由 stem 的 ::before 顶着掩码画出来。
+ * 几何（--mq-sqrt-mx/my/mw/mh）和掩码内容（--mq-sqrt-mask）都由 editor.js
+ * 按当前字号 / 拉伸系数 k / stem 宽度算好；JS 没跑到时盒子是 0×0、不显示，
+ * 字形也还是原样，退化成旧的观感。
  */
 .mq-math-mode .mq-sqrt-stem {
+  position: relative;
   border-top: 2px solid transparent;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-repeat: no-repeat;
-  background-origin: border-box;
-  background-position: left top;
-  background-size: 100% calc(0.071em * var(--mq-sqrt-k, 1));
+}
+/*
+ * 根号图形本体：一块子像素定位的「画布」，内容由 --mq-sqrt-mask 提供，
+ * 用 currentColor 上色（颜色跟着行文字走，历史页 / 结果行 / 示例行通吃）。
+ *
+ * 盒子可以探出 stem 的左边（相对 stem 的 padding box 摆），所以斜线能盖到
+ * 前缀那一侧；掩码用 100% 100% 铺满盒子，viewBox 和盒子是 1:1，不缩放。
+ */
+.mq-math-mode .mq-sqrt-stem::before {
+  content: '';
+  position: absolute;
+  left: var(--mq-sqrt-mx, 0px);
+  top: var(--mq-sqrt-my, 0px);
+  width: var(--mq-sqrt-mw, 0px);
+  height: var(--mq-sqrt-mh, 0px);
+  background-color: currentColor;
+  -webkit-mask-image: var(--mq-sqrt-mask, none);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+  mask-image: var(--mq-sqrt-mask, none);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  mask-position: 0 0;
 }
 
 /* 函数名（sin / log …）用正体，并且收紧一点间距 */
