@@ -904,6 +904,52 @@ BOOK_AZ_TRACKING = 0.12
 BOLD_SMALL = bold_width(BOOK_F_SIZE, BOOK_S_SIZE)
 BOLD_PAREN = bold_width(BOOK_F_SIZE, BOOK_PAREN_SIZE)
 
+#: 书签 1（+ − × ÷）的笔画宽度。原来四个符号是直接拿字体的 +−×÷ 塞进四宫格，
+#: 可 Noto 里这四个字符各自笔宽不同（实测 2.05 / 1.92 / 1.2 / 1.16），摆在大 f
+#: （干宽 4.3）旁边明显发轻，用户报「视觉重心不稳」。改成几何自绘、共用一条笔宽：
+#: 2.9 ≈ f 的 0.68 —— 原版位图里四则符号 2px、f 3px，比例正是 0.67。
+BOOK_OP_STROKE = 2.9
+BOOK_OP_DOT = 3.4
+BOOK_OP_ARM = 13.5
+# × 的墨迹盒比 + 的臂长短一档（原版 11 vs 12）；同笔宽下盒子越小越显重，
+# 这里留 12.2（原版比例 11/12 = 0.92，我们 12.2/13.5 = 0.90），四个符号才一样重
+BOOK_OP_CROSS = 12.2
+
+
+def _bar_cmds(p0, p1, width):
+    """两端平头、宽 width 的直杆（填充多边形）。"""
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    length = (dx * dx + dy * dy) ** 0.5 or 1.0
+    nx, ny = -dy / length * width / 2, dx / length * width / 2
+    return poly_cmds([
+        (p0[0] + nx, p0[1] + ny), (p1[0] + nx, p1[1] + ny),
+        (p1[0] - nx, p1[1] - ny), (p0[0] - nx, p0[1] - ny),
+    ])
+
+
+def _book_op_paths():
+    """书签 1 的四则运算符号：四宫格中心照原版位图（24.5/41 × 26.25/43.25）。"""
+    w, arm, box = BOOK_OP_STROKE, BOOK_OP_ARM, BOOK_OP_CROSS
+    half = arm / 2
+    # × 的两条 45° 斜杆：端点还要算上平头在角上占掉的 w/2·cos45°
+    d = box / 2 - w / 2 * (0.5 ** 0.5)
+    out = []
+    for cx, cy in ((24.5, 26.25), (41.0, 26.25), (24.5, 43.25), (41.0, 43.25)):
+        if cx < 32:  # + 与 ×
+            if cy < 35:
+                out.append(_bar_cmds((cx - half, cy), (cx + half, cy), w))
+                out.append(_bar_cmds((cx, cy - half), (cx, cy + half), w))
+            else:
+                out.append(_bar_cmds((cx - d, cy + d), (cx + d, cy - d), w))
+                out.append(_bar_cmds((cx - d, cy - d), (cx + d, cy + d), w))
+        else:       # − 与 ÷
+            out.append(_bar_cmds((cx - half, cy), (cx + half, cy), w))
+            if cy > 35:
+                r = BOOK_OP_DOT / 2
+                out.append(circle_cmds(cx, cy - 4.27, r))
+                out.append(circle_cmds(cx, cy + 4.27, r))
+    return out
+
 
 def _ink_of(sha, node, size):
     """按 size 排版一段字，返回 (cmds, 墨迹 bbox)。"""
@@ -921,20 +967,8 @@ def book_glyphs(sha, kind, dx=0.0, dy=0.0):
     """书签里的字形路径（64×64 画布坐标；dx/dy 是按下态那 1px 的偏移）。"""
     out = []
     if kind == 1:
-        # 四则运算符号：四宫格内等比放进各自小格（原版 ink 30×31，落 17..47）
-        x0, y0, x1, y1 = 17.0, 17.0, 47.0, 48.0
-        row_h = (y1 - y0 - 3) / 2
-        mid = y0 + row_h + 3
-        col_w = (x1 - x0 - 3) / 2
-        midx = x0 + col_w + 3
-        for node, box in (
-            (T("+"), (x0, y0, midx - 3, mid)),
-            (T("−"), (midx, y0, x1, mid)),
-            (T("×"), (x0, mid + 3, midx - 3, y1)),
-            (T("÷"), (midx, mid + 3, x1, y1)),
-        ):
-            cmds, _, _ = node_layout(sha, node, 100.0)
-            out.append(fit_to_box(cmds, box, "contain"))
+        # 四则运算符号：几何自绘，四宫格位置和原版位图一致（见 _book_op_paths）
+        out.extend(_book_op_paths())
     elif kind == 2:
         cmds, b = _ink_of(sha, T("f"), BOOK_F_SIZE)
         out.append(_center_ink(cmds, b))
