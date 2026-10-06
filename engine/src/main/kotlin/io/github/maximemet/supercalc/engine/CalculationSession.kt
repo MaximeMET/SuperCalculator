@@ -235,9 +235,15 @@ class CalculationSession(private val engine: SymjaEngine = SymjaEngine()) {
         LETTER_VARIABLES.all { engine.isFreeOf(expr, it) }
 
     private companion object {
-        /** 键盘上可能出现的变量名（拉丁 a-z 与第 3 页的希腊字母）。 */
+        /**
+         * 键盘上可能出现的变量名（拉丁 a-z 与第 3 页的希腊字母）。
+         *
+         * `e` 不在里面：键盘上的 `e` 键是**自然常数**（π 旁边那颗），原版对 `e`、`e^2`、
+         * `pi^e` 这些都给预览（语料 167 / 1028 / 1032~1038 行）。之前把 a-z 一锅端，
+         * 这 6 条和原版对不上（自动预览 1134/1140），差分测试逮到的。
+         */
         val LETTER_VARIABLES: List<String> =
-            ('a'..'z').map(Char::toString) +
+            ('a'..'z').map(Char::toString).filterNot { it == "e" } +
                 listOf("theta", "phi", "lambda", "mu", "sigma", "omega")
     }
 
