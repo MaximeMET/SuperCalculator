@@ -35,7 +35,11 @@ import io.github.maximemet.supercalc.update.RuleStore
  *
  * 和原版一致的两处小脾气：
  *   * 抽屉项点下去先关抽屉，250ms 之后再切页面；
- *   * 返回键：历史页回计算页，其它页连按两次退出。
+ *   * 返回键：计算页连按两次退出。
+ *
+ * 返回键在非计算页（教程/设置/反馈/历史）先回计算页——用户报「教程、设置、
+ * 反馈页里按返回手势直接就退到桌面了」，这里不再沿用参考实现的「连按两次
+ * 退出」，只有计算页本身才保留双击退出。
  */
 class MainActivity : AppCompatActivity() {
 
@@ -231,7 +235,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupToolbar() {
         binding.btnMenu.setOnClickListener { binding.drawerLayout.openDrawer(binding.drawerView.drawerContainer) }
-        binding.btnBack.setOnClickListener { goBackFromHistory() }
+        binding.btnBack.setOnClickListener { goBackToCalculator() }
         binding.btnOverflow.setOnClickListener { view -> showHistoryMenu(view) }
         binding.btnUndo.setOnClickListener { calculator.undo() }
         binding.btnRedo.setOnClickListener { calculator.redo() }
@@ -253,8 +257,9 @@ class MainActivity : AppCompatActivity() {
         showPage(ITEM_TUTORIAL)
     }
 
-    private fun goBackFromHistory() {
-        if (currentItem != ITEM_HISTORY) return
+    /** 历史页工具条上的返回箭头、以及非计算页的系统返回，都回到计算页。 */
+    private fun goBackToCalculator() {
+        if (currentItem == ITEM_CALCULATOR) return
         selectDrawerItem(ITEM_CALCULATOR)
         showPage(ITEM_CALCULATOR)
     }
@@ -296,6 +301,9 @@ class MainActivity : AppCompatActivity() {
 
         fragments[id] = fragment
         currentItem = id
+        // 换过页面之后，之前那次「双击退出」的计时作废——否则从设置页回到
+        // 计算页后立刻再按一次返回，会不弹提示直接退出。
+        lastBackPressedTime = -3000L
         updateToolbar(id)
         if (fragment is CalculatorFragment) {
             fragment.applyInsets(lastBottomInset, binding.root.height)
@@ -368,10 +376,12 @@ class MainActivity : AppCompatActivity() {
             binding.drawerLayout.closeDrawer(binding.drawerView.drawerContainer)
             return
         }
-        if (currentItem == ITEM_HISTORY) {
-            goBackFromHistory()
+        // 教程 / 设置 / 反馈 / 历史：回计算页，不退出
+        if (currentItem != ITEM_CALCULATOR) {
+            goBackToCalculator()
             return
         }
+        // 计算页：原版就是连按两次退出
         val now = System.currentTimeMillis()
         if (now - lastBackPressedTime < 3000) {
             finish()
