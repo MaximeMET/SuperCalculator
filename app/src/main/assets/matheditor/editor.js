@@ -868,6 +868,76 @@
    * 后面的 DOM 代码一概不跑（原来这段判断放在 DOM 代码之后，历史页会先炸再挂不到
    * window.SuperCalcMQ，导致 \degree 之类的命令丢失、公式退化成纯文本）。
    */
+
+  /*
+   * 根号横线的粗细：把 MathQuill 的纵向拉伸系数递给 CSS。
+   *
+   * MathQuill 的 sqrt.reflow 每次都会把 .mq-sqrt-prefix 写成
+   * `transform: scale(1, k)`，k = 被开方数高度 / 字号 - 0.1（√2 约 0.93、
+   * √(1/2) 约 2.1）。字形顶上那截小尾巴跟着被拉粗，横线要跟它一样粗，
+   * 接缝处才不会有台阶 —— editor.css 里用 --mq-sqrt-k 算横线厚度。
+   *
+   * 这里不碰 vendored 的 mathquill.min.js：只盯前缀上的 style 变化（MathQuill
+   * 每次 reflow 都会重写 transform），把 scaleY 抄给兄弟节点 stem。
+   * MutationObserver 的回调是微任务，跑在下一帧绘制之前，肉眼看不到滞后；
+   * 自己写 --mq-sqrt-k 又会触发一次 stem 上的 style 变化，判断时把非前缀
+   * 节点跳过，不会打成死循环。
+   *
+   * 放在 SuperCalcMQ 之前，历史页（SUPERCALC_MQ_EXT_ONLY）也装得上 ——
+   * 历史记录里的公式一样有根号。
+   */
+  function sqrtScaleY(prefix) {
+    var text = (prefix.style && prefix.style.transform) || '';
+    var m = /matrix\(([^)]*)\)/.exec(text);
+    if (m) {
+      var parts = m[1].split(',');
+      return parts.length === 6 ? parseFloat(parts[3]) : 0;
+    }
+    m = /scale\(([^,]+),\s*([^)]+)\)/.exec(text);
+    return m ? parseFloat(m[2]) : 0;
+  }
+
+  function syncSqrtScale(prefix) {
+    var stem = prefix.nextElementSibling;
+    if (!stem || String(stem.className).indexOf('mq-sqrt-stem') < 0) return;
+    var k = sqrtScaleY(prefix);
+    if (!k || !isFinite(k)) return;
+    var value = String(Math.round(k * 1e4) / 1e4);
+    if (stem.style.getPropertyValue('--mq-sqrt-k') !== value) {
+      stem.style.setProperty('--mq-sqrt-k', value);
+    }
+  }
+
+  /** 扫一遍某个子树（含自己）里的根号前缀。 */
+  function sweepSqrtScales(root) {
+    if (root.nodeType === 1 && String(root.className).indexOf('mq-sqrt-prefix') >= 0) {
+      syncSqrtScale(root);
+    }
+    var list = root.querySelectorAll ? root.querySelectorAll('.mq-sqrt-prefix') : [];
+    for (var i = 0; i < list.length; i++) syncSqrtScale(list[i]);
+  }
+
+  if (window.MutationObserver) {
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var rec = records[i];
+        if (rec.target.nodeType === 1 &&
+            String(rec.target.className).indexOf('mq-sqrt-prefix') >= 0) {
+          syncSqrtScale(rec.target);
+        }
+        for (var j = 0; rec.addedNodes && j < rec.addedNodes.length; j++) {
+          var node = rec.addedNodes[j];
+          if (node.nodeType === 1) sweepSqrtScales(node);
+        }
+      }
+    }).observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['style'],
+      childList: true,
+      subtree: true,
+    });
+  }
+
   window.SuperCalcMQ = {
     MathQuill: MathQuill,
     MQ: MQ,
@@ -1654,6 +1724,8 @@
       formulaField.reflow();
       resultField.reflow();
       numericField.reflow();
+      // 重排会重写前缀的 scale()，观察器是微任务，这里顺手扫一遍更直观
+      sweepSqrtScales(document.documentElement);
       if (exampleTipBox && exampleTipBox.className.indexOf('on') >= 0) {
         fitExampleTip();
       }
@@ -1676,6 +1748,7 @@
 
   // 通知 Android 侧：编辑器就绪，可以开始下发按键了
   setLatexInternal('');
+  sweepSqrtScales(document.documentElement);
   if (window.Android && window.Android.onEditorReady) {
     window.Android.onEditorReady();
   }

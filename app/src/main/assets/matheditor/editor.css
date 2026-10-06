@@ -195,8 +195,8 @@ html {
  * √ 的字形更高，0.1em 会让字形顶部从横线上方探出去（实机 480dpi 下约 10px），
  * 看起来就是「横线和根号错位」。
  *
- * 0.204em 是 480dpi 实机量出来的落点：字形顶自带的横尾巴（2 CSS px 粗）
- * 正好和下面 .mq-sqrt-stem 的横线重合，接缝看不到。
+ * 0.216em 是 480dpi 实机量出来的落点：字形顶自带的横尾巴正好和下面
+ * .mq-sqrt-stem 的横线重合，接缝看不到。
  *
  * 用 em 而不是 px，字体大小跟着设置页的字号一起缩放。
  */
@@ -215,18 +215,37 @@ html {
 }
 
 /*
- * 横线的粗细跟着字形笔画走。
+ * 根号横线：厚度 0.071em × k，字号和被开方数高度一起跟。
  *
- * 上游是固定的 `border-top: 1px`。STIX Two Math 的 √ 笔画比 1px 粗一倍
- * （实机 480dpi：字形尾巴 6 设备像素、1px 边框只有 3），两条线在对接处
- * 粗细差一半，肉眼就是一道台阶。2px（= 6 设备像素）和字形笔画一样粗。
+ * 上游是固定的 `border-top: 1px`，我们上一版改成固定 2px —— 都只能对上一种
+ * 被开方数。MathQuill 会把根号前缀纵向 `scale(1, k)` 拉伸（k 由被开方数高度
+ * 决定，见 editor.js 的 syncSqrtScale），字形顶上的小尾巴也跟着变粗：
  *
- * 这里写整数 px 是有意的：试过 0.07em 想跟着字号缩放，但 Chrome 会把
- * 小数边框宽度向下取整成 1px（0.07em = 1.97px → 1px），实机上时粗时细。
- * 字号调大时字形笔画会比横线粗一点点（2px 对 2.5px），肉眼基本看不出来。
+ *   √2      k≈0.93，28.16px 字号 → 尾巴 6 设备像素
+ *   √2      k≈0.93，19.36px 字号（结果行）→ 尾巴 4 设备像素
+ *   √(1/2)  k≈2.1  → 尾巴 8～12 设备像素
+ *
+ * 固定 2px（= 6 设备像素）在结果行比尾巴粗一半、在分数里又细一半，接缝处
+ * 都是一道台阶 —— 480dpi 实测：结果行 √2 横线 6px / 尾巴 3.75px，
+ * √(1/2) 横线 6px / 尾巴 11.6px。
+ *
+ * 所以横线不再用 border 画：border-top 的 2px 留着、涂成透明（盒子高度、
+ * 基线、落点都不动），横线改用贴着 border-box 顶边的线性渐变。Chrome 会把
+ * 小数 border-width 取整成整数 CSS px，背景尺寸和渐变不做这种取整，
+ * 0.071em × k 这种亚像素厚度才能画出来。0.071em 是 STIX Two Math 的 √
+ * 顶笔画实测粗细（480dpi 截图 + 覆盖率加权校准）。
+ *
+ * --mq-sqrt-k 由 editor.js 从前缀的 transform 里读出来；读不到时按 1 走，
+ * 也就是原来的 2px 观感。横线落点仍在 stem 盒顶（与被开方数、与原来的
+ * 接缝算法一致），字形墨迹顶和它的零点几像素差是上一版就有的量级。
  */
 .mq-math-mode .mq-sqrt-stem {
-  border-top-width: 2px;
+  border-top: 2px solid transparent;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-origin: border-box;
+  background-position: left top;
+  background-size: 100% calc(0.071em * var(--mq-sqrt-k, 1));
 }
 
 /* 函数名（sin / log …）用正体，并且收紧一点间距 */

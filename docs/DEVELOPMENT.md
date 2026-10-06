@@ -399,10 +399,15 @@ M6 初版先换成了 DejaVu Math TeX Gyre，之后升级为 **STIX Two Math**�
 换字体会顺带改写根号的接缝。三处都落在 `editor.css`，数值都是 480dpi 实机
 （或同字体的浏览器）逐像素量出来的：
 
-* `.mq-sqrt-stem` 的 `border-top-width` 1px → 2px：STIX 的 √ 笔画粗，字形尾巴
-  有 6 设备像素，1px 边框只有 3——两条线在对接处差一倍，肉眼就是一道台阶。
-  这里写整数 px 而不是 em 是踩过坑的：0.07em 会被 Chrome 向下取整回 1px，
-  实机上时粗时细。
+* `.mq-sqrt-stem` 的横线：不再用 `border-top` 画，改成贴着 border-box 顶边的
+  线性渐变，厚度 `0.071em × k`（k 是 MathQuill 写在前缀 transform 上的纵向
+  拉伸系数，`editor.js` 读出来写进 `--mq-sqrt-k`）。上游固定 1px、后来固定
+  2px 都只能对上一种被开方数：480dpi 实测结果行 `√2` 横线 6px / 尾巴 3.75px，
+  分数被开方数横线 6px / 尾巴 11.6px，两个方向都差一半。定值 px 改不动的
+  原因是 Chrome 会把小数 border-width 取整成整数 CSS px，而背景尺寸和渐变
+  不做这种取整，亚像素厚度才画得出来。`border-top` 的 2px 占位保留（涂透明），
+  盒高、基线、落点都不动；JS 没接上时 `--mq-sqrt-k` 缺省为 1，横线就是原来
+  的 2px 观感。
 * `.mq-sqrt-prefix` 的 `top` → `0.216em`：字形尾巴和横线落在同一条线上。
 * `.mq-sqrt-prefix` 的 `transform-origin` → `50% -0.168em`：**这是根号在
   「里面内容一高就断开」的根因**。MathQuill 遇到高被开方数会把前缀纵向拉伸
