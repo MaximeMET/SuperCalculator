@@ -38,7 +38,11 @@ http
         res.writeHead(404).end("not found: " + rel);
         return;
       }
-      res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+      // 探针页反复重跑，样式改了要立刻生效：别让浏览器走启发式缓存
+      res.writeHead(200, {
+        "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
+        "Cache-Control": "no-store",
+      });
       res.end(data);
     });
   })
