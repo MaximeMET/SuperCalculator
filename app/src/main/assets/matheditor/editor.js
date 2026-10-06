@@ -1693,6 +1693,43 @@
   }
 
   /**
+   * 这个命令是不是括号 / 绝对值组（\left(…\right)、\left|…\right|）。
+   *
+   * 括号里的比较号是合法写法（`(a<b)`），所以「内层槽位里的关系符号挪到
+   * 最外层」这条规则到括号组这一层就停 —— 光标已经在括号组里时不再往外跳。
+   */
+  function isParenGroup(cmd) {
+    return ctrlOf(cmd).indexOf('\\left') === 0;
+  }
+
+  /**
+   * 把光标从任意内层槽位挪到最外层（顶层项的右边），挪了返回 true。
+   *
+   * 用户点名的规则（优于原版）：分子分母、根号次数与被开方数、积分 / 求和 /
+   * 极限的上下限、排列组合的两个槽这些「内层」里，= < > ≤ ≥ 都是无效内容
+   * ——正常写法不会在分式、根号、上下限里写等号比较号，所以遇到这五个符号
+   * 一律先跳到最外层再插，落点在「包着光标的那个顶层项」右边。
+   *
+   * 「最外层」的边界是括号组：`(a<b)` 里的比较号是合法写法，光标已经在
+   * 括号组里时不再往外跳；但括号组里更深的槽（`(\frac{1}{2}|`）还是会跳
+   * 到括号组这一层，符号不会留在分式里。光标本来就在最外层时不跳。
+   */
+  function breakOutToTopLevel() {
+    var cursor = editorCursor();
+    if (!cursor || !cursor.parent || cursor.selection) return false;
+    var block = cursor.parent;
+    var top = null;
+    while (block && block.parent) {
+      if (isParenGroup(block.parent)) break;
+      top = block.parent;
+      block = top.parent;
+    }
+    if (!top) return false;
+    cursor.insRightOf(top);
+    return true;
+  }
+
+  /**
    * 按键过滤器。返回 true = 这一下已经被吃掉，不要再走默认插入。
    *
    * [symbol] 是参考实现里的按键标识（KeyItem.symbol），[code] 是插入内容。
@@ -1734,25 +1771,22 @@
         if (isTrigonometric() && isDegreeCtrl(postCtrl())) deleteDegreeOnRight();
         return false;
 
-      // 等于号：不管上标里有没有内容，都先跳出上标插到顶层（用户要求，优于原版）
+      /*
+       * 关系符号 = < > ≥ ≤：只要光标在「内层槽位」里（分子分母、根号次数 /
+       * 被开方数、积分与求和的上下限、排列组合槽、其它命令的槽），就跳到
+       * 最外层再插（用户要求，优于原版）——这些槽里写不下关系符号。
+       *
+       * 原版只有上标里的一部分情况会跳（改版 MathQuill 的
+       * `charsThatBreakOutOfSupSub: "+-=<>"` 补丁），≥ ≤ 还是「先右移一格」的
+       * 老做法；现在统一走 breakOutToTopLevel()，括号组例外（见那个函数）。
+       */
       case '=':
-        breakOutOfSupSub();
-        return false;
-
-      // 比较号 < >：原版靠 MathQuill 的 charsThatBreakOutOfSupSub 补丁跳出上标，
-      // 我们这两个键是 write() 插入、不经过那条通道，所以在这里补同一个判定。
       case 'less':
       case 'greater':
-        if (appendingToSupSub() && breakOutOfSupSub()) return false;
-        return false;
-
-      // ≥ ≤：原版在上标里先右移一格再插入（光标就在末尾时，右移一格即跳出）
       case 'ge':
-      case 'le': {
-        var supCmd = supSubAtCursor();
-        if (supCmd && editorCursor().parent === supCmd.sup) formulaField.keystroke('Right');
+      case 'le':
+        breakOutToTopLevel();
         return false;
-      }
 
       // 变量和 π 同理：sin(5x) 里的 5 不是角度
       case 'x': case 'y': case 'z': case 'a': case 'b': case 'pi':
