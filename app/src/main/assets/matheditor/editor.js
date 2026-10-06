@@ -870,7 +870,7 @@
    */
 
   /*
-   * 根号图形：整块（斜线 + 顶上横线）用一块 SVG 掩码画出来，一次成型的
+   * 根号图形：整块（斜线 + 顶上横线）用一块内联 SVG 画出来，一次成型的
    * 连续形状，接缝不存在。详见 editor.css 的「根号图形」一节。
    *
    * 数据来源是 STIX Two Math（assets/mathquill/font/STIXTwoMath-Regular.ttf）
@@ -881,7 +881,7 @@
    *   -(138,319)-(34,279)-(18,307)-(177,417)-(197,417)  ← 左下的小起笔
    *   -(395,-93)-(399,-93)-闭合
    *
-   * 横线就是把「(667,922)→(829,854) 那截平顶」向右延长：掩码里加一个
+   * 横线就是把「(667,922)→(829,854) 那截平顶」向右延长：SVG 里加一个
    * 从 x=700、y=854、高 68 的矩形，一直铺到 stem 的右边 —— 和字形平顶
    * 重叠 33 个单位，同一条上边、同一厚度，所以看不出接缝。
    *
@@ -894,10 +894,10 @@
    * 横线就接在这截固定厚度的平顶上。被开方数再高，顶部横线粗细都不变。
    *
    * 这里不碰 vendored 的 mathquill.min.js：只盯前缀上的 style 变化（MathQuill
-   * 每次 reflow 都会重写 transform），按前缀 / stem 的盒位算掩码几何。
-   * 写完 --mq-sqrt-* 会再触发一次 stem 上的 style 变化，判断时把非前缀
-   * 节点跳过，不会打成死循环。MutationObserver 回调是微任务，跑在下一帧
-   * 绘制之前，肉眼看不到滞后；另外还有启动扫描和 reflow 兜底。
+   * 每次 reflow 都会重写 transform），按前缀 / stem / 外壳的盒位算图形几何，
+   * 写进那块 SVG。次数槽（mq-nthroot）被 <sup> 的基线排版带着往下漂，也在
+   * 这里用一个 relative 位移钉回根号左上角。MutationObserver 回调是微任务，
+   * 跑在下一帧绘制之前，肉眼看不到滞后；另外还有启动扫描和 reflow 兜底。
    *
    * 放在 SuperCalcMQ 之前，历史页（SUPERCALC_MQ_EXT_ONLY）也装得上 ——
    * 历史记录里的公式一样有根号。
@@ -935,14 +935,9 @@
     return m ? parseFloat(m[2]) : 0;
   }
 
-  /** 三位小数的 px 值，字符串省得越短越好（掩码是 data URI）。 */
+  /** px / 属性值统一留三位小数，避免亚像素抖动带来的无谓改写。 */
   function sqrtPx(value) {
     return String(Math.round(value * 1000) / 1000);
-  }
-
-  /** 缩放系数要更高精度：0.01936 只保留三位小数会差 2%。 */
-  function sqrtScale(value) {
-    return String(Math.round(value * 1e6) / 1e6);
   }
 
   /**
@@ -984,6 +979,81 @@
     return SQRT_TAIL_Y - (SQRT_TAIL_Y - SQRT_INK_BOTTOM) * k;
   }
 
+  var SQRT_SVG_NS = 'http://www.w3.org/2000/svg';
+
+  /**
+   * 根号图形本体：一块挂在「前缀 + stem 的外壳」上的内联 SVG。
+   *
+   * 走过两条弯路，记在这里免得再踩：
+   *   1. 字体字形整块拉伸 —— STIX 的平顶尾巴跟着变粗，横线只好跟着粗；
+   *   2. 把轮廓画成 data URI 的 SVG 掩码（贴在前缀 / stem 的伪元素上）——
+   *      Chrome/WebView 对「当 CSS 掩码用的 SVG」会按图片固有尺寸那一档去
+   *      光栅化，根号一高就只按 1× 出图再拉到 dpr 倍：480dpi 实机上应 5.75
+   *      设备像素的横线，k≈7.7 时只剩 1.7 像素（同页 k≈4 的却正常，纯属
+   *      光栅化启发式，跟几何无关）。换成 canvas 出的 PNG 掩码，同一个位置
+   *      照样偶发被压细 —— 只要走 CSS 掩码就可能踩到。
+   *
+   * 内联 SVG 是页面里的普通矢量元素，由渲染器按设备像素直接绘制，不经过
+   * 「图片光栅化」这条链，任何尺寸都稳定。它挂在壳元素上（不是可编辑的 stem
+   * 里），absolute 定位、不参与排版，MathQuill 的编辑逻辑碰不到它。
+   */
+  function sqrtInkSvg(prefix) {
+    var host = prefix.parentElement;
+    if (!host) return null;
+    var svg = host.__mqSqrtInk;
+    if (svg && svg.parentNode === host && svg.firstChild) return svg;
+    svg = document.createElementNS(SQRT_SVG_NS, 'svg');
+    svg.setAttribute('class', 'mq-sqrt-ink');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('preserveAspectRatio', 'none');
+    /* 轮廓顶点是字体单位（y 向上），这层 <g> 负责换算到 px（y 向下），
+     * 和 viewBox 的 px 坐标对齐 —— transform 每次 sync 时重写。 */
+    var g = document.createElementNS(SQRT_SVG_NS, 'g');
+    var path = document.createElementNS(SQRT_SVG_NS, 'path');
+    path.setAttribute('fill', 'currentColor');
+    var rect = document.createElementNS(SQRT_SVG_NS, 'rect');
+    rect.setAttribute('fill', 'currentColor');
+    g.appendChild(path);
+    g.appendChild(rect);
+    svg.appendChild(g);
+    host.appendChild(svg);
+    if (window.getComputedStyle(host).position === 'static') {
+      host.style.position = 'relative';
+    }
+    host.__mqSqrtInk = svg;
+    return svg;
+  }
+
+  /**
+   * 次数（根指数）钉回根号左上角。
+   *
+   * MathQuill 把次数放在 `<sup class="mq-nthroot">` 里按基线排版
+   * （vertical-align: .8em）。被开方数一高，stem 的基线跟着往下跑，次数就漂到
+   * 根号中腰去了（原版也这样）。这里不动它的排版位置（宽度、前缀落点都不变），
+   * 只加一个 position: relative 的纵向位移：次数中心对准横线顶边 —— 和 k≈1 的
+   * 观感一致（实机量过：√2 的次数中心就落在横线顶边上）。
+   */
+  function syncSqrtIndex(prefix, barTop) {
+    var scaled = prefix.parentElement;
+    var nth = scaled && scaled.previousElementSibling;
+    if (!nth || String(nth.className || '').indexOf('mq-nthroot') < 0) return;
+    var rect = nth.getBoundingClientRect();
+    /*
+     * 上下文键：我们的写入本身也会让 MutationObserver 再叫一次，而 getBoundingClientRect
+     * 有 1/64px 级取整误差 —— 每次都重算会来回震。几何（横线位置 + 次数盒尺寸）没变
+     * 就直接跳过，循环自然断掉；内容/拉伸变了键就变，照常重钉。
+     */
+    var key = sqrtPx(barTop) + '|' + sqrtPx(rect.width) + 'x' + sqrtPx(rect.height);
+    if (nth.__mqIdxKey === key) return;
+    var applied = parseFloat(nth.__mqIdxTop || '0') || 0;
+    var center = rect.top - applied + rect.height / 2;
+    var want = sqrtPx(barTop - center);
+    nth.__mqIdxKey = key;
+    nth.__mqIdxTop = want;
+    nth.style.position = 'relative';
+    nth.style.top = want + 'px';
+  }
+
   function syncSqrtMask(prefix) {
     var stem = prefix.nextElementSibling;
     if (!stem || String(stem.className).indexOf('mq-sqrt-stem') < 0) return;
@@ -993,9 +1063,6 @@
     if (fontPx <= 0) return;
     var prefixRect = prefix.getBoundingClientRect();
     var stemRect = stem.getBoundingClientRect();
-    var stemStyle = window.getComputedStyle(stem);
-    var borderTop = parseFloat(stemStyle.borderTopWidth) || 0;
-    var borderLeft = parseFloat(stemStyle.borderLeftWidth) || 0;
 
     /* 纵向拉伸已经烘进轮廓坐标，掩码本身是等比缩放：1 字体单位 = fontPx/1000 px。 */
     var scale = fontPx / SQRT_UPEM;
@@ -1006,38 +1073,42 @@
     var barUnits = width / scale - SQRT_BAR_L;
     if (barUnits < 0) barUnits = 0;
 
-    var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + sqrtPx(width) + ' ' +
-      sqrtPx(height) + '" preserveAspectRatio="none"><g transform="translate(0 ' +
-      sqrtPx(SQRT_INK_TOP * scale) + ') scale(' + sqrtScale(scale) + ' ' +
-      sqrtScale(-scale) + ')"><path d="' + sqrtOutlinePath(k) + '"/><rect x="' + SQRT_BAR_L +
-      '" y="' + SQRT_BAR_B + '" width="' + sqrtPx(barUnits) + '" height="' +
-      (SQRT_INK_TOP - SQRT_BAR_B) + '"/></g></svg>';
-    var mask = 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
-
-    if (stem.style.getPropertyValue('--mq-sqrt-mask') !== mask) {
-      stem.style.setProperty('--mq-sqrt-mask', mask);
+    var svg = sqrtInkSvg(prefix);
+    if (!svg) return;
+    var hostRect = svg.parentNode.getBoundingClientRect();
+    var viewBox = '0 0 ' + sqrtPx(width) + ' ' + sqrtPx(height);
+    if (svg.getAttribute('viewBox') !== viewBox) {
+      svg.setAttribute('viewBox', viewBox);
+      svg.setAttribute('width', sqrtPx(width));
+      svg.setAttribute('height', sqrtPx(height));
     }
-    var mx = sqrtPx(prefixRect.left - stemRect.left - borderLeft) + 'px';
-    if (stem.style.getPropertyValue('--mq-sqrt-mx') !== mx) {
-      stem.style.setProperty('--mq-sqrt-mx', mx);
+    var g = svg.firstChild;
+    var path = g.firstChild;
+    var rect = g.lastChild;
+    var transform = 'translate(0 ' + sqrtPx(SQRT_INK_TOP * scale) + ') scale(' +
+      scale + ' ' + (-scale) + ')';
+    if (g.getAttribute('transform') !== transform) {
+      g.setAttribute('transform', transform);
     }
-    var my = sqrtPx(barTop - stemRect.top - borderTop) + 'px';
-    if (stem.style.getPropertyValue('--mq-sqrt-my') !== my) {
-      stem.style.setProperty('--mq-sqrt-my', my);
-    }
-    var mw = sqrtPx(width) + 'px';
-    if (stem.style.getPropertyValue('--mq-sqrt-mw') !== mw) {
-      stem.style.setProperty('--mq-sqrt-mw', mw);
-    }
-    var mh = sqrtPx(height) + 'px';
-    if (stem.style.getPropertyValue('--mq-sqrt-mh') !== mh) {
-      stem.style.setProperty('--mq-sqrt-mh', mh);
-    }
+    var d = sqrtOutlinePath(k);
+    if (path.getAttribute('d') !== d) path.setAttribute('d', d);
+    var rectX = String(SQRT_BAR_L);
+    var rectY = String(SQRT_BAR_B);
+    var rectW = sqrtPx(barUnits);
+    var rectH = String(SQRT_INK_TOP - SQRT_BAR_B);
+    if (rect.getAttribute('x') !== rectX) rect.setAttribute('x', rectX);
+    if (rect.getAttribute('y') !== rectY) rect.setAttribute('y', rectY);
+    if (rect.getAttribute('width') !== rectW) rect.setAttribute('width', rectW);
+    if (rect.getAttribute('height') !== rectH) rect.setAttribute('height', rectH);
+    var left = sqrtPx(prefixRect.left - hostRect.left) + 'px';
+    if (svg.style.left !== left) svg.style.left = left;
+    var top = sqrtPx(barTop - hostRect.top) + 'px';
+    if (svg.style.top !== top) svg.style.top = top;
     /* 字形本体藏起来，位置由掩码顶上 —— 两套光栅化叠着画会出重影。 */
     if (String(prefix.style.color) !== 'transparent') {
       prefix.style.color = 'transparent';
     }
+    syncSqrtIndex(prefix, barTop);
   }
 
   /** 扫一遍某个子树（含自己）里的根号前缀。 */
@@ -1049,6 +1120,18 @@
     for (var i = 0; i < list.length; i++) syncSqrtMask(list[i]);
   }
 
+  /** 从某个被改动的节点出发，找它所在根号的 .mq-sqrt-prefix（嵌套根号取最近那层）。 */
+  function sqrtPrefixOf(node) {
+    var el = node.nodeType === 1 ? node : node.parentElement;
+    for (; el; el = el.parentElement) {
+      if (el.querySelector) {
+        var prefix = el.querySelector('.mq-sqrt-prefix');
+        if (prefix) return prefix;
+      }
+    }
+    return null;
+  }
+
   if (window.MutationObserver) {
     new MutationObserver(function (records) {
       for (var i = 0; i < records.length; i++) {
@@ -1056,6 +1139,16 @@
         if (rec.target.nodeType === 1 &&
             String(rec.target.className).indexOf('mq-sqrt-prefix') >= 0) {
           syncSqrtMask(rec.target);
+        } else {
+          /*
+           * 次数槽 / 被开方数自己的改动（输入一个次数、改个数字）不会碰前缀的
+           * transform，但盒位会变：次数槽要跟着重钉，掩码宽度也要跟着重算。
+           */
+          var tid = rec.target.nodeType === 1 ? rec.target : rec.target.parentElement;
+          if (tid && tid.closest && tid.closest('.mq-nthroot, .mq-sqrt-stem')) {
+            var owner = sqrtPrefixOf(tid);
+            if (owner) syncSqrtMask(owner);
+          }
         }
         for (var j = 0; rec.addedNodes && j < rec.addedNodes.length; j++) {
           var node = rec.addedNodes[j];
@@ -1066,6 +1159,7 @@
       attributes: true,
       attributeFilter: ['style'],
       childList: true,
+      characterData: true,
       subtree: true,
     });
   }

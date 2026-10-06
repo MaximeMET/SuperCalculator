@@ -189,85 +189,10 @@ html {
 .mq-empty.mq-sqrt:after { visibility: hidden; content: ''; }
 
 /*
- * 根号前缀的下移量。
- *
- * MathQuill 上游给的是 `top: .1em`，那个值是配 Symbola 调的；换成 STIX Two Math 之后
- * √ 的字形更高，0.1em 会让字形顶部从横线上方探出去（实机 480dpi 下约 10px），
- * 看起来就是「横线和根号错位」。
- *
- * 0.216em 是 480dpi 实机量出来的落点。现在字形本身被 SVG 掩码替代（见下面
- * 根号图形一节），这个偏移只影响前缀盒子的位置 —— 掩码的「墨迹顶」就是拿
- * 前缀的盒位减 0.19em × k 算出来的，两个常数一起决定整块 √ 的落点。
- *
- * 用 em 而不是 px，字体大小跟着设置页的字号一起缩放。
+ * 根号前缀（.mq-sqrt-prefix）、墨迹 SVG（.mq-sqrt-ink）、stem 与
+ * .mq-root-block 的裁剪补偿都挪到了 sqrt-ink.css —— 那份被编辑页和历史页
+ * 共用，两边的根号几何必须吃同一套规则。
  */
-.mq-math-mode .mq-sqrt-prefix {
-  top: 0.216em;
-  /*
-   * 缩放的锚点钉在字形墨迹顶上，而不是上游的盒顶。
-   *
-   * 根号里放分数时 MathQuill 会把前缀纵向拉伸（scale(1, 2) 这种）。STIX 的
-   * √ 墨迹顶在行盒顶**上方**约 0.168em（实测量出来的），锚点留在盒顶的话，
-   * 每拉伸 1 倍，顶端就往盒外探 1 倍。现在这块字形已经不画了（掩码接管），
-   * 但前缀盒位仍是掩码落点的基准，锚点保持原样、`editor.js` 里那套
-   * 「盒位 − 0.19em × k = 墨迹顶」正是按这个锚点推出来的。
-   */
-  -webkit-transform-origin: 50% -0.168em;
-  transform-origin: 50% -0.168em;
-}
-
-/*
- * 根号图形：整块（斜线 + 顶上的横线）用一块 SVG 掩码一次画出来。
- *
- * 上一版是「字体自带的 √ 字形 + stem 上单独画的横线」两块拼的：字形走字体
- * 光栅化、横线走 CSS 背景，两套光栅化在接缝处对不齐 —— 480dpi 实测差 1～3
- * 设备像素（字号、拉伸系数 k 一大就更明显），拉到 4 倍看就是一道台阶；
- * 试过把横线挪进前缀的 transform、用 border、用亚像素 translate，
- * Chrome 对盒子 / 背景的落点取整都会再引入 1 CSS px 级的抖动，调不干净。
- *
- * 现在改成：STIX Two Math 的 √ 轮廓（纯多边形，见 editor.js 的 SQRT_OUTLINE）
- * 和横线画进同一块 SVG —— 横线就是字形顶上那截平顶（922→854，厚 68/1000 em）
- * 的自然延长：同一条边、同一厚度，接缝从构造上就不存在。
- *
- * 纵向拉伸只作用在斜线上：轮廓沿 y 做分段线性映射，平顶下缘（854）以上原样、
- * 以下乘 k。这样那截「尾巴」和横线的厚度恒为 68/1000 em —— 被开方数再高，
- * 顶部横线都不会变粗（STIX 原字形整块拉伸时尾巴会跟着粗，这就是「高根号
- * 顶着一条胖横线」的来源；原版字形没有尾巴，所以没这个毛病）。
- *
- * 字形照旧参与排版（宽度、基线、被开方数位置都没动），只是涂成透明
- * （editor.js 负责），整块图形由 stem 的 ::before 顶着掩码画出来。
- * 几何（--mq-sqrt-mx/my/mw/mh）和掩码内容（--mq-sqrt-mask）都由 editor.js
- * 按当前字号 / 拉伸系数 k / stem 宽度算好；JS 没跑到时盒子是 0×0、不显示，
- * 字形也还是原样，退化成旧的观感。
- */
-.mq-math-mode .mq-sqrt-stem {
-  position: relative;
-  border-top: 2px solid transparent;
-}
-/*
- * 根号图形本体：一块子像素定位的「画布」，内容由 --mq-sqrt-mask 提供，
- * 用 currentColor 上色（颜色跟着行文字走，历史页 / 结果行 / 示例行通吃）。
- *
- * 盒子可以探出 stem 的左边（相对 stem 的 padding box 摆），所以斜线能盖到
- * 前缀那一侧；掩码用 100% 100% 铺满盒子，viewBox 和盒子是 1:1，不缩放。
- */
-.mq-math-mode .mq-sqrt-stem::before {
-  content: '';
-  position: absolute;
-  left: var(--mq-sqrt-mx, 0px);
-  top: var(--mq-sqrt-my, 0px);
-  width: var(--mq-sqrt-mw, 0px);
-  height: var(--mq-sqrt-mh, 0px);
-  background-color: currentColor;
-  -webkit-mask-image: var(--mq-sqrt-mask, none);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  -webkit-mask-position: 0 0;
-  mask-image: var(--mq-sqrt-mask, none);
-  mask-repeat: no-repeat;
-  mask-size: 100% 100%;
-  mask-position: 0 0;
-}
 
 /* 函数名（sin / log …）用正体，并且收紧一点间距 */
 .mq-math-mode .non-italicized-function {
@@ -378,6 +303,7 @@ html {
   -moz-user-select: none;
   user-select: none;
 }
+
 .mq-math-mode .mq-selectable {
   -webkit-user-select: none;
   -moz-user-select: none;

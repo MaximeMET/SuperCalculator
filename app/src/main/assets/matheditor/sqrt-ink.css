@@ -1,0 +1,107 @@
+/*
+ * 根号图形（.mq-sqrt-*）的共享样式。
+ *
+ * 编辑器页（editor.html）和历史页（history.html）都拿 MathQuill 渲染公式，
+ * 这份文件被两边同时引用：前缀的锚点、内联 SVG 墨迹的定位、根号顶横线的
+ * 裁剪补偿必须完全一致，两个页面里的根号几何才对得上。
+ *
+ * 单独抽一份是因为历史页只引了 history.css（不引 editor.css）——整包引
+ * editor.css 会把编辑器页的页面级样式也带进历史页；不引的话，墨迹 SVG
+ * 就不是 absolute（掉进文档流、把行推宽），次数槽的位移基准也跟着错。
+ */
+
+/*
+ * 根号前缀的下移量。
+ *
+ * MathQuill 上游给的是 `top: .1em`，那个值是配 Symbola 调的；换成 STIX Two Math 之后
+ * √ 的字形更高，0.1em 会让字形顶部从横线上方探出去（实机 480dpi 下约 10px），
+ * 看起来就是「横线和根号错位」。
+ *
+ * 0.216em 是 480dpi 实机量出来的落点。现在字形本身被 SVG 掩码替代（见下面
+ * 根号图形一节），这个偏移只影响前缀盒子的位置 —— 掩码的「墨迹顶」就是拿
+ * 前缀的盒位减 0.19em × k 算出来的，两个常数一起决定整块 √ 的落点。
+ *
+ * 用 em 而不是 px，字体大小跟着设置页的字号一起缩放。
+ */
+.mq-math-mode .mq-sqrt-prefix {
+  top: 0.216em;
+  /*
+   * 缩放的锚点钉在字形墨迹顶上，而不是上游的盒顶。
+   *
+   * 根号里放分数时 MathQuill 会把前缀纵向拉伸（scale(1, 2) 这种）。STIX 的
+   * √ 墨迹顶在行盒顶**上方**约 0.168em（实测量出来的），锚点留在盒顶的话，
+   * 每拉伸 1 倍，顶端就往盒外探 1 倍。现在这块字形已经不画了（掩码接管），
+   * 但前缀盒位仍是掩码落点的基准，锚点保持原样、`editor.js` 里那套
+   * 「盒位 − 0.19em × k = 墨迹顶」正是按这个锚点推出来的。
+   */
+  -webkit-transform-origin: 50% -0.168em;
+  transform-origin: 50% -0.168em;
+}
+
+/*
+ * 根号图形：整块（斜线 + 顶上的横线）用一块内联 SVG 一次画出来。
+ *
+ * 上一版是「字体自带的 √ 字形 + stem 上单独画的横线」两块拼的：字形走字体
+ * 光栅化、横线走 CSS 背景，两套光栅化在接缝处对不齐 —— 480dpi 实测差 1～3
+ * 设备像素（字号、拉伸系数 k 一大就更明显），拉到 4 倍看就是一道台阶；
+ * 试过把横线挪进前缀的 transform、用 border、用亚像素 translate，
+ * Chrome 对盒子 / 背景的落点取整都会再引入 1 CSS px 级的抖动，调不干净。
+ *
+ * 再上一版改成「data URI 的 SVG 当 CSS 掩码」：几何是同一份
+ * （STIX Two Math 的 √ 轮廓 + 横线，见 editor.js 的 SQRT_OUTLINE），接缝没了，
+ * 但 Chrome/WebView 对「当掩码用的 SVG」会按图片固有尺寸那一档光栅化，根号一高
+ * 就只按 1× 出图再拉到 dpr 倍 —— 480dpi 实机上应 5.75 设备像素的横线，k≈7.7
+ * 时只剩 1.7 像素（同页 k≈4 的正常，纯属光栅化启发式）。换成 canvas 出的 PNG
+ * 掩码、改挂在伪元素上也照样偶发，只要走 CSS 掩码就可能踩到。
+ *
+ * 现在改成内联 SVG 元素（.mq-sqrt-ink，挂在「前缀 + stem 的外壳」上，
+ * absolute 定位、不参与排版），由渲染器按设备像素直接画矢量，任何尺寸都稳定。
+ *
+ * 纵向拉伸只作用在斜线上：轮廓沿 y 做分段线性映射，平顶下缘（854）以上原样、
+ * 以下乘 k。这样那截「尾巴」和横线的厚度恒为 68/1000 em —— 被开方数再高，
+ * 顶部横线都不会变粗（STIX 原字形整块拉伸时尾巴会跟着粗，这就是「高根号
+ * 顶着一条胖横线」的来源；原版字形没有尾巴，所以没这个毛病）。
+ *
+ * 字形照旧参与排版（宽度、基线、被开方数位置都没动），只是涂成透明
+ * （editor.js 负责），整块图形由 .mq-sqrt-ink 画出来。几何由 editor.js 按当前
+ * 字号 / 拉伸系数 k / stem 宽度算好；JS 没跑到时 SVG 不存在，字形也还是原样，
+ * 退化成旧的观感。
+ */
+.mq-math-mode .mq-sqrt-stem {
+  position: relative;
+  border-top: 2px solid transparent;
+}
+/*
+ * 根号图形本体：内联 SVG，用 currentColor 上色（颜色跟着行文字走，
+ * 历史页 / 结果行 / 示例行通吃）。left/top/width/height/viewBox 都由
+ * editor.js 按当前几何写死，和 stem 的盒子是 1:1。
+ *
+ * 挂在「前缀 + stem 的外壳」上、absolute 定位：盒子可以探出 stem 的左边，
+ * 斜线能盖到前缀那一侧；也不进可编辑的 stem，MathQuill 碰不到。
+ */
+.mq-math-mode .mq-sqrt-ink {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/*
+ * 给根号顶上那条横线留出「出界」的余地。
+ *
+ * MathQuill 的 .mq-root-block 是横向滚动容器（overflow: hidden），按自己的
+ * padding box 裁内容。根号拉伸系数 k 越大，顶上那条横线探出行盒顶边越多
+ * （实机量：k≈4 时还在盒内，k≈6 探出 0.4px，k≈7.7 探出 1.4px，之后每 +1
+ * 大约多 0.6px）—— 探出去的部分被 root block 一裁，横线就「越拉越细」。
+ *
+ * 这里用「padding-top 把裁剪区向上扩、负 margin 把盒子整体提回去」的写法：
+ * 内容的落点一点不动（padding-top 加多少、margin-top 就减多少），只是
+ * 裁剪区的上边缘被抬高了 0.5em —— 按每 +1 约 0.022em 的斜率算，够撑到
+ * k≈20 的深根号。0.5em 跟着字号走，结果行 / 历史页的小字号也一起照顾到。
+ */
+.mq-math-mode .mq-root-block {
+  padding-top: calc(2px + 0.5em);
+  margin-top: -0.5em;
+}
