@@ -20,17 +20,21 @@
   #formulaPadding 是公式后面 40px 的空白，点它把光标移到末尾；
   #bracketDiv 是多行公式左边那个花括号（本项目的几何 SVG：bracket-2-7 / bracket-8）。
 -->
-<div id="root" class="autoWidth">
+<div id="root">
   <div id="topSpan" style="height:8px;width:100%"></div>
-  <div id="leftContainer" class="leftContainer autoWidth">
-    <span id="bracketDiv" class="bracket" style="display:none"><img id="bracketImg" alt=""></span>
-    <span id="formulaSpan"></span><span id="formulaPadding" class="formulaPadding"></span>
+  <div id="formulaViewport" class="formulaViewport">
+    <div id="leftContainer" class="leftContainer">
+      <span id="bracketDiv" class="bracket" style="display:none"><img id="bracketImg" alt=""></span>
+      <span id="formulaSpan"></span><span id="formulaPadding" class="formulaPadding"></span>
+    </div>
   </div>
-  <div id="resultDiv" class="resultDiv" style="display:none">
-    <span id="resultSpan" class="result"></span>
-  </div>
-  <div id="numericResultDiv" class="resultDiv2" style="display:none">
-    <span id="numericResultSpan" class="result"></span><img id="resultOpIcon" class="opIcon" src="icons/op-slot.svg" alt="">
+  <div id="resultsViewport" class="resultsViewport">
+    <div id="resultDiv" class="resultDiv" style="display:none">
+      <span id="resultSpan" class="result"></span>
+    </div>
+    <div id="numericResultDiv" class="resultDiv2" style="display:none">
+      <span id="numericResultSpan" class="result"></span><img id="resultOpIcon" class="opIcon" src="icons/op-slot.svg" alt="">
+    </div>
   </div>
   <!--
     引擎启动中 / 方法按钮的临时文字。原版没有这一块（结果显示在独立的结果页），

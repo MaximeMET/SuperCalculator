@@ -52,15 +52,33 @@ html {
    我们显式按 auto 走，免得结果行被撑到底部去。 */
 #root {
   width: 100%;
-  overflow: auto;
+  display: block;
+  overflow: hidden;
 }
 
-.autoWidth { display: inline-block; }
 .clear { clear: both; }
 .endAlchor { height: 8px; width: 20px; }
 
-/* 公式那一行：整行不换行 */
+/* 输入和结果各自滚动，输入行由光标驱动横向位置。 */
+.formulaViewport,
+.resultsViewport {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.formulaViewport::-webkit-scrollbar,
+.resultsViewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* 公式那一行：整行不换行，宽度由内容决定。 */
 .leftContainer {
+  display: inline-block;
+  min-width: 100%;
+  width: max-content;
   margin: 0;
   padding: 0;
   white-space: nowrap;
@@ -80,8 +98,13 @@ html {
   vertical-align: bottom;
 }
 
-.resultDiv { z-index: 2; }
-.resultDiv2 { z-index: 1; }
+.resultDiv,
+.resultDiv2 {
+  z-index: 1;
+  width: max-content;
+  min-width: 100%;
+  white-space: nowrap;
+}
 
 .result {
   color: #a4a8ac !important;

@@ -1,10 +1,10 @@
 {
   "app": {
-    "versionCode": 47,
-    "versionName": "0.1.2",
+    "versionCode": 49,
+    "versionName": "0.1.3",
     "url": "https://github.com/MaximeMET/SuperCalculator/releases/latest",
-    "apkUrl": "https://github.com/MaximeMET/SuperCalculator/releases/download/v0.1.2/SuperCalculator-0.1.2.apk",
-    "notes": "离线解题步骤（方程/不等式/求导/极限/积分）、键盘图标整批换成自绘矢量、重要极限与多项式分解等一批引擎修复；新增应用内检查更新。详见 Release 说明。"
+    "apkUrl": "https://github.com/MaximeMET/SuperCalculator/releases/download/v0.1.3/SuperCalculator-0.1.3.apk",
+    "notes": "全新矢量应用图标；长算式输入行自动跟随光标，手动横向拖动后保持当前位置；结果行拖动后自动回到左侧。详见 Release 说明。"
   },
   "rules": {
     "version": 3,

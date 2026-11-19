@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  自适应启动图标的前景：根号 + 等号，和关于页的 ic_about_logo_mark 是同一套几何。
-
-  外层 group 把它缩到 108 格里的约 68 格并居中，左右两端离中心 34.3 格，
-  落在启动器圆形蒙版的 36 格半径以内（自适应图标的外圈有可能被裁掉）。
-  改这里的比例要同步改 tools/make_launcher_icon.py。
+  白色圆头加号上叠加一条品牌橙的上升曲线，表达算术与函数计算。
+  主体放大至 98%，尽量用满 Android 自适应图标安全区。
+  几何需与 ic_about_logo_mark.xml、tools/make_launcher_icon.py 同步。
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -13,23 +11,27 @@
     android:viewportHeight="512">
 
     <group
-        android:scaleX="0.8"
-        android:scaleY="0.8"
-        android:translateX="60"
-        android:translateY="60">
+        android:scaleX="0.98"
+        android:scaleY="0.98"
+        android:translateX="5.12"
+        android:translateY="4.08">
 
         <path
-            android:pathData="M56,272 L114,334 L190,156 L322,156"
+            android:pathData="M256,108 L256,380"
             android:strokeColor="#FFFFFFFF"
             android:strokeWidth="30"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M122,244 L390,244"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="30"
+            android:strokeLineCap="round" />
 
         <path
-            android:fillColor="@color/brand_accent"
-            android:pathData="M362,208 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
-        <path
-            android:fillColor="@color/brand_accent"
-            android:pathData="M362,280 h70 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-70 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+            android:pathData="M140,364 C170,302 350,180 374,120"
+            android:strokeColor="@color/brand_accent"
+            android:strokeWidth="28"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
     </group>
 </vector>

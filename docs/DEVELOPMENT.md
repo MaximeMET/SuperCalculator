@@ -23,7 +23,7 @@
 | M6 | 素材替换 + 开源发布 | ✅ 品牌、文案、字体、图标全部自有；v0.1.0 已发布 |
 | M7 | 解题步骤（原版那个「解决过程」） | ✅ 离线算；方程 / 方程组（加减消元、回代）/ 不等式（组）/ 求导 / 极限 / 积分 / 展开与分解 + 纯算式「过程」按钮 |
 | M8 | 手动「检查更新」（方案 C）：应用本体提示 + 规则包验签热更新 | ✅ |
-| M9 | 品牌化：新的应用图标 | 🚧 生图 agent 出图中；定稿后换启动图标（`tools/make_launcher_icon.py` + `mipmap-*` + `mipmap-anydpi-v26/`）和关于页 logo（`ic_about_logo_mark.xml` / `bg_about_logo.xml`） |
+| M9 | 品牌化：新的应用图标 | ✅ 白色圆头加号叠加暖橙上升曲线；原生矢量启动图标、旧版 PNG 兜底与关于页标记已同步 |
 
 > 原版抽屉里的「超级 24 点」不在复刻范围内，已按设计取消（M5 阶段整段跳过）：
 > 抽屉项、图标、字符串和历史记录里那个类型号都删掉了。
@@ -380,8 +380,8 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 
 | 原版的东西 | 现在是什么 |
 |---|---|
-| 关于页那个网易品牌 logo（早先按轮廓描的矢量） | 项目自己的标记：冷色圆角方块 + 白色根号 + 琥珀色等号（`bg_about_logo` / `ic_about_logo_mark`） |
-| 原版那个橙色方块启动图标 | 同款标记的启动图标：5 档 PNG（API 21-25）+ 自适应图标（API 26+） |
+| 关于页那个网易品牌 logo（早先按轮廓描的矢量） | M6 初版曾用冷色圆角方块 + 白色根号 + 琥珀色等号；M9 换成项目自己的函数求根标记（`bg_about_logo` / `ic_about_logo_mark`） |
+| 原版那个橙色方块启动图标 | 项目自己的启动图标：M9 函数求根标记，5 档 PNG（API 21-25）+ 自适应矢量图标（API 26+） |
 | 「官方网站：math.youdao.com」 | 「项目主页：github.com/MaximeMET/SuperCalculator」 |
 | 「Copyright © 2017, NetEase,Inc.」 | 「Copyright © 2026, MaximeMET · GPL-3.0」 |
 | 设置/反馈页的「超级计算器 QQ 群：530100431」 | 「开源版本不收集反馈数据 / 有问题请到 GitHub 提 issue」 |
@@ -389,17 +389,23 @@ DOM 结构、30px 颜色列、量尺寸的算法都照抄，量完把 CSS 像素
 | 抽屉里的「超级 24 点」 | 整项删除，连那条分组分隔线一起 |
 | 公式编辑器的数学字体 `Symbola` | `STIX Two Math`（SIL OFL-1.1，科技出版领域的标准字体） |
 
-启动图标是脚本生成的，改配色或比例只要改一处：
+旧版 Android 所需的 PNG 兜底由脚本生成；API 26+ 使用 VectorDrawable：
 
 ```powershell
 python tools/make_launcher_icon.py
 ```
 
-标记的几何一共抄了三份——关于页的 `ic_about_logo_mark.xml`、自适应图标前景的
-`ic_launcher_foreground.xml`、生成脚本 `tools/make_launcher_icon.py`——改一处就要同步三处。
-比例取 0.8 不是随手定的：
-自适应图标外圈 18dp 可能被启动器裁掉，缩完之后标记两端离中心 34.3 格，
-正好落在圆形蒙版的 36 格半径以内。
+M9 图标以白色圆头加号代表基础运算，以暖橙上升曲线代表函数计算。
+矢量几何在关于页标记
+`ic_about_logo_mark.xml`、启动图标前景 `ic_launcher_foreground.xml` 和
+旧版 Android PNG 生成脚本 `tools/make_launcher_icon.py` 中保持一致。
+启动器前景放大到 98%，主体仍位于自适应图标安全区内。
+
+#### M9：品牌化应用图标
+
+使用不含文字或键盘九宫格的几何图形：白色圆头加号与一条暖橙上升曲线，
+背景沿用深墨蓝渐变。现代 Android 使用 VectorDrawable；API 21-25 使用脚本生成的
+PNG 兜底。关于页复用相同图形，让应用入口与项目标记保持一致。
 
 #### 编辑器换字体：Symbola → STIX Two Math
 

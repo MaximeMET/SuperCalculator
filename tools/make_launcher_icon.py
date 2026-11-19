@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""生成启动图标（本项目自己的素材，M6）。
+"""生成启动图标 PNG 兜底（本项目自己的素材，M9）。
 
-标记本身是「一条根号 + 一个等号」，几何和 app/src/main/res/drawable/ic_about_logo_mark.xml
-一一对应，改一边就要改另一边。
+标记由白色圆头加号和品牌橙上升曲线组成，表达算术与函数计算。
+几何和两个 VectorDrawable 一一对应。
 
 产出：
     app/src/main/res/mipmap-{m,h,xh,xxh,xxxh}dpi/ic_launcher.png        圆角方块版
@@ -21,23 +21,22 @@ import os
 
 from PIL import Image, ImageDraw
 
-# ---- 素材参数（512 画布坐标系，与 ic_about_logo_mark.xml 相同）----
+# ---- 素材参数（512 画布坐标系，与两个 VectorDrawable 相同）----
 CANVAS = 512
 INK_TOP = (0x3C, 0x4A, 0x70)
 INK_BOTTOM = (0x1E, 0x27, 0x40)
 ACCENT = (0xFF, 0xB5, 0x60)
 WHITE = (0xFF, 0xFF, 0xFF)
 
-RADICAL = [(56, 272), (114, 334), (190, 156), (322, 156)]
-RADICAL_WIDTH = 30
-EQUALS_BARS = [(346, 208, 448, 240), (346, 280, 448, 312)]
+AXIS_WIDTH = 30
+CURVE_WIDTH = 28
+AXIS_VERTICAL = ((256, 108), (256, 380))
+AXIS_HORIZONTAL = ((122, 244), (390, 244))
+CURVE = ((140, 364), (170, 302), (350, 180), (374, 120))
 
-# 标记在整块画布里的缩放与平移：自适应图标的前景用的是同一组数，
-# 保证两种图标看起来是同一个大小。0.8 是算出来的：标记横着铺开，缩完之后
-# 两端离中心最远的地方约 35.6 格，落在启动器圆形蒙版的 36 格半径以内
-# （自适应图标的外圈 18dp 有可能被裁掉，内容不能顶到边）。
-MARK_SCALE = 0.80
-MARK_OFFSET = (60.0, 60.0)
+# 加号和曲线整体放大，并在自适应图标安全区内居中。
+MARK_SCALE = 0.98
+MARK_OFFSET = (5.12, 4.08)
 
 # 圆角方块：留 16 的边距，半径 100（老式启动图标习惯留一点点透明边）
 SHAPE_INSET = 16
@@ -57,25 +56,45 @@ def mark_point(x, y):
     return (x * MARK_SCALE + MARK_OFFSET[0], y * MARK_SCALE + MARK_OFFSET[1])
 
 
-def draw_mark(draw, scale):
-    """在已经按 scale 放大的画布上画根号和等号。"""
-    pts = [mark_point(x, y) for x, y in RADICAL]
-    pts = [(x * scale, y * scale) for x, y in pts]
-    width = RADICAL_WIDTH * MARK_SCALE * scale
-    draw.line(pts, fill=WHITE, width=round(width), joint="curve")
-    # 圆头：两端补一个半径 = 线宽一半 的圆点
-    r = width / 2
-    for x, y in (pts[0], pts[-1]):
-        draw.ellipse((x - r, y - r, x + r, y + r), fill=WHITE)
+def cubic_points(curve, segments=256):
+    """把三次贝塞尔曲线采样成 Pillow 可绘制的折线。"""
+    p0, p1, p2, p3 = curve
+    points = []
+    for i in range(segments + 1):
+        t = i / segments
+        u = 1 - t
+        points.append((
+            u ** 3 * p0[0] + 3 * u ** 2 * t * p1[0] + 3 * u * t ** 2 * p2[0] + t ** 3 * p3[0],
+            u ** 3 * p0[1] + 3 * u ** 2 * t * p1[1] + 3 * u * t ** 2 * p2[1] + t ** 3 * p3[1],
+        ))
+    return points
 
-    for x0, y0, x1, y1 in EQUALS_BARS:
-        box = [mark_point(x0, y0), mark_point(x1, y1)]
-        box = [
-            box[0][0] * scale, box[0][1] * scale,
-            box[1][0] * scale, box[1][1] * scale,
-        ]
-        radius = (box[3] - box[1]) / 2
-        draw.rounded_rectangle(box, radius=radius, fill=ACCENT)
+
+def scaled_point(point, scale):
+    x, y = mark_point(*point)
+    return (x * scale, y * scale)
+
+
+def draw_round_line(draw, points, width, scale, color=WHITE):
+    points = [scaled_point(point, scale) for point in points]
+    stroke = round(width * MARK_SCALE * scale)
+    draw.line(points, fill=color, width=stroke)
+    radius = stroke / 2
+    for x, y in (points[0], points[-1]):
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)
+
+
+def draw_round_curve(draw, curve, width, scale, color):
+    radius = width * MARK_SCALE * scale / 2
+    for x, y in (scaled_point(point, scale) for point in cubic_points(curve, segments=512)):
+        draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)
+
+
+def draw_mark(draw, scale):
+    """在画布上画圆头加号和一条上升曲线。"""
+    draw_round_line(draw, AXIS_VERTICAL, AXIS_WIDTH, scale)
+    draw_round_line(draw, AXIS_HORIZONTAL, AXIS_WIDTH, scale)
+    draw_round_curve(draw, CURVE, CURVE_WIDTH, scale, ACCENT)
 
 
 def background(size, shape):

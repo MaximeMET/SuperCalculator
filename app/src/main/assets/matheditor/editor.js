@@ -1185,6 +1185,128 @@
 
   var resultField = MQ.StaticMath(document.getElementById('resultSpan'));
   var numericField = MQ.StaticMath(document.getElementById('numericResultSpan'));
+  var formulaViewport = document.getElementById('formulaViewport');
+  var resultsViewport = document.getElementById('resultsViewport');
+  var inputScrollFrame = 0;
+  var formulaAutoFollow = true;
+  var formulaGestureStart = null;
+  var FORMULA_DRAG_THRESHOLD = 10;
+
+  function scrollFormulaCaretIntoView() {
+    if (!formulaViewport || !formulaAutoFollow) return;
+    var cursor = document.querySelector('#formulaSpan .mq-cursor');
+    if (!cursor) return;
+    var viewportRect = formulaViewport.getBoundingClientRect();
+    var cursorRect = cursor.getBoundingClientRect();
+    var margin = 24;
+    var cursorLeft = cursorRect.left - viewportRect.left + formulaViewport.scrollLeft;
+    var cursorRight = cursorRect.right - viewportRect.left + formulaViewport.scrollLeft;
+    var visibleLeft = formulaViewport.scrollLeft + margin;
+    var visibleRight = formulaViewport.scrollLeft + formulaViewport.clientWidth - margin;
+    if (cursorLeft < visibleLeft) {
+      formulaViewport.scrollLeft = Math.max(0, cursorLeft - margin);
+    } else if (cursorRight > visibleRight) {
+      formulaViewport.scrollLeft = cursorRight - formulaViewport.clientWidth + margin;
+    }
+  }
+
+  function scheduleFormulaScroll() {
+    if (inputScrollFrame) window.cancelAnimationFrame(inputScrollFrame);
+    inputScrollFrame = window.requestAnimationFrame(function () {
+      inputScrollFrame = 0;
+      scrollFormulaCaretIntoView();
+    });
+  }
+
+  function formulaGesturePoint(event) {
+    if (event.touches) {
+      if (event.touches.length !== 1) return null;
+      return event.touches[0];
+    }
+    return event;
+  }
+
+  function beginFormulaGesture(event) {
+    var point = formulaGesturePoint(event);
+    formulaGestureStart = point ? { x: point.clientX, y: point.clientY } : null;
+  }
+
+  function trackFormulaGesture(event) {
+    if (!formulaGestureStart) return;
+    var point = formulaGesturePoint(event);
+    if (!point) return;
+    var dx = point.clientX - formulaGestureStart.x;
+    var dy = point.clientY - formulaGestureStart.y;
+    if (Math.abs(dx) >= FORMULA_DRAG_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      formulaAutoFollow = false;
+      formulaGestureStart = null;
+    }
+  }
+
+  function endFormulaGesture() {
+    formulaGestureStart = null;
+  }
+
+  if (formulaViewport) {
+    formulaViewport.addEventListener('touchstart', beginFormulaGesture, { passive: true, capture: true });
+    formulaViewport.addEventListener('touchmove', trackFormulaGesture, { passive: true, capture: true });
+    formulaViewport.addEventListener('touchend', endFormulaGesture, { passive: true, capture: true });
+    formulaViewport.addEventListener('touchcancel', endFormulaGesture, { passive: true, capture: true });
+    formulaViewport.addEventListener('click', scheduleFormulaScroll);
+    formulaViewport.addEventListener('touchend', scheduleFormulaScroll, { passive: true });
+    formulaViewport.addEventListener('keyup', scheduleFormulaScroll);
+  }
+
+  var resultSnapTimer = null;
+  var resultSnapReleaseTimer = null;
+  var resultTouchActive = false;
+  var resultSnapInProgress = false;
+
+  function beginResultDrag() {
+    resultTouchActive = true;
+    resultSnapInProgress = false;
+    if (resultSnapTimer) window.clearTimeout(resultSnapTimer);
+    if (resultSnapReleaseTimer) window.clearTimeout(resultSnapReleaseTimer);
+  }
+
+  function snapResultsLeft() {
+    if (!resultsViewport || resultTouchActive || resultSnapInProgress) return;
+    if (resultsViewport.scrollLeft <= 1) return;
+    resultSnapInProgress = true;
+    resultsViewport.scrollTo({ left: 0, behavior: 'smooth' });
+    resultSnapReleaseTimer = window.setTimeout(function () {
+      resultSnapInProgress = false;
+      if (resultsViewport.scrollLeft > 1) scheduleResultSnap();
+    }, 450);
+  }
+
+  function scheduleResultSnap() {
+    if (!resultsViewport || resultTouchActive || resultSnapInProgress) return;
+    if (resultSnapTimer) window.clearTimeout(resultSnapTimer);
+    resultSnapTimer = window.setTimeout(snapResultsLeft, 180);
+  }
+
+  if (resultsViewport) {
+    resultsViewport.addEventListener('touchstart', beginResultDrag, { passive: true });
+    resultsViewport.addEventListener('touchend', function () {
+      resultTouchActive = false;
+      scheduleResultSnap();
+    }, { passive: true });
+    resultsViewport.addEventListener('touchcancel', function () {
+      resultTouchActive = false;
+      scheduleResultSnap();
+    }, { passive: true });
+    resultsViewport.addEventListener('pointerdown', beginResultDrag);
+    resultsViewport.addEventListener('pointerup', function () {
+      resultTouchActive = false;
+      scheduleResultSnap();
+    });
+    resultsViewport.addEventListener('pointercancel', function () {
+      resultTouchActive = false;
+      scheduleResultSnap();
+    });
+    resultsViewport.addEventListener('scroll', scheduleResultSnap, { passive: true });
+  }
 
   // 空公式时底下那行示例。算式用静态域渲染，和上面结果行是同一套排版；
   // 中文小标题是普通文字，所以两者共用一条基线。
@@ -1607,7 +1729,9 @@
 
   function setLatexInternal(latex) {
     restoring = true;
-    formulaField.latex(normalizeLatex(latex) || '');
+    var normalizedLatex = normalizeLatex(latex) || '';
+    if (!normalizedLatex) formulaAutoFollow = true;
+    formulaField.latex(normalizedLatex);
     // latex(...) 只是换掉内容，光标会脱位；不把光标放回末尾的话，
     // 接下来 write() 会静默写不进去。这个坑很隐蔽。
     formulaField.moveToRightEnd();
@@ -1615,6 +1739,7 @@
     current = formulaField.latex();
     notifyEmpty(current);
     fitBracket(current);
+    scheduleFormulaScroll();
   }
 
   // ---------------------------------------------------------------
@@ -1627,9 +1752,11 @@
   function onEdited() {
     if (restoring) return;
     var latex = formulaField.latex();
+    if (!latex) formulaAutoFollow = true;
     pushHistory(latex);
     notifyEmpty(latex);
     fitBracket(latex);
+    scheduleFormulaScroll();
     if (timer) window.clearTimeout(timer);
     timer = window.setTimeout(function () {
       compute(latex);
@@ -1722,6 +1849,7 @@
 
     resultDiv.style.display = exact ? '' : 'none';
     numericResultDiv.style.display = numeric ? '' : 'none';
+    if (resultsViewport) resultsViewport.scrollLeft = 0;
     if (opIcon) opIcon.style.display = isValid(numeric) ? '' : 'none';
     resultField.latex(greekToLatex(exact));
     numericField.latex(greekToLatex(numeric));
@@ -2071,6 +2199,7 @@
         if (name === 'Backspace') filterBackspace();
         formulaField.keystroke(name);
       }
+      scheduleFormulaScroll();
     },
 
     clear: function () {
@@ -2083,6 +2212,7 @@
 
     setLatex: function (latex) {
       pushHistory(formulaField.latex());
+      formulaAutoFollow = true;
       setLatexInternal(latex);
       lastSent = null;
       compute(current);
@@ -2191,6 +2321,7 @@
 
     focus: function () {
       formulaField.focus();
+      scheduleFormulaScroll();
     },
 
     /** 布局变化后让 MathQuill 重排（WebView 尺寸变化时要调）。 */
@@ -2203,6 +2334,7 @@
       if (exampleTipBox && exampleTipBox.className.indexOf('on') >= 0) {
         fitExampleTip();
       }
+      scheduleFormulaScroll();
     },
 
     version: '1',
